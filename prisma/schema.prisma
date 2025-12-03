@@ -28,14 +28,28 @@ model User {
   email      String   @unique
   password   String   
   phone      String?
+  photo      String?
+  address    String?
   isActive   Boolean  @default(true)
   lastLogin  DateTime?
 
   roleId     Int?
   role       Role?    @relation(fields: [roleId], references: [id])
 
+  // hirarki user
+  // Manager -> Team Leader
+  managerId    Int?    // diisi kalau user ini TEAM_LEADER
+  manager      User?   @relation("ManagerTeamLeaders", fields: [managerId], references: [id])
+  teamLeaders  User[]  @relation("ManagerTeamLeaders")  // daftar TL yang dibawahi manager ini
+
+  // Team Leader -> Sales
+  teamLeaderId Int?    // diisi kalau user ini SALES
+  teamLeader   User?   @relation("TeamLeaderSales", fields: [teamLeaderId], references: [id])
+  sales        User[]  @relation("TeamLeaderSales")      // daftar sales yang dibawahi TL ini
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+  deletedAt  DateTime?
 
   @@map("users")
 }

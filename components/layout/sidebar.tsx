@@ -9,6 +9,9 @@ import {
   BarChart3,
   Settings,
   Package,
+  BookUser,
+  Network,
+  BriefcaseBusiness,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -41,9 +44,12 @@ export function Sidebar({ role }: SidebarProps) {
 
   const managerNav = [
     { href: "/dashboard/manager", label: "Dashboard", icon: Home },
+    { href: "/master/jabatan", label: "Master Jabatan", icon: BriefcaseBusiness },
+    { href: "/master/pegawai", label: "Master Pegawai", icon: BookUser },
+    { href: "/master/products", label: "Master Produk", icon: Package },
+    { href: "/organisasi", label: "Struktur Organisasi", icon: Network },
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/reports", label: "Laporan", icon: BarChart3 },
-    { href: "/master/products", label: "Master Produk", icon: Package },
     { href: "/settings/fields", label: "Pengaturan", icon: Settings },
     { href: "/profile", label: "Profil", icon: User },
   ];
@@ -95,7 +101,7 @@ export function Sidebar({ role }: SidebarProps) {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all",
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
                 isActive
                   ? "gradient-primary text-white font-semibold shadow-md"
                   : "text-gray-700 hover:bg-white/80 hover:text-gray-900 hover:shadow-sm"

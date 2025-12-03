@@ -46,18 +46,6 @@ async function main() {
       plainPassword: "manager123",
       roleCode: "MANAGER",
     },
-    {
-      name: "Team Leader",
-      email: "leader@lead.local",
-      plainPassword: "leader123",
-      roleCode: "TEAM_LEADER",
-    },
-    {
-      name: "Sales Demo",
-      email: "sales@lead.local",
-      plainPassword: "sales123",
-      roleCode: "SALES",
-    },
   ];
 
   for (const u of defaultUsers) {
