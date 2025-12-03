@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import { useEffect, useState, ChangeEvent, FormEvent, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, List, Loader2, Plus, Search } from "lucide-react";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -39,6 +39,8 @@ export interface Employee {
   status: "AKTIF" | "NONAKTIF";
   managerName?: string | null;
   teamLeaderName?: string | null;
+  managerId?: number | null;
+  teamLeaderId?: number | null;
 }
 
 // untuk dropdown atasan
@@ -73,6 +75,12 @@ export function EmployeeList() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
+  // pagination
+  const [page, setPage] = useState(1);
+  const [pageSize] = useState(9);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   // modal form
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -88,7 +96,9 @@ export function EmployeeList() {
     photoPath: "",
   });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // modal hapus
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -98,20 +108,38 @@ export function EmployeeList() {
   const [managers, setManagers] = useState<SimpleUser[]>([]);
   const [teamLeaders, setTeamLeaders] = useState<SimpleUser[]>([]);
 
-  async function fetchEmployees(q?: string) {
+  async function fetchEmployees(pageParam = 1, q?: string) {
     try {
       setLoading(true);
       setError(null);
 
       const url = new URL("/api/employees", window.location.origin);
-      if (q && q.trim()) url.searchParams.set("q", q.trim());
+
+      url.searchParams.set("page", String(pageParam));
+      url.searchParams.set("pageSize", String(pageSize));
+
+      const term = q ?? search;
+      if (term && term.trim()) url.searchParams.set("q", term.trim());
 
       const res = await fetch(url.toString());
       const json = await res.json();
       if (!res.ok || !json.ok) {
         throw new Error(json.message || "Gagal memuat data pegawai");
       }
+
       setEmployees(json.data as Employee[]);
+
+      if (json.meta) {
+        setPage(json.meta.page);
+        setTotal(json.meta.total);
+        setTotalPages(json.meta.totalPages);
+      } else {
+        // fallback jika API belum support meta
+        setPage(1);
+        const count = (json.data as Employee[]).length || 0;
+        setTotal(count);
+        setTotalPages(1);
+      }
     } catch (err: any) {
       setError(err?.message || "Gagal memuat data pegawai");
     } finally {
@@ -119,10 +147,12 @@ export function EmployeeList() {
     }
   }
 
-  // ambil list manager & TL untuk dropdown atasan
+  // ambil list manager & TL untuk dropdown atasan (onlyActive=true, tanpa paging)
   async function fetchSuperiors() {
     try {
-      const res = await fetch("/api/employees?onlyActive=true");
+      const url = new URL("/api/employees", window.location.origin);
+      url.searchParams.set("onlyActive", "true");
+      const res = await fetch(url.toString());
       const json = await res.json();
       if (!res.ok || !json.ok) return;
 
@@ -143,8 +173,9 @@ export function EmployeeList() {
   }
 
   useEffect(() => {
-    fetchEmployees();
+    fetchEmployees(1);
     fetchSuperiors();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function openCreateForm() {
@@ -162,6 +193,7 @@ export function EmployeeList() {
       photoPath: "",
     });
     setPhotoFile(null);
+    setPhotoPreview(null);
     setIsFormOpen(true);
   }
 
@@ -175,11 +207,12 @@ export function EmployeeList() {
       phone: emp.phone || "",
       address: emp.address || "",
       roleCode: emp.roleCode || "",
-      managerId: "", // bisa diisi kalau kamu expose data managerId dari API
-      teamLeaderId: "", // sama
+      managerId: emp.managerId ? String(emp.managerId) : "",
+      teamLeaderId: emp.teamLeaderId ? String(emp.teamLeaderId) : "",
       photoPath: emp.photo || "",
     });
     setPhotoFile(null);
+    setPhotoPreview(emp.photo || null);
     setIsFormOpen(true);
   }
 
@@ -188,6 +221,40 @@ export function EmployeeList() {
   ) {
     const { name, value } = e.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+
+    // validasi tipe
+    if (!file.type.startsWith("image/")) {
+      toast({
+        variant: "destructive",
+        title: "Format tidak didukung",
+        description: "Silakan upload file gambar (JPG, PNG, dll).",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    // validasi ukuran 2MB
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast({
+        variant: "destructive",
+        title: "Ukuran terlalu besar",
+        description: "Ukuran foto maksimal 2MB.",
+      });
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      e.target.value = "";
+      return;
+    }
+
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -223,11 +290,7 @@ export function EmployeeList() {
         });
         const jsonUpload = await resUpload.json();
         if (!resUpload.ok || !jsonUpload.ok) {
-          toast({
-            title: "Gagal",
-            description: "Gagal upload foto",
-            variant: "destructive",
-          });
+          throw new Error(jsonUpload.message || "Gagal upload foto");
         }
         photoPath = jsonUpload.path as string;
       }
@@ -257,11 +320,7 @@ export function EmployeeList() {
         });
         const json = await res.json();
         if (!res.ok || !json.ok) {
-          toast({
-            title: "Gagal",
-            description: "Gagal menambah pegawai",
-            variant: "destructive",
-          });
+          throw new Error(json.message || "Gagal menambah pegawai");
         }
       } else {
         const res = await fetch(`/api/employees/${formState.id}`, {
@@ -287,21 +346,30 @@ export function EmployeeList() {
         });
         const json = await res.json();
         if (!res.ok || !json.ok) {
-          toast({
-            title: "Gagal",
-            description: "Gagal mengupdate pegawai",
-            variant: "destructive",
-          });
+          throw new Error(json.message || "Gagal mengupdate pegawai");
         }
       }
 
+      toast({
+        title: "Berhasil",
+        description:
+          formMode === "create"
+            ? "Pegawai berhasil ditambahkan."
+            : "Pegawai berhasil diperbarui.",
+      });
+
       setIsFormOpen(false);
-      await fetchEmployees(search);
+      // setelah simpan, refresh list (kembali ke page 1 saat create)
+      if (formMode === "create") {
+        await fetchEmployees(1, search);
+      } else {
+        await fetchEmployees(page, search);
+      }
       await fetchSuperiors();
     } catch (err: any) {
       toast({
         title: "Gagal",
-        description: "Gagal menyimpan pegawai",
+        description: err?.message || "Gagal menyimpan pegawai",
         variant: "destructive",
       });
     } finally {
@@ -327,10 +395,18 @@ export function EmployeeList() {
       }
       setIsDeleteOpen(false);
       setDeleteTarget(null);
-      await fetchEmployees(search);
+      await fetchEmployees(page, search);
       await fetchSuperiors();
+      toast({
+        title: "Berhasil",
+        description: "Pegawai berhasil dihapus.",
+      });
     } catch (err: any) {
-      alert(err?.message || "Gagal menghapus pegawai");
+      toast({
+        title: "Gagal",
+        description: err?.message || "Gagal menghapus pegawai",
+        variant: "destructive",
+      });
     } finally {
       setDeleting(false);
     }
@@ -338,7 +414,12 @@ export function EmployeeList() {
 
   async function handleSearchSubmit(e: FormEvent) {
     e.preventDefault();
-    await fetchEmployees(search);
+    await fetchEmployees(1, search);
+  }
+
+  async function handlePageChange(newPage: number) {
+    if (newPage < 1 || newPage > totalPages) return;
+    await fetchEmployees(newPage);
   }
 
   return (
@@ -434,6 +515,50 @@ export function EmployeeList() {
               />
             </div>
           )}
+
+          {/* Pagination */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-6 text-sm">
+            <div className="text-gray-500">
+              {total > 0 && (
+                <>
+                  Menampilkan{" "}
+                  <span className="font-semibold">
+                    {(page - 1) * pageSize + 1}
+                  </span>{" "}
+                  -{" "}
+                  <span className="font-semibold">
+                    {Math.min(page * pageSize, total)}
+                  </span>{" "}
+                  dari <span className="font-semibold">{total}</span> pegawai
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => handlePageChange(page - 1)}
+              >
+                Sebelumnya
+              </Button>
+
+              <span className="text-gray-600">
+                Halaman <span className="font-semibold">{page}</span> /{" "}
+                {totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page >= totalPages}
+                onClick={() => handlePageChange(page + 1)}
+              >
+                Berikutnya
+              </Button>
+            </div>
+          </div>
         </>
       )}
 
@@ -500,7 +625,7 @@ export function EmployeeList() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="space-y-2">
                 <Label>Jabatan</Label>
                 <Select
@@ -568,21 +693,102 @@ export function EmployeeList() {
               )}
             </div>
 
+            {/* Upload foto pegawai - style sama seperti produk */}
             <div className="space-y-2">
               <Label>Foto Pegawai</Label>
-              <Input
+
+              <input
+                ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setPhotoFile(file);
-                }}
+                className="hidden"
+                onChange={handlePhotoChange}
               />
-              {formState.photoPath && !photoFile && (
-                <p className="text-xs text-gray-500">
-                  Foto saat ini:{" "}
-                  <span className="font-mono">{formState.photoPath}</span>
-                </p>
+
+              {photoPreview || formState.photoPath ? (
+                <div className="flex flex-col md:flex-row gap-4 items-start">
+                  <div className="relative w-full md:w-32 h-32 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                    <img
+                      src={photoPreview || formState.photoPath || ""}
+                      alt={formState.name || "Foto pegawai"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-gray-600">
+                      {photoPreview
+                        ? "Foto baru siap disimpan."
+                        : "Foto pegawai saat ini. Kamu bisa mengganti atau menghapus foto."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Ganti Foto
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:bg-red-50"
+                        onClick={() => {
+                          setPhotoFile(null);
+                          setPhotoPreview(null);
+                          setFormState((prev) => ({
+                            ...prev,
+                            photoPath: "",
+                          }));
+                        }}
+                      >
+                        Hapus Foto
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
+                    <svg
+                      className="w-6 h-6 text-primary"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 16.5v1.125C3 18.66 4.343 20 6 20h12c1.657 0 3-1.34 3-2.375V16.5M16.5 9 12 4.5 7.5 9M12 4.5V15"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1 text-center md:text-left space-y-1">
+                    <p className="text-sm font-medium text-gray-900">
+                      Upload foto pegawai
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Klik di sini untuk memilih file gambar. Format JPG/PNG,
+                      ukuran maksimal 2MB.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    Pilih File
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -639,8 +845,7 @@ export function EmployeeList() {
           <DialogHeader>
             <DialogTitle>Hapus Pegawai</DialogTitle>
             <DialogDescription>
-              Pegawai akan dihapus <strong>tidak permanen</strong>, sehingga
-              dipindahkan ke sampah.
+              Pegawai akan dihapus tidak permanen dan dipindahkan ke sampah
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 text-sm text-gray-700">

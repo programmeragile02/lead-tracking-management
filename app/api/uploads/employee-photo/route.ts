@@ -16,8 +16,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const blob = file as Blob;
-    const arrayBuffer = await blob.arrayBuffer();
+    const fileObj = file as File;
+
+    // cek tipe file
+    if (!fileObj.type.startsWith("image/")) {
+      return NextResponse.json(
+        { ok: false, message: "File harus berupa gambar (JPG, PNG, dll)" },
+        { status: 400 }
+      );
+    }
+
+    // batas ukuran 2MB
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (fileObj.size > MAX_SIZE) {
+      return NextResponse.json(
+        { ok: false, message: "Ukuran foto maksimal 2MB" },
+        { status: 400 }
+      );
+    }
+
+    const arrayBuffer = await fileObj.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
     const uploadsDir = path.join(
@@ -28,7 +46,7 @@ export async function POST(req: NextRequest) {
     );
     await fs.mkdir(uploadsDir, { recursive: true });
 
-    const originalName = (file as any).name || "photo.jpg";
+    const originalName = fileObj.name || "photo.jpg";
     const ext = path.extname(originalName) || ".jpg";
     const fileName = `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`;
 

@@ -1,67 +1,93 @@
-"use client"
+"use client";
 
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Edit, Trash2 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import type { Product } from "./product-list";
 
-interface Product {
-  id: string
-  name: string
-  category: string
-  price: number
-  description: string
-  stock: string
-  image: string
+interface Props {
+  products: Product[];
+  onEdit: (product: Product) => void;
+  onDelete: (product: Product) => void;
 }
 
-export function ProductTable({ products }: { products: Product[] }) {
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("id-ID", {
-      style: "currency",
-      currency: "IDR",
-      minimumFractionDigits: 0,
-    }).format(price)
-  }
-
+export function ProductTable({ products, onEdit, onDelete }: Props) {
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
       <Table>
         <TableHeader>
           <TableRow className="bg-gradient-subtle hover:bg-gradient-subtle">
-            <TableHead className="font-semibold text-gray-900">Nama Produk</TableHead>
-            <TableHead className="font-semibold text-gray-900">Kategori</TableHead>
-            <TableHead className="font-semibold text-gray-900">Harga</TableHead>
-            <TableHead className="font-semibold text-gray-900">Status</TableHead>
-            <TableHead className="font-semibold text-gray-900 text-right">Aksi</TableHead>
+            <TableHead className="font-semibold text-gray-900">
+              Nama Produk
+            </TableHead>
+            <TableHead className="font-semibold text-gray-900">
+              Kategori
+            </TableHead>
+            <TableHead className="font-semibold text-gray-900">
+              Status
+            </TableHead>
+            <TableHead className="font-semibold text-gray-900 text-right">
+              Aksi
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {products.map((product) => (
-            <TableRow key={product.id} className="hover:bg-gray-50 transition-colors">
+            <TableRow
+              key={product.id}
+              className="hover:bg-gray-50 transition-colors"
+            >
               <TableCell>
                 <div>
                   <p className="font-semibold text-gray-900">{product.name}</p>
-                  <p className="text-sm text-gray-500 line-clamp-1">{product.description}</p>
+                  <p className="text-sm text-gray-500 line-clamp-1">
+                    {product.description || "Tidak ada deskripsi"}
+                  </p>
                 </div>
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className="text-primary border-primary/30 bg-primary/5">
+                <Badge
+                  variant="outline"
+                  className="text-primary border-primary/30 bg-primary/5"
+                >
                   {product.category}
                 </Badge>
               </TableCell>
               <TableCell>
-                <span className="font-semibold gradient-text">{formatPrice(product.price)}</span>
-              </TableCell>
-              <TableCell>
-                <Badge className="bg-green-500 text-white">{product.stock}</Badge>
+                <Badge
+                  className={
+                    product.isAvailable
+                      ? "bg-green-500 text-white"
+                      : "bg-gray-400 text-white"
+                  }
+                >
+                  {product.isAvailable ? "Tersedia" : "Tidak tersedia"}
+                </Badge>
               </TableCell>
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" className="text-primary hover:bg-primary/10">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-primary hover:bg-primary/10"
+                    onClick={() => onEdit(product)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:bg-red-50"
+                    onClick={() => onDelete(product)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -71,5 +97,5 @@ export function ProductTable({ products }: { products: Product[] }) {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

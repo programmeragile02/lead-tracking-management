@@ -53,3 +53,18 @@ model User {
 
   @@map("users")
 }
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  category    String   // contoh: "Jasa", "Layanan", "Produk"
+  name        String
+  description String?
+  photo       String?  // URL gambar produk
+  isAvailable Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("products")
+}

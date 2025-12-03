@@ -2,59 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
-export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const q = searchParams.get("q")?.trim() || "";
+export const runtime = "nodejs";
 
-  const where: any = {
-    deletedAt: null,
-  };
-
-  if (q) {
-    const qTrim = q.trim();
-
-    where.OR = [
-      { name: { contains: qTrim } },
-      { email: { contains: qTrim } },
-      { phone: { contains: qTrim } },
-      {
-        role: {
-          code: { contains: qTrim.toUpperCase() },
-        },
-      },
-    ];
-  }
-
-  const users = await prisma.user.findMany({
-    where,
-    include: {
-      role: true,
-      manager: true,
-      teamLeader: true,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  const data = users.map((u) => ({
-    id: u.id,
-    name: u.name,
-    email: u.email,
-    phone: u.phone,
-    photo: u.photo,
-    address: u.address,
-    roleCode: u.role?.code || null,
-    status:
-      !u.deletedAt && u.isActive ? ("AKTIF" as const) : ("NONAKTIF" as const),
-    managerName: u.manager ? u.manager.name : null,
-    teamLeaderName: u.teamLeader ? u.teamLeader.name : null,
-    managerId: u.managerId,
-    teamLeaderId: u.teamLeaderId,
-  }));
-
-  return NextResponse.json({ ok: true, data });
-}
+type RoleCode = "MANAGER" | "TEAM_LEADER" | "SALES";
 
 type CreateBody = {
   name: string;
@@ -63,11 +13,146 @@ type CreateBody = {
   phone?: string;
   photo?: string;
   address?: string;
-  roleCode: "MANAGER" | "TEAM_LEADER" | "SALES";
+  roleCode: RoleCode;
   managerId?: number | null;
   teamLeaderId?: number | null;
 };
 
+// GET /api/employees
+// - normal:   ?page=1&pageSize=10&q=...
+// - dropdown: ?onlyActive=true  (tanpa pagination)
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const qRaw = searchParams.get("q");
+    const q = qRaw?.trim() || "";
+    const onlyActive = searchParams.get("onlyActive") === "true";
+
+    const pageParam = Number(searchParams.get("page") || "1");
+    const pageSizeParam = Number(searchParams.get("pageSize") || "10");
+
+    const where: any = {
+      deletedAt: null,
+    };
+
+    if (onlyActive) {
+      where.isActive = true;
+    }
+
+    if (q) {
+      const qTrim = q.trim();
+      const qUpper = qTrim.toUpperCase();
+
+      where.OR = [
+        { name: { contains: qTrim, mode: "insensitive" } },
+        { email: { contains: qTrim, mode: "insensitive" } },
+        { phone: { contains: qTrim } },
+        {
+          role: {
+            code: { contains: qUpper },
+          },
+        },
+      ];
+    }
+
+    // === MODE: hanya onlyActive (dropdown atasan) → tanpa pagination ===
+    if (
+      onlyActive &&
+      !searchParams.get("page") &&
+      !searchParams.get("pageSize")
+    ) {
+      const users = await prisma.user.findMany({
+        where,
+        include: {
+          role: true,
+          manager: true,
+          teamLeader: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      });
+
+      const data = users.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        phone: u.phone,
+        photo: u.photo,
+        address: u.address,
+        roleCode: (u.role?.code || null) as RoleCode | null,
+        status:
+          !u.deletedAt && u.isActive
+            ? ("AKTIF" as const)
+            : ("NONAKTIF" as const),
+        managerName: u.manager ? u.manager.name : null,
+        teamLeaderName: u.teamLeader ? u.teamLeader.name : null,
+        managerId: u.managerId,
+        teamLeaderId: u.teamLeaderId,
+      }));
+
+      return NextResponse.json({ ok: true, data });
+    }
+
+    // === MODE: list utama dengan pagination ===
+    const page = pageParam > 0 ? pageParam : 1;
+    const pageSize =
+      pageSizeParam > 0 && pageSizeParam <= 100 ? pageSizeParam : 10;
+
+    const total = await prisma.user.count({ where });
+
+    const users = await prisma.user.findMany({
+      where,
+      include: {
+        role: true,
+        manager: true,
+        teamLeader: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    });
+
+    const data = users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      photo: u.photo,
+      address: u.address,
+      roleCode: (u.role?.code || null) as RoleCode | null,
+      status:
+        !u.deletedAt && u.isActive ? ("AKTIF" as const) : ("NONAKTIF" as const),
+      managerName: u.manager ? u.manager.name : null,
+      teamLeaderName: u.teamLeader ? u.teamLeader.name : null,
+      managerId: u.managerId,
+      teamLeaderId: u.teamLeaderId,
+    }));
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+    return NextResponse.json({
+      ok: true,
+      data,
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+      },
+    });
+  } catch (err: any) {
+    console.error("GET /api/employees error", err);
+    return NextResponse.json(
+      { ok: false, message: "Gagal memuat data pegawai" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/employees
 export async function POST(req: NextRequest) {
   try {
     const json = (await req.json()) as CreateBody;
