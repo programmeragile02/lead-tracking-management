@@ -42,9 +42,9 @@ export function TrendChart({ type }: { type: "leads" | "revenue" }) {
           <Line
             type="monotone"
             dataKey="value"
-            stroke={type === "leads" ? "#8b5cf6" : "#3b82f6"}
+            stroke={type === "leads" ? "#ef4444" : "#ff6900"}
             strokeWidth={3}
-            dot={{ fill: type === "leads" ? "#8b5cf6" : "#3b82f6", r: 5 }}
+            dot={{ fill: type === "leads" ? "#ef4444" : "#ff6900", r: 5 }}
           />
         </LineChart>
       </ResponsiveContainer>

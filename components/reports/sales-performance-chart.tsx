@@ -25,8 +25,8 @@ export function SalesPerformanceChart() {
           }}
         />
         <Legend />
-        <Bar dataKey="target" fill="#94a3b8" name="Target" radius={[8, 8, 0, 0]} />
-        <Bar dataKey="actual" fill="#8b5cf6" name="Aktual" radius={[8, 8, 0, 0]} />
+        <Bar dataKey="target" fill="#ef4444" name="Target" radius={[8, 8, 0, 0]} />
+        <Bar dataKey="actual" fill="#ff6900" name="Aktual" radius={[8, 8, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

@@ -16,16 +16,16 @@ export function ProfileSettings() {
         {settings.map((setting) => (
           <button
             key={setting.label}
-            className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-gradient-to-r hover:from-violet-50 hover:to-purple-50 transition-all group"
+            className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-red-50 hover:from-violet-50 hover:to-purple-50 transition-all group"
           >
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <setting.icon className="w-5 h-5 text-purple-600" />
+            <div className="w-10 h-10 rounded-lg bg-red-50 from-violet-100 to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <setting.icon className="w-5 h-5 text-red-600" />
             </div>
             <div className="flex-1 text-left">
               <p className="font-semibold text-gray-900">{setting.label}</p>
               <p className="text-sm text-gray-600">{setting.description}</p>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-600 transition-colors" />
           </button>
         ))}
       </div>

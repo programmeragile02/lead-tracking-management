@@ -18,7 +18,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
 
   return (
     <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-gray-200 bg-white group">
-      <div className="relative h-48 bg-gradient-to-br from-primary/10 to-secondary/10 overflow-hidden">
+      <div className="relative h-48 overflow-hidden">
         {product.photo ? (
           <Image
             src={imgSrc}
@@ -66,7 +66,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-primary text-primary hover:bg-primary/5 bg-transparent"
+            className="flex-1 border-black text-black hover:bg-black/5 bg-transparent"
             onClick={onEdit}
           >
             <Edit className="h-4 w-4 mr-1" />

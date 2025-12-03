@@ -33,9 +33,9 @@ function roleBadgeClass(role: Employee["roleCode"]) {
     case "MANAGER":
       return "bg-primary/10 text-primary border-primary/30";
     case "TEAM_LEADER":
-      return "bg-purple-50 text-purple-700 border-purple-200";
+      return "bg-orange-50 text-orange-700 border-orange-200";
     case "SALES":
-      return "bg-emerald-50 text-emerald-700 border-emerald-200";
+      return "bg-amber-50 text-amber-700 border-amber-200";
     default:
       return "bg-gray-100 text-gray-600 border-gray-200";
   }
@@ -58,8 +58,8 @@ export function EmployeeCard({
 }) {
   return (
     <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-gray-200 bg-white group">
-      <div className="relative h-40 bg-gradient-to-br from-primary/5 via-white to-secondary/10 flex items-center justify-center">
-        <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-primary/20 to-secondary/20">
+      <div className="relative h-40 flex items-center justify-center">
+        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-primary/20 to-secondary/20">
           <Image
             src={employee.photo || "/avatar-placeholder.png"}
             alt={employee.name}
@@ -135,7 +135,7 @@ export function EmployeeCard({
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-primary text-primary hover:bg-primary/5 bg-transparent"
+            className="flex-1 border-black text-black hover:bg-black/5 bg-transparent"
             onClick={() => onEdit?.(employee)}
           >
             <Edit className="h-4 w-4 mr-1" />

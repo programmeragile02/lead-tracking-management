@@ -83,8 +83,8 @@ export function Sidebar({ role }: SidebarProps) {
   }, [user]);
 
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r bg-sidebar shadow-sm h-screen sticky top-0">
-      <div className="p-5 border-b bg-violet-500">
+    <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r bg-white shadow-sm h-screen sticky top-0">
+      <div className="p-5 border-b gradient-primary">
         <div className="flex items-center justify-center">
           <h2 className="text-xl font-bold text-white">Tracking Lead</h2>
         </div>
@@ -104,7 +104,7 @@ export function Sidebar({ role }: SidebarProps) {
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
                 isActive
                   ? "gradient-primary text-white font-semibold shadow-md"
-                  : "text-gray-700 hover:bg-white/80 hover:text-gray-900 hover:shadow-sm"
+                  : "text-gray-700 hover:bg-red-200/80 hover:text-gray-900 hover:shadow-sm"
               )}
             >
               <Icon className="h-5 w-5" />
@@ -117,7 +117,7 @@ export function Sidebar({ role }: SidebarProps) {
       <div className="p-4 border-t bg-white/50">
         <div className="flex items-center gap-3 px-2">
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-gradient-primary text-white font-semibold">
+            <AvatarFallback className="gradient-primary text-white font-semibold">
               {loading ? "…" : initials}
             </AvatarFallback>
           </Avatar>

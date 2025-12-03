@@ -43,9 +43,9 @@ function roleBadgeClass(role: JabatanItem["code"]) {
     case "MANAGER":
       return "bg-primary text-white";
     case "TEAM_LEADER":
-      return "bg-purple-600 text-white";
+      return "bg-orange-600 text-white";
     case "SALES":
-      return "bg-emerald-600 text-white";
+      return "bg-amber-600 text-white";
   }
 }
 
@@ -55,7 +55,7 @@ export function JabatanCard({ role }: { role: JabatanItem }) {
   return (
     <Card className="relative p-5 bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
       {/* highlight strip */}
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-secondary to-emerald-400" />
+      <div className="absolute inset-x-0 top-0 h-1 gradient-primary" />
 
       <div className="flex items-start gap-4">
         <div className="mt-1">

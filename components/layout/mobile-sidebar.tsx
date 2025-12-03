@@ -46,7 +46,7 @@ export function MobileSidebar({ role, open, onOpenChange }: MobileSidebarProps) 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-72 p-0 bg-gradient-subtle">
+      <SheetContent side="left" className="w-72 p-0 bg-white">
         <SheetHeader className="p-4.5 border-b gradient-primary">
           <SheetTitle className="text-white text-lg">Menu Navigasi</SheetTitle>
         </SheetHeader>

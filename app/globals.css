@@ -3,55 +3,56 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Enhanced color scheme with purple-blue theme and better contrast */
-
 :root {
-  /* Background colors - using subtle purple-blue tones */
-  --background: oklch(0.97 0.01 270);
+  /* Background colors - clean and bright */
+  --background: oklch(0.98 0.000 30);
   --foreground: oklch(0.145 0 0);
 
-  /* Cards with slight tint */
-  --card: oklch(0.99 0.005 270);
+  /* Cards with warm tint */
+  --card: oklch(0.99 0.003 30);
   --card-foreground: oklch(0.145 0 0);
 
-  /* Added popover colors for solid dropdown backgrounds */
+  /* Popover colors for solid dropdown backgrounds */
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
 
-  /* Purple-blue primary colors */
-  --primary: oklch(0.55 0.18 275);
+  /* Energetic red-orange primary colors */
+  --primary: oklch(0.58 0.22 25);
   --primary-foreground: oklch(0.99 0 0);
 
-  /* Secondary with blue tint */
-  --secondary: oklch(0.92 0.02 250);
+  /* Secondary with warm coral tint */
+  --secondary: oklch(0.93 0.025 35);
   --secondary-foreground: oklch(0.2 0 0);
 
-  /* Muted areas with purple tint */
-  --muted: oklch(0.94 0.015 270);
+  /* Muted areas with warm tint */
+  --muted: oklch(0.95 0.01 30);
   --muted-foreground: oklch(0.48 0 0);
 
-  /* Accent colors */
-  --accent: oklch(0.93 0.025 270);
+  /* Accent colors - orange */
+  --accent: oklch(0.94 0.03 40);
   --accent-foreground: oklch(0.2 0 0);
 
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.99 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+
+  /* Chart colors with red-orange-amber palette */
+  --chart-1: oklch(0.62 0.24 25);
+  --chart-2: oklch(0.68 0.2 35);
+  --chart-3: oklch(0.75 0.18 50);
+  --chart-4: oklch(0.8 0.15 65);
+  --chart-5: oklch(0.55 0.22 15);
+
   --radius: 0.625rem;
 
-  /* Sidebar with distinct purple-blue background */
-  --sidebar: oklch(0.94 0.03 270);
+  /* Sidebar with distinct warm background */
+  --sidebar: oklch(0.96 0.000 30);
   --sidebar-foreground: oklch(0.2 0 0);
-  --sidebar-primary: oklch(0.55 0.18 275);
+  --sidebar-primary: oklch(0.58 0.22 25);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.92 0.02 260);
+  --sidebar-accent: oklch(0.94 0.02 35);
   --sidebar-accent-foreground: oklch(0.2 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
@@ -64,8 +65,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary: oklch(0.65 0.24 25);
+  --primary-foreground: oklch(0.99 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -77,15 +78,15 @@
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --chart-1: oklch(0.62 0.24 25);
+  --chart-2: oklch(0.68 0.2 35);
+  --chart-3: oklch(0.75 0.18 50);
+  --chart-4: oklch(0.8 0.15 65);
+  --chart-5: oklch(0.55 0.22 15);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.65 0.24 25);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
@@ -141,48 +142,44 @@
   }
 }
 
-/* Adding purple-blue gradient theme for Lead Tracking System */
-
 .gradient-primary {
-  background: linear-gradient(135deg, rgb(139 92 246) 0%, rgb(59 130 246) 100%);
+  background: rgb(239 68 68);
 }
 
-.gradient-purple-blue {
-  background: linear-gradient(135deg, rgb(168 85 247) 0%, rgb(99 102 241) 50%, rgb(59 130 246) 100%);
+.gradient-red-orange {
+  background: rgb(239 68 68);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, rgb(139 92 246) 0%, rgb(59 130 246) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: rgb(239 68 68);
 }
 
-/* Updated sidebar gradient for better visual separation */
+/* Updated sidebar gradient for warm, energetic feel */
 
 .bg-gradient-subtle {
-  background: linear-gradient(180deg, oklch(0.95 0.025 270) 0%, oklch(0.93 0.03 265) 100%);
+  background: oklch(0.96 0.02 30);
 }
 
-.bg-purple-50 {
-  background: oklch(0.97 0.025 280);
+.bg-red-50 {
+  background: oklch(0.98 0.02 25);
 }
 
-.bg-blue-50 {
-  background: oklch(0.97 0.025 240);
+.bg-orange-50 {
+  background: oklch(0.98 0.02 40);
 }
 
-.text-gradient-purple {
-  background: linear-gradient(135deg, rgb(139 92 246) 0%, rgb(168 85 247) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.text-gradient-red {
+  color: rgb(239 68 68);
 }
 
-.card-gradient-purple {
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%);
+.card-gradient-red {
+  background: rgba(254, 226, 226, 0.5);
 }
 
-.card-gradient-blue {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+.card-gradient-orange {
+  background: rgba(255, 237, 213, 0.5);
+}
+
+.card-gradient-amber {
+  background: rgba(254, 243, 199, 0.5);
 }

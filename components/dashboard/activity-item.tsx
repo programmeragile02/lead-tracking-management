@@ -21,14 +21,14 @@ export function ActivityItem({ time, type, leadName, status, note }: ActivityIte
     <div className="relative flex gap-4 pb-6 last:pb-0">
       {/* Timeline Line */}
       <div className="relative flex flex-col items-center">
-        <div className="w-4 h-4 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 shadow-md ring-4 ring-purple-100 z-10" />
-        <div className="absolute top-4 w-0.5 h-full bg-gradient-to-b from-purple-300 to-transparent" />
+        <div className="w-4 h-4 rounded-full bg-red-500 shadow-md ring-4 ring-purple-100 z-10" />
+        <div className="absolute top-4 w-0.5 h-full bg-red-200" />
       </div>
 
       {/* Content */}
       <div className="flex-1 bg-white rounded-2xl p-4 shadow-md border-2 border-purple-50 hover:shadow-lg transition-all">
         <div className="flex items-center gap-2 mb-2">
-          <div className="flex items-center gap-1.5 text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+          <div className="flex items-center gap-1.5 text-red-700 bg-red-50 px-3 py-1 rounded-full border border-red-200">
             <Clock className="h-3.5 w-3.5" />
             <span className="text-xs font-bold">{time}</span>
           </div>

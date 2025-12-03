@@ -2,10 +2,10 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
 
 const data = [
-  { name: "Instagram Ads", value: 128, color: "#8b5cf6" },
-  { name: "Website", value: 95, color: "#3b82f6" },
-  { name: "Referral", value: 72, color: "#06b6d4" },
-  { name: "WhatsApp", value: 33, color: "#10b981" },
+  { name: "Instagram Ads", value: 128, color: "#fb2c36" },
+  { name: "Website", value: 95, color: "#ff6900" },
+  { name: "Facebook Ads", value: 72, color: "#fd9a00" },
+  { name: "WhatsApp", value: 33, color: "#ff2056" },
 ]
 
 export function ChannelComparisonChart() {

@@ -1,10 +1,10 @@
 "use client"
 
 const stages = [
-  { name: "Lead Baru", count: 328, percentage: 100, color: "from-violet-500 to-purple-600" },
-  { name: "Sudah Dihubungi", count: 245, percentage: 75, color: "from-purple-500 to-blue-600" },
-  { name: "Hot/Warm", count: 156, percentage: 48, color: "from-blue-500 to-cyan-600" },
-  { name: "Closing Berhasil", count: 87, percentage: 27, color: "from-green-500 to-emerald-600" },
+  { name: "Lead Baru", count: 328, percentage: 100, color: "bg-amber-400" },
+  { name: "Sudah Dihubungi", count: 245, percentage: 75, color: "bg-amber-500" },
+  { name: "Hot/Warm", count: 156, percentage: 48, color: "bg-orange-500" },
+  { name: "Closing Berhasil", count: 87, percentage: 27, color: "bg-red-500" },
 ]
 
 export function ConversionFunnelChart() {

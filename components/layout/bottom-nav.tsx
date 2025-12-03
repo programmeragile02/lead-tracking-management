@@ -48,11 +48,11 @@ export function BottomNav({ role }: BottomNavProps) {
               href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 transition-all relative",
-                isActive ? "text-purple-600" : "text-gray-500 hover:text-gray-700",
+                isActive ? "text-red-500" : "text-gray-500 hover:text-gray-700",
               )}
             >
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-red-500 rounded-full" />
               )}
               <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
               <span className={cn("text-xs font-medium", isActive && "font-semibold")}>{item.label}</span>

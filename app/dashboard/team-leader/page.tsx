@@ -9,9 +9,9 @@ export default function TeamLeaderDashboardPage() {
     <DashboardLayout title="Dashboard Tim" role="team-leader">
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <KPICard title="Total Lead Tim" icon={Users} count={45} color="violet" />
-          <KPICard title="Total Closing" icon={Target} count={12} color="blue" />
-          <KPICard title="Total Pendapatan" icon={DollarSign} count={150} unit="jt" color="purple" />
+          <KPICard title="Total Lead Tim" icon={Users} count={45} color="red" />
+          <KPICard title="Total Closing" icon={Target} count={12} color="orange" />
+          <KPICard title="Total Pendapatan" icon={DollarSign} count={150} unit="jt" color="amber" />
         </div>
 
         <section>

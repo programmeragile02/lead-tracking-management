@@ -102,7 +102,7 @@ export function DashboardLayout({
                     className="relative text-white hover:bg-white/20"
                   >
                     <Bell className="h-5 w-5" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-orange-500 rounded-full ring-2 ring-white" />
                   </Button>
 
                   <DropdownMenu>

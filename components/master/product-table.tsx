@@ -77,7 +77,7 @@ export function ProductTable({ products, onEdit, onDelete }: Props) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-primary hover:bg-primary/10"
+                    className="text-black hover:bg-black/10"
                     onClick={() => onEdit(product)}
                   >
                     <Edit className="h-4 w-4" />

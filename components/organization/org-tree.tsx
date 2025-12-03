@@ -101,7 +101,7 @@ export function OrgTree() {
 
 function AvatarCircle({ employee }: { employee: Employee }) {
   return (
-    <div className="relative w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md bg-gradient-to-br from-primary/20 to-secondary/20">
+    <div className="relative w-16 h-16 rounded-full overflow-hidden border-4 border-white shadow-md">
       {employee.photo ? (
         <Image
           src={employee.photo}
@@ -166,7 +166,7 @@ function TeamLeaderBranch({
       <Card className="relative px-5 py-4 bg-gradient-to-br from-purple-50 to-white border-purple-100 shadow-md flex flex-col items-center min-w-[220px]">
         <AvatarCircle employee={tl} />
         <div className="mt-2 text-center">
-          <Badge className="bg-purple-600 text-white text-[10px] px-2 py-0.5 rounded-full">
+          <Badge className="bg-orange-600 text-white text-[10px] px-2 py-0.5 rounded-full">
             Team Leader
           </Badge>
           <p className="text-sm font-semibold text-gray-900 mt-1">{tl.name}</p>
@@ -182,10 +182,10 @@ function TeamLeaderBranch({
             {sales.map((s) => (
               <Card
                 key={s.id}
-                className="px-3 py-2 bg-emerald-50 border-emerald-100 flex items-center gap-2 min-w-[180px]"
+                className="px-3 py-2 bg-amber-50 border-amber-100 flex items-center gap-2 min-w-[180px]"
               >
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-emerald-100">
-                  <User className="h-4 w-4 text-emerald-600" />
+                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center border border-amber-100">
+                  <User className="h-4 w-4 text-amber-600" />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-900">
@@ -196,7 +196,7 @@ function TeamLeaderBranch({
                   </p>
                   <Badge
                     variant="outline"
-                    className="border-emerald-300 text-emerald-700 bg-white/60 mt-0.5 text-[10px] px-1.5 py-0"
+                    className="border-amber-300 text-amber-700 bg-white/60 mt-0.5 text-[10px] px-1.5 py-0"
                   >
                     Sales
                   </Badge>

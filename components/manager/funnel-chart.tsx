@@ -17,7 +17,7 @@ export function FunnelChart() {
               <span className="text-gray-600 font-semibold">{stage.count} lead</span>
             </div>
             <div
-              className="h-12 bg-gradient-to-r from-violet-600 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md"
+              className="h-12 gradient-primary rounded-lg flex items-center justify-center text-white font-bold shadow-md"
               style={{ width: `${stage.width}%` }}
             >
               {stage.count}

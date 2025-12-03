@@ -20,7 +20,7 @@ export function SalesPerformanceTable() {
                 <div className="space-y-1">
                   <p className="text-sm">6 / 10</p>
                   <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-violet-500 rounded-full" style={{ width: "60%" }} />
+                    <div className="h-full bg-red-500 rounded-full" style={{ width: "60%" }} />
                   </div>
                 </div>
               </td>
@@ -28,7 +28,7 @@ export function SalesPerformanceTable() {
                 <div className="space-y-1">
                   <p className="text-sm">28jt / 50jt</p>
                   <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: "56%" }} />
+                    <div className="h-full bg-orange-500 rounded-full" style={{ width: "56%" }} />
                   </div>
                 </div>
               </td>
@@ -44,7 +44,7 @@ export function SalesPerformanceTable() {
                 <div className="space-y-1">
                   <p className="text-sm">8 / 10</p>
                   <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-violet-500 rounded-full" style={{ width: "80%" }} />
+                    <div className="h-full bg-red-500 rounded-full" style={{ width: "80%" }} />
                   </div>
                 </div>
               </td>
@@ -52,7 +52,7 @@ export function SalesPerformanceTable() {
                 <div className="space-y-1">
                   <p className="text-sm">42jt / 50jt</p>
                   <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-blue-500 rounded-full" style={{ width: "84%" }} />
+                    <div className="h-full bg-orange-500 rounded-full" style={{ width: "84%" }} />
                   </div>
                 </div>
               </td>

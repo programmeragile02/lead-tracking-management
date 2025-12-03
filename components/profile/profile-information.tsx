@@ -16,8 +16,8 @@ export function ProfileInformation() {
       <div className="space-y-4">
         {fields.map((field) => (
           <div key={field.label} className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-100 to-purple-100 flex items-center justify-center flex-shrink-0">
-              <field.icon className="w-5 h-5 text-purple-600" />
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+              <field.icon className="w-5 h-5 text-red-600" />
             </div>
             <div>
               <p className="text-sm text-gray-600 font-medium mb-1">{field.label}</p>

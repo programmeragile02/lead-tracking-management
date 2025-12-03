@@ -1,42 +1,62 @@
-import type { LucideIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface KPICardProps {
-  title: string
-  icon: LucideIcon
-  target?: number
-  actual?: number
-  count?: number
-  hot?: number
-  warm?: number
-  unit?: string
-  color: "violet" | "blue" | "purple" | "red" | "green"
+  title: string;
+  icon: LucideIcon;
+  target?: number;
+  actual?: number;
+  count?: number;
+  hot?: number;
+  warm?: number;
+  unit?: string;
+  color: "red" | "orange" | "amber" | "coral" | "rose"
 }
 
-export function KPICard({ title, icon: Icon, target, actual, count, hot, warm, unit = "", color }: KPICardProps) {
-  const percentage = target && actual ? Math.round((actual / target) * 100) : 0
+export function KPICard({
+  title,
+  icon: Icon,
+  target,
+  actual,
+  count,
+  hot,
+  warm,
+  unit = "",
+  color,
+}: KPICardProps) {
+  const percentage = target && actual ? Math.round((actual / target) * 100) : 0;
 
   const colorClasses = {
-    violet: "from-violet-500 to-violet-600",
-    blue: "from-blue-500 to-blue-600",
-    purple: "from-purple-500 to-purple-600",
-    red: "from-red-500 to-red-600",
-    green: "from-green-500 to-green-600",
-  }
+    red: "bg-red-500",
+    orange: "bg-orange-500",
+    amber: "bg-amber-500",
+    coral: "bg-red-400",
+    rose: "bg-rose-500",
+  };
 
   const bgColorClasses = {
-    violet: "bg-gradient-to-br from-violet-50 to-purple-50",
-    blue: "bg-gradient-to-br from-blue-50 to-cyan-50",
-    purple: "bg-gradient-to-br from-purple-50 to-pink-50",
-    red: "bg-gradient-to-br from-red-50 to-orange-50",
-    green: "bg-gradient-to-br from-green-50 to-emerald-50",
-  }
+    red: "bg-red-50",
+    orange: "bg-orange-50",
+    amber: "bg-amber-50",
+    coral: "bg-red-50",
+    rose: "bg-rose-50",
+  };
 
   return (
-    <div className={cn("rounded-2xl p-6 shadow-md border-2 border-white", bgColorClasses[color])}>
+    <div
+      className={cn(
+        "rounded-2xl p-6 shadow-md border-2 border-white",
+        bgColorClasses[color]
+      )}
+    >
       <div className="flex items-start justify-between mb-4">
         <h3 className="font-semibold text-sm text-gray-700">{title}</h3>
-        <div className={cn("p-3 rounded-xl bg-gradient-to-br shadow-lg", colorClasses[color])}>
+        <div
+          className={cn(
+            "p-3 rounded-xl shadow-lg",
+            colorClasses[color]
+          )}
+        >
           <Icon className="h-5 w-5 text-white" />
         </div>
       </div>
@@ -65,7 +85,10 @@ export function KPICard({ title, icon: Icon, target, actual, count, hot, warm, u
             </div>
             <div className="h-3 bg-white/60 rounded-full overflow-hidden shadow-inner">
               <div
-                className={cn("h-full bg-gradient-to-r shadow-sm", colorClasses[color])}
+                className={cn(
+                  "h-full shadow-sm",
+                  colorClasses[color]
+                )}
                 style={{ width: `${Math.min(percentage, 100)}%` }}
               />
             </div>
@@ -89,5 +112,5 @@ export function KPICard({ title, icon: Icon, target, actual, count, hot, warm, u
         </div>
       )}
     </div>
-  )
+  );
 }

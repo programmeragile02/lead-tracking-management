@@ -11,10 +11,10 @@ export default function ManagerDashboardPage() {
     <DashboardLayout title="Dashboard Manager" role="manager">
       <div className="space-y-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard title="Total Lead" icon={Users} count={328} color="violet" />
-          <KPICard title="Total Closing" icon={Target} count={87} color="blue" />
-          <KPICard title="Total Pendapatan" icon={DollarSign} count={450} unit="jt" color="purple" />
-          <KPICard title="Tingkat Konversi" icon={TrendingUp} count={26.5} unit="%" color="green" />
+          <KPICard title="Total Lead" icon={Users} count={328} color="red" />
+          <KPICard title="Total Closing" icon={Target} count={87} color="orange" />
+          <KPICard title="Total Pendapatan" icon={DollarSign} count={450} unit="jt" color="amber" />
+          <KPICard title="Tingkat Konversi" icon={TrendingUp} count={26.5} unit="%" color="rose" />
         </div>
 
         <section>

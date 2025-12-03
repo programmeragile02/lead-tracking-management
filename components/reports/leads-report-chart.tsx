@@ -25,7 +25,7 @@ export function LeadsReportChart() {
             padding: "8px 12px",
           }}
         />
-        <Line type="monotone" dataKey="leads" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: "#8b5cf6", r: 5 }} />
+        <Line type="monotone" dataKey="leads" stroke="#ef4444" strokeWidth={3} dot={{ fill: "#ef4444", r: 5 }} />
       </LineChart>
     </ResponsiveContainer>
   )
