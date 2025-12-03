@@ -12,6 +12,8 @@ import {
   BookUser,
   Network,
   BriefcaseBusiness,
+  Footprints,
+  FileChartColumn,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -47,6 +49,8 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/master/jabatan", label: "Master Jabatan", icon: BriefcaseBusiness },
     { href: "/master/pegawai", label: "Master Pegawai", icon: BookUser },
     { href: "/master/products", label: "Master Produk", icon: Package },
+    { href: "/master/tahap", label: "Master Tahap", icon: Footprints },
+    { href: "/master/status", label: "Master Status Lead", icon: FileChartColumn },
     { href: "/organisasi", label: "Struktur Organisasi", icon: Network },
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/reports", label: "Laporan", icon: BarChart3 },

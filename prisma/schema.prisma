@@ -68,3 +68,118 @@ model Product {
 
   @@map("products")
 }
+
+enum LeadFieldType {
+  TEXT          // input text biasa
+  TEXTAREA      // textarea
+  NUMBER        // angka
+  DATE          // tanggal
+  SINGLE_SELECT // dropdown (pilih 1)
+  MULTI_SELECT  // checkbox (pilih banyak)
+}
+
+model LeadStage {
+  id        Int     @id @default(autoincrement())
+  name      String  // contoh: "Baru", "FU 1", "FU 2", "Closing"
+  code      String  @unique // optional: "NEW", "FU1", dst
+  order     Int     @default(0) // buat urutan di UI
+  isActive  Boolean @default(true)
+
+  leads     Lead[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadStatus {
+  id        Int     @id @default(autoincrement())
+  name      String  // contoh: "Cold", "Warm", "Hot"
+  code      String  @unique // "COLD", "WARM", "HOT"
+  order     Int     @default(0)
+  isActive  Boolean @default(true)
+
+  leads     Lead[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Lead {
+  id        Int      @id @default(autoincrement())
+
+  // FIELD PATEN
+  name      String
+  address   String?
+  phone     String?
+  photoUrl  String?
+
+  // harga penawaran / nego / closing
+  priceOffering    Decimal? @db.Decimal(12, 2)
+  priceNegotiation Decimal? @db.Decimal(12, 2)
+  priceClosing     Decimal? @db.Decimal(12, 2)
+
+  // tahap (baru, FU1, FU2, dst)
+  stageId  Int?
+  stage    LeadStage? @relation(fields: [stageId], references: [id])
+
+  // status (cold, warm, hot)
+  statusId Int?
+  status   LeadStatus? @relation(fields: [statusId], references: [id])
+
+  // FIELD DINAMIS
+  customValues LeadCustomFieldValue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadCustomFieldDef {
+  id        Int           @id @default(autoincrement())
+  key       String        @unique // contoh: "source", "interest_level"
+  label     String        // label di form: "Sumber Lead", "Minat Produk"
+  type      LeadFieldType
+
+  placeholder String?     // optional, buat UI
+  helpText    String?     // optional, teks kecil di bawah field
+
+  isRequired Boolean      @default(false)
+  isActive   Boolean      @default(true)
+  sortOrder  Int          @default(0) // urutan di form
+
+  // untuk SINGLE_SELECT / MULTI_SELECT
+  options   LeadCustomFieldOption[]
+
+  // relasi ke value yang diisi per-lead
+  values    LeadCustomFieldValue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LeadCustomFieldOption {
+  id       Int                @id @default(autoincrement())
+  fieldId  Int
+  field    LeadCustomFieldDef @relation(fields: [fieldId], references: [id])
+
+  label    String // contoh: "Instagram", "WhatsApp", "Walk-in"
+  value    String // contoh: "instagram", "whatsapp", "walkin"
+  sortOrder Int   @default(0)
+}
+
+model LeadCustomFieldValue {
+  id      Int                @id @default(autoincrement())
+
+  leadId  Int
+  lead    Lead               @relation(fields: [leadId], references: [id])
+
+  fieldId Int
+  field   LeadCustomFieldDef @relation(fields: [fieldId], references: [id])
+
+  // simpan sebagai string / JSON
+  // TEXT/NUMBER/DATE/SINGLE_SELECT => langsung string
+  // MULTI_SELECT => bisa simpan JSON (["instagram","tiktok"])
+  value   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([leadId, fieldId]) // 1 lead cuma boleh 1 value per field
+}
