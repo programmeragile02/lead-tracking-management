@@ -53,7 +53,17 @@ export function Sidebar({ role }: SidebarProps) {
     },
     { href: "/master/pegawai", label: "Master Pegawai", icon: BookUser },
     { href: "/master/products", label: "Master Produk", icon: Package },
-    { href: "/master/tahap", label: "Master Tahap", icon: Footprints },
+    { href: "/master/tahap", label: "Master Tahapan", icon: Footprints },
+    {
+      href: "/master/lead-sources",
+      label: "Master Sumber Lead",
+      icon: FileChartColumn,
+    },
+    {
+      href: "/master/lead-followup-types",
+      label: "Master Tindak Lanjut",
+      icon: FileChartColumn,
+    },
     {
       href: "/master/status",
       label: "Master Status Lead",

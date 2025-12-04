@@ -47,6 +47,9 @@ model User {
   teamLeader   User?   @relation("TeamLeaderSales", fields: [teamLeaderId], references: [id])
   sales        User[]  @relation("TeamLeaderSales")      // daftar sales yang dibawahi TL ini
 
+  leads       Lead[]   @relation("UserLeads")
+  leadFollowUps LeadFollowUp[]
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -61,6 +64,8 @@ model Product {
   description String?
   photo       String?  // URL gambar produk
   isAvailable Boolean  @default(true)
+
+  leads       Lead[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -80,8 +85,8 @@ enum LeadFieldType {
 
 model LeadStage {
   id        Int     @id @default(autoincrement())
-  name      String  // contoh: "Baru", "FU 1", "FU 2", "Closing"
-  code      String  @unique // optional: "NEW", "FU1", dst
+  name      String  // contoh: "Kontak Awal", "Kunjungan / Zoom"
+  code      String  @unique
   order     Int     @default(0) // buat urutan di UI
   isActive  Boolean @default(true)
 
@@ -105,6 +110,12 @@ model LeadStatus {
 model Lead {
   id        Int      @id @default(autoincrement())
 
+  salesId   Int?
+  sales     User?    @relation("UserLeads", fields: [salesId], references: [id])
+
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
+
   // FIELD PATEN
   name      String
   address   String?
@@ -116,7 +127,7 @@ model Lead {
   priceNegotiation Decimal? @db.Decimal(12, 2)
   priceClosing     Decimal? @db.Decimal(12, 2)
 
-  // tahap (baru, FU1, FU2, dst)
+  // tahap "kontak awal" dst
   stageId  Int?
   stage    LeadStage? @relation(fields: [stageId], references: [id])
 
@@ -124,8 +135,15 @@ model Lead {
   statusId Int?
   status   LeadStatus? @relation(fields: [statusId], references: [id])
 
+  // SUMBER LEAD
+  sourceId Int?
+  source   LeadSource? @relation(fields: [sourceId], references: [id])
+
   // FIELD DINAMIS
   customValues LeadCustomFieldValue[]
+
+  // histori tindak lanjut (audit log)
+  followUps   LeadFollowUp[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -182,4 +200,62 @@ model LeadCustomFieldValue {
   updatedAt DateTime @updatedAt
 
   @@unique([leadId, fieldId]) // 1 lead cuma boleh 1 value per field
+}
+
+model LeadSource {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique // contoh: "IG_ADS", "WHATSAPP"
+  name        String   // contoh: "Instagram Ads", "WhatsApp"
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  leads       Lead[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("lead_sources")
+}
+
+model LeadFollowUpType {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique // contoh: "FU1", "FU2", "KIRIM_PROPOSAL"
+  name        String   // contoh: "Follow Up 1", "Follow Up 2", "Kirim Proposal"
+  description String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  // relasi ke histori tindak lanjut
+  followUps   LeadFollowUp[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@map("lead_followup_types")
+}
+
+model LeadFollowUp {
+  id          Int               @id @default(autoincrement())
+
+  leadId      Int
+  lead        Lead              @relation(fields: [leadId], references: [id])
+
+  // siapa yang melakukan follow up (biasanya SALES)
+  salesId     Int?
+  sales       User?             @relation(fields: [salesId], references: [id])
+
+  typeId      Int?
+  type        LeadFollowUpType? @relation(fields: [typeId], references: [id])
+
+  note        String?           // catatan follow up
+  doneAt      DateTime          @default(now())
+  nextActionAt DateTime?        // jadwal follow up berikutnya (optional)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("lead_followups")
 }

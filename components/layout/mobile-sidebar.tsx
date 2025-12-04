@@ -67,6 +67,16 @@ export function MobileSidebar({
       label: "Master Status Lead",
       icon: FileChartColumn,
     },
+    {
+      href: "/master/lead-sources",
+      label: "Master Sumber Lead",
+      icon: FileChartColumn,
+    },
+    {
+      href: "/master/lead-followup-types",
+      label: "Master Tindak Lanjut",
+      icon: FileChartColumn,
+    },
     { href: "/organisasi", label: "Struktur Organisasi", icon: Network },
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/reports", label: "Laporan", icon: BarChart3 },
