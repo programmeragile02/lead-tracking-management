@@ -71,6 +71,11 @@ export function MobileSidebar({
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/reports", label: "Laporan", icon: BarChart3 },
     { href: "/settings/fields", label: "Pengaturan", icon: Settings },
+    {
+      href: "/settings/lead-fields",
+      label: "Konfigurasi Data Lead",
+      icon: Settings,
+    },
     { href: "/profile", label: "Profil", icon: User },
   ];
 

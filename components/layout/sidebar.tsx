@@ -46,15 +46,28 @@ export function Sidebar({ role }: SidebarProps) {
 
   const managerNav = [
     { href: "/dashboard/manager", label: "Dashboard", icon: Home },
-    { href: "/master/jabatan", label: "Master Jabatan", icon: BriefcaseBusiness },
+    {
+      href: "/master/jabatan",
+      label: "Master Jabatan",
+      icon: BriefcaseBusiness,
+    },
     { href: "/master/pegawai", label: "Master Pegawai", icon: BookUser },
     { href: "/master/products", label: "Master Produk", icon: Package },
     { href: "/master/tahap", label: "Master Tahap", icon: Footprints },
-    { href: "/master/status", label: "Master Status Lead", icon: FileChartColumn },
+    {
+      href: "/master/status",
+      label: "Master Status Lead",
+      icon: FileChartColumn,
+    },
     { href: "/organisasi", label: "Struktur Organisasi", icon: Network },
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/reports", label: "Laporan", icon: BarChart3 },
     { href: "/settings/fields", label: "Pengaturan", icon: Settings },
+    {
+      href: "/settings/lead-fields",
+      label: "Konfigurasi Data Lead",
+      icon: Settings,
+    },
     { href: "/profile", label: "Profil", icon: User },
   ];
 
