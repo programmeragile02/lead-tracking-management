@@ -259,3 +259,19 @@ model LeadFollowUp {
 
   @@map("lead_followups")
 }
+
+model LeadTargetSetting {
+  id        Int      @id @default(1)
+
+  // Target global yang berlaku untuk semua sales
+  // - leadTargetPerDay: target jumlah lead baru per hari
+  // - closingTargetAmount: target nominal closing per bulan
+  leadTargetPerDay    Int     @default(0)
+  closingTargetAmount Decimal @db.Decimal(14, 2) @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("lead_target_settings")
+}
+

@@ -1,3 +1,6 @@
+"use client";
+
+import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { FollowUpCard } from "@/components/dashboard/follow-up-card";
@@ -5,48 +8,145 @@ import { LeadCard } from "@/components/dashboard/lead-card";
 import { ActivityItem } from "@/components/dashboard/activity-item";
 import { Target, DollarSign, Flame, AlertCircle } from "lucide-react";
 
+type SalesDashboardApi = {
+  ok: boolean;
+  data: {
+    user: {
+      id: number;
+      name: string;
+    };
+    kpi: {
+      targetLeadPerDay: number;
+      todayLeadCount: number;
+      closingTargetAmount: string;
+      closingActualAmount: string;
+      hotLeadCount: number;
+      warmLeadCount: number;
+      lateFollowUpCount: number;
+    };
+    followUpsToday: {
+      id: number;
+      leadName: string;
+      productName: string;
+      followUpType: string;
+      time: string; // ISO
+      status: "pending" | "overdue";
+    }[];
+    newLeadsToday: {
+      id: number;
+      leadName: string;
+      channel: string;
+      createdAt: string; // ISO
+    }[];
+    recentActivities: {
+      id: number;
+      time: string; // ISO
+      type: string;
+      leadName: string;
+      status: string; // "HOT" | "WARM" | "COLD" | ...
+      note: string;
+    }[];
+  };
+};
+
+const fetcher = (url: string) =>
+  fetch(url).then((res) => res.json() as Promise<SalesDashboardApi>);
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour >= 4 && hour < 11) return "Selamat pagi";
+  if (hour >= 11 && hour < 15) return "Selamat siang";
+  if (hour >= 15 && hour < 18) return "Selamat sore";
+  return "Selamat malam";
+}
+
+function formatTimeHHMM(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export default function SalesDashboardPage() {
+  const { data, error } = useSWR<SalesDashboardApi>(
+    "/api/dashboard/sales",
+    fetcher
+  );
+
+  const loading = !data && !error;
+  const userName = data?.data.user.name ?? "Sales";
+
+  const greeting = getGreeting();
+
+  // default KPI = 0 kalau belum ada data
+  const targetLead = data?.data.kpi.targetLeadPerDay ?? 0;
+  const actualLeadToday = data?.data.kpi.todayLeadCount ?? 0;
+
+  const closingTarget = Number(data?.data.kpi.closingTargetAmount ?? "0");
+  const closingActual = Number(data?.data.kpi.closingActualAmount ?? "0");
+
+  // tampilkan dalam jutaan
+  const closingTargetJt = closingTarget / 1_000_000;
+  const closingActualJt = closingActual / 1_000_000;
+
+  const hotLead = data?.data.kpi.hotLeadCount ?? 0;
+  const warmLead = data?.data.kpi.warmLeadCount ?? 0;
+
+  const lateFollowUpCount = data?.data.kpi.lateFollowUpCount ?? 0;
+
+  const followUpsToday = data?.data.followUpsToday ?? [];
+  const newLeadsToday = data?.data.newLeadsToday ?? [];
+  const recentActivities = data?.data.recentActivities ?? [];
+
   return (
     <DashboardLayout title="Dashboard Sales" role="sales">
       <div className="space-y-6">
         <div>
-          <h2 className="text-2xl font-bold">Selamat pagi, Andi</h2>
-          <p className="text-muted-foreground">
-            Fokus: tindak lanjut lead Hot & yang terlambat
-          </p>
+          <h2 className="text-2xl font-bold">
+            {greeting}, {userName}
+          </h2>
+          {error && (
+            <p className="text-sm text-red-500 mt-1">
+              Gagal memuat data dashboard, coba refresh halaman.
+            </p>
+          )}
         </div>
 
+        {/* KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <KPICard
             title="Target Lead Hari Ini"
             icon={Target}
-            target={10}
-            actual={6}
+            target={targetLead}
+            actual={actualLeadToday}
             color="red"
           />
           <KPICard
             title="Target Pendapatan Bulanan"
             icon={DollarSign}
-            target={50}
-            actual={28}
+            target={closingTargetJt}
+            actual={closingActualJt}
             unit="jt"
             color="orange"
           />
           <KPICard
             title="Lead Aktif (Hot/Warm)"
             icon={Flame}
-            hot={8}
-            warm={15}
+            hot={hotLead}
+            warm={warmLead}
             color="amber"
           />
           <KPICard
             title="Tindak Lanjut Terlambat"
             icon={AlertCircle}
-            count={5}
+            count={lateFollowUpCount}
             color="rose"
           />
         </div>
 
+        {/* Tindak Lanjut Hari Ini */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Tindak Lanjut Hari Ini</h3>
@@ -57,27 +157,34 @@ export default function SalesDashboardPage() {
               Lihat semua
             </a>
           </div>
-          <div className="space-y-3">
-            <FollowUpCard
-              leadName="Budi Permana"
-              product="Produk A"
-              followUpType="FU1"
-              time="09:30"
-              status="pending"
-            />
-            <FollowUpCard
-              leadName="Toko Sejahtera"
-              product="Produk B"
-              followUpType="FU2"
-              time="14:00"
-              status="pending"
-            />
-          </div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">
+              Memuat tindak lanjut hari ini...
+            </p>
+          ) : followUpsToday.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Belum ada jadwal tindak lanjut untuk hari ini.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {followUpsToday.map((fu) => (
+                <FollowUpCard
+                  key={fu.id}
+                  leadName={fu.leadName}
+                  product={fu.productName}
+                  followUpType={fu.followUpType}
+                  time={formatTimeHHMM(fu.time)}
+                  status={fu.status}
+                />
+              ))}
+            </div>
+          )}
         </section>
 
+        {/* Lead Baru */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Lead Baru</h3>
+            <h3 className="text-lg font-semibold">Lead Baru Hari Ini</h3>
             <a
               href="/leads"
               className="text-sm text-primary hover:text-primary-hover"
@@ -85,40 +192,62 @@ export default function SalesDashboardPage() {
               Lihat semua
             </a>
           </div>
-          <div className="space-y-3">
-            <LeadCard
-              leadName="PT Sentosa"
-              channel="IG Ads"
-              time="08:15"
-              status="new"
-            />
-            <LeadCard
-              leadName="Adi Saputra"
-              channel="Website"
-              time="07:50"
-              status="new"
-            />
-          </div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">
+              Memuat lead baru hari ini...
+            </p>
+          ) : newLeadsToday.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Belum ada lead baru hari ini.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {newLeadsToday.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  leadName={lead.leadName}
+                  channel={lead.channel}
+                  time={formatTimeHHMM(lead.createdAt)}
+                  status="new"
+                />
+              ))}
+            </div>
+          )}
         </section>
 
+        {/* Aktivitas Terbaru */}
         <section>
           <h3 className="text-lg font-semibold mb-4">Aktivitas Terbaru</h3>
-          <div className="space-y-0">
-            <ActivityItem
-              time="08:30"
-              type="Tindak Lanjut FU2"
-              leadName="Budi"
-              status="Warm"
-              note="Menanyakan harga"
-            />
-            <ActivityItem
-              time="07:15"
-              type="Perubahan Status"
-              leadName="Sari Dewi"
-              status="Hot"
-              note="Siap closing"
-            />
-          </div>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">
+              Memuat aktivitas terbaru...
+            </p>
+          ) : recentActivities.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Belum ada aktivitas terbaru.
+            </p>
+          ) : (
+            <div className="space-y-0">
+              {recentActivities.map((act) => (
+                <ActivityItem
+                  key={act.id}
+                  time={formatTimeHHMM(act.time)}
+                  type={act.type}
+                  leadName={act.leadName}
+                  status={
+                    act.status === "HOT"
+                      ? "Hot"
+                      : act.status === "WARM"
+                      ? "Warm"
+                      : act.status === "COLD"
+                      ? "Cold"
+                      : act.status
+                  }
+                  note={act.note || "-"}
+                />
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </DashboardLayout>

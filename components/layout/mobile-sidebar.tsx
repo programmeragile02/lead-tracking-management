@@ -13,6 +13,7 @@ import {
   BriefcaseBusiness,
   Footprints,
   FileChartColumn,
+  Target,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -81,6 +82,12 @@ export function MobileSidebar({
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/reports", label: "Laporan", icon: BarChart3 },
     { href: "/settings/fields", label: "Pengaturan", icon: Settings },
+    {
+      href: "/settings/target-lead",
+      label: "Pengaturan Target Lead",
+      icon: Target,
+    },
+
     {
       href: "/settings/lead-fields",
       label: "Konfigurasi Data Lead",
