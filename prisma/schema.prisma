@@ -49,6 +49,8 @@ model User {
 
   leads       Lead[]   @relation("UserLeads")
   leadFollowUps LeadFollowUp[]
+  whatsappSession WhatsAppSession?
+  leadMessages    LeadMessage[] @relation("UserLeadMessages")
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -144,6 +146,9 @@ model Lead {
 
   // histori tindak lanjut (audit log)
   followUps   LeadFollowUp[]
+
+  // relasi ke log chat wa
+  messages    LeadMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -275,3 +280,75 @@ model LeadTargetSetting {
   @@map("lead_target_settings")
 }
 
+// Channel pesan (WA, catatan manual, dll)
+enum LeadMessageChannel {
+  WHATSAPP
+  NOTE
+}
+
+// Arah pesan (masuk/keluar)
+enum MessageDirection {
+  INBOUND   // dari lead ke sales
+  OUTBOUND  // dari sales ke lead
+}
+
+// Status koneksi WhatsApp per user
+enum WhatsappStatus {
+  PENDING_QR    // client sudah dibuat, menunggu scan QR
+  CONNECTED     // sudah terhubung
+  DISCONNECTED  // pernah terhubung, sekarang putus
+  ERROR         // error client
+}
+
+model WhatsAppSession {
+  id            Int             @id @default(autoincrement())
+  userId        Int             @unique
+  user          User            @relation(fields: [userId], references: [id])
+
+  // nomor WA yang dipakai client ini, contoh "628123456789"
+  phoneNumber   String?
+
+  // id chat WA utama (opsional, bisa diisi saat ready)
+  waUserJid     String?         // contoh: "628123456789@c.us"
+
+  status        WhatsappStatus  @default(PENDING_QR)
+
+  lastConnectedAt DateTime?
+  lastSeenAt      DateTime?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@map("whatsapp_sessions")
+}
+
+model LeadMessage {
+  id          Int                @id @default(autoincrement())
+
+  leadId      Int
+  lead        Lead               @relation(fields: [leadId], references: [id])
+
+  // siapa sales yang terkait (biasanya owner lead / pemilik WA client)
+  salesId     Int?
+  sales       User?              @relation("UserLeadMessages", fields: [salesId], references: [id])
+
+  channel     LeadMessageChannel
+  direction   MessageDirection
+
+  // meta khusus WhatsApp
+  waMessageId String?            @unique
+  waChatId    String?            // contoh "628123456789@c.us"
+  fromNumber  String?            // "628123456789"
+  toNumber    String?            // "628987654321"
+
+  content     String             // isi pesan
+  sentAt      DateTime           @default(now())
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([leadId])
+  @@index([salesId])
+  @@index([channel, direction])
+  @@map("lead_messages")
+}

@@ -15,6 +15,7 @@ import {
   Footprints,
   FileChartColumn,
   Target,
+  Phone,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -35,6 +36,7 @@ export function Sidebar({ role }: SidebarProps) {
     { href: "/leads", label: "Lead", icon: Users },
     { href: "/tasks", label: "Tugas", icon: CheckSquare },
     { href: "/profile", label: "Profil", icon: User },
+    { href: "/whatsapp/me", label: "Koneksi Whatsapp", icon: Phone },
   ];
 
   const teamLeaderNav = [

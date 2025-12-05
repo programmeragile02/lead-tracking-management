@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 
 interface LeadListCardProps {
+  leadId: number | string;
   leadName: string;
   status: "hot" | "warm" | "cold" | "new" | "close_won" | "close_lost";
   product: string;
@@ -16,6 +17,7 @@ interface LeadListCardProps {
 }
 
 export function LeadListCard({
+  leadId,
   leadName,
   status,
   product,
@@ -97,14 +99,7 @@ export function LeadListCard({
             </div>
 
             <div className="flex gap-2">
-              {/* <Button
-                size="sm"
-                variant="ghost"
-                className="h-9 w-9 p-0 hover:bg-green-100 text-green-600"
-              >
-                <MessageCircle className="h-4 w-4" />
-              </Button> */}
-              <Link href="/leads/1">
+              <Link href={`/leads/${leadId}`}>
                 <Button
                   size="sm"
                   variant="ghost"

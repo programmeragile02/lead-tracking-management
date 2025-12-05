@@ -229,6 +229,7 @@ export default function LeadsPage() {
               return (
                 <LeadListCard
                   key={lead.id}
+                  leadId={lead.id}
                   leadName={lead.name}
                   status={uiStatus}
                   product={lead.productName || "Tanpa produk"}

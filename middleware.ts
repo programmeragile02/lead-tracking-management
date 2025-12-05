@@ -61,6 +61,10 @@ function isAllowed(pathname: string, role: RoleSlug): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  if (pathname.startsWith("/api/whatsapp")) {
+    return NextResponse.next();
+  }
+
   // skip static & asset
   if (
     pathname.startsWith("/_next") ||
