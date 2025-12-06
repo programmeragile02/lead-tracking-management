@@ -160,7 +160,7 @@ export function TaskCard({
           </div>
         </div>
 
-        <div className="flex items-center justify-between pt-3 border-t gap-2">
+        <div className="flex flex-col items-between justify-between pt-3 border-t gap-2">
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +170,7 @@ export function TaskCard({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-end justify-end gap-2">
             <Button
               variant="outline"
               size="sm"
