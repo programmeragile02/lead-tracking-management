@@ -117,7 +117,7 @@ export function Sidebar({ role }: SidebarProps) {
     <aside className="hidden lg:flex lg:flex-col lg:w-64 border-r bg-white shadow-sm h-screen sticky top-0">
       <div className="p-5 border-b gradient-primary">
         <div className="flex items-center justify-center">
-          <h2 className="text-xl font-bold text-white">Tracking Lead</h2>
+          <h2 className="text-xl font-bold text-white">Lead Track</h2>
         </div>
       </div>
 

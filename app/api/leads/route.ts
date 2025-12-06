@@ -42,12 +42,13 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get("q")?.trim() || "";
     const statusCodeParam = searchParams.get("status")?.trim().toUpperCase(); // contoh: HOT, WARM, COLD
 
-    const where: any = {
+    // ---- baseWhere: filter sales + keyword (tanpa status) ----
+    const baseWhere: any = {
       salesId: currentUser.id,
     };
 
     if (q) {
-      where.AND = [
+      baseWhere.AND = [
         {
           OR: [
             { name: { contains: q } },
@@ -58,16 +59,20 @@ export async function GET(req: NextRequest) {
       ];
     }
 
+    // ---- where untuk list lead utama (ikut status pill) ----
+    const leadsWhere: any = { ...baseWhere };
+
     if (statusCodeParam && statusCodeParam !== "ALL") {
-      where.AND = (where.AND || []).concat({
+      leadsWhere.AND = (leadsWhere.AND || []).concat({
         status: {
           code: statusCodeParam,
         },
       });
     }
 
+    // ---- query utama: list lead sesuai status pill ----
     const leads = await prisma.lead.findMany({
-      where,
+      where: leadsWhere,
       include: {
         product: true,
         source: true,
@@ -86,6 +91,55 @@ export async function GET(req: NextRequest) {
         createdAt: "desc",
       },
     });
+
+    // ---- query tambahan: hitung jumlah per status (untuk badge) ----
+    // pakai baseWhere supaya:
+    // - tetap milik sales yg sama
+    // - tetap terfilter keyword (q)
+    // - TIDAK dikunci ke status tertentu (ALL)
+    const grouped = await prisma.lead.groupBy({
+      where: baseWhere,
+      by: ["statusId"],
+      _count: { _all: true },
+    });
+
+    // ambil statusId yang terpakai
+    const statusIds = grouped
+      .map((g) => g.statusId)
+      .filter((id): id is number => id !== null);
+
+    const statusList = statusIds.length
+      ? await prisma.leadStatus.findMany({
+          where: { id: { in: statusIds } },
+        })
+      : [];
+
+    const statusMapById = new Map<number, string>(); // id → code
+    for (const st of statusList) {
+      statusMapById.set(st.id, st.code.toUpperCase());
+    }
+
+    const countsByStatusCode: Record<string, number> = {};
+    let totalAll = 0;
+
+    for (const g of grouped) {
+      const count = g._count._all;
+      totalAll += count;
+
+      if (g.statusId) {
+        const code = statusMapById.get(g.statusId);
+        if (code) {
+          const key = code.toUpperCase();
+          countsByStatusCode[key] = (countsByStatusCode[key] || 0) + count;
+        }
+      } else {
+        // kalau ada lead tanpa statusId, bisa dimasukkan ke "UNASSIGNED" kalau mau
+        countsByStatusCode["UNASSIGNED"] =
+          (countsByStatusCode["UNASSIGNED"] || 0) + count;
+      }
+    }
+
+    countsByStatusCode["ALL"] = totalAll;
 
     const data = leads.map((lead) => {
       const latestFU = lead.followUps[0];
@@ -106,7 +160,11 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ ok: true, data });
+    return NextResponse.json({
+      ok: true,
+      data,
+      countsByStatusCode, // ← tambahan untuk badge
+    });
   } catch (err: any) {
     console.error("GET /api/leads error", err);
     return NextResponse.json(
@@ -189,10 +247,7 @@ export async function POST(req: NextRequest) {
     const defaultStage = await prisma.leadStage.findFirst({
       where: {
         isActive: true,
-        OR: [
-          { code: "KONTAK_AWAL" },
-          { name: { equals: "Kontak Awal" } },
-        ],
+        OR: [{ code: "KONTAK_AWAL" }, { name: { equals: "Kontak Awal" } }],
       },
       orderBy: { order: "asc" },
     });
@@ -201,10 +256,7 @@ export async function POST(req: NextRequest) {
     const defaultStatus = await prisma.leadStatus.findFirst({
       where: {
         isActive: true,
-        OR: [
-          { code: "NEW" },
-          { name: { equals: "Baru" } },
-        ],
+        OR: [{ code: "NEW" }, { name: { equals: "Baru" } }],
       },
       orderBy: { order: "asc" },
     });

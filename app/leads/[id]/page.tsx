@@ -39,6 +39,8 @@ import {
   ChevronUp,
   Loader2,
   FileText,
+  Pencil,
+  X,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useToast } from "@/hooks/use-toast";
@@ -157,6 +159,24 @@ interface ActivityItem {
   photoUrl?: string | null;
   createdByName?: string | null;
 }
+
+type LeadFieldTypeUi =
+  | "TEXT"
+  | "TEXTAREA"
+  | "NUMBER"
+  | "DATE"
+  | "SINGLE_SELECT"
+  | "MULTI_SELECT";
+
+type DynamicField = {
+  id: number;
+  key: string;
+  label: string;
+  type: LeadFieldTypeUi;
+  isRequired: boolean;
+  options?: { value: string; label: string }[];
+  value?: string | null; // string / JSON (multi select)
+};
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -967,6 +987,124 @@ export default function LeadDetailPage() {
     setActivityPreviewOpen(true);
   }
 
+  // form
+  const dynamicFields = (detailRes?.data?.dynamicFields ??
+    []) as DynamicField[];
+
+  // ==== OVERVIEW EDITABLE ====
+  const [overviewEditing, setOverviewEditing] = useState(false);
+  const [savingOverview, setSavingOverview] = useState(false);
+
+  // field paten
+  const [overviewName, setOverviewName] = useState("");
+  const [overviewPhone, setOverviewPhone] = useState("");
+  const [overviewAddress, setOverviewAddress] = useState("");
+  const [overviewProductId, setOverviewProductId] = useState<string>("");
+  const [overviewStatusCode, setOverviewStatusCode] = useState<string>("");
+  const [overviewPriceOffering, setOverviewPriceOffering] =
+    useState<string>("");
+  const [overviewPriceNegotiation, setOverviewPriceNegotiation] =
+    useState<string>("");
+  const [overviewPriceClosing, setOverviewPriceClosing] = useState<string>("");
+
+  // field dinamis, disimpan per fieldId
+  const [overviewCustomValues, setOverviewCustomValues] = useState<
+    Record<number, string>
+  >({});
+
+  useEffect(() => {
+    if (!lead) return;
+
+    // field paten
+    setOverviewName(lead.name || "");
+    setOverviewPhone(lead.phone || "");
+    setOverviewAddress(lead.address || "");
+    setOverviewProductId(lead.productId ? String(lead.productId) : "");
+    setOverviewStatusCode(lead.status?.code || "");
+    setOverviewPriceOffering(
+      lead.priceOffering ?? "" ? String(lead.priceOffering) : ""
+    );
+    setOverviewPriceNegotiation(
+      lead.priceNegotiation ?? "" ? String(lead.priceNegotiation) : ""
+    );
+    setOverviewPriceClosing(
+      lead.priceClosing ?? "" ? String(lead.priceClosing) : ""
+    );
+
+    // field dinamis
+    const map: Record<number, string> = {};
+    for (const f of dynamicFields) {
+      map[f.id] = f.value ?? "";
+    }
+    setOverviewCustomValues(map);
+  }, [lead, dynamicFields]);
+
+  function setCustomValue(fieldId: number, value: string) {
+    setOverviewCustomValues((prev) => ({ ...prev, [fieldId]: value }));
+  }
+
+  async function handleSaveOverview() {
+    if (!leadId) return;
+
+    try {
+      setSavingOverview(true);
+
+      const customValuesPayload = dynamicFields.map((f) => ({
+        fieldId: f.id,
+        value: overviewCustomValues[f.id] ?? "",
+      }));
+
+      const res = await fetch(`/api/leads/${leadId}/overview`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: overviewName,
+          phone: overviewPhone,
+          address: overviewAddress,
+          productId: overviewProductId ? Number(overviewProductId) : null,
+          statusCode: overviewStatusCode || null,
+          priceOffering: overviewPriceOffering || null,
+          priceNegotiation: overviewPriceNegotiation || null,
+          priceClosing: overviewPriceClosing || null,
+          customValues: customValuesPayload,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Gagal menyimpan overview");
+      }
+
+      toast({
+        title: "Data lead diperbarui",
+        description: "Perubahan di overview berhasil disimpan.",
+      });
+
+      setOverviewEditing(false);
+      await mutateDetail();
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan",
+        description: err?.message || "Terjadi kesalahan.",
+      });
+    } finally {
+      setSavingOverview(false);
+    }
+  }
+
+  function handleCancelOverview() {
+    // reset ke data dari server (useEffect akan isi lagi)
+    if (lead) {
+      setOverviewEditing(false);
+      // trigger ulang efek dengan cara sederhana
+      // (kalau mau aman, bisa panggil mutateDetail(), tapi biasanya tidak perlu)
+    } else {
+      setOverviewEditing(false);
+    }
+  }
+
   return (
     <DashboardLayout title="Detail Leads" role="sales">
       <div className="flex min-h-screen flex-col bg-background">
@@ -1193,30 +1331,430 @@ export default function LeadDetailPage() {
 
                   {/* OVERVIEW */}
                   <TabsContent value="overview" className="space-y-4 text-sm">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Ringkasan data lead
+                      </p>
+                      {!overviewEditing ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2 text-xs"
+                          onClick={() => setOverviewEditing(true)}
+                          disabled={detailLoading}
+                        >
+                          <Pencil className="mr-1 h-3 w-3" />
+                          Edit
+                        </Button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
+                            onClick={handleCancelOverview}
+                            disabled={savingOverview}
+                          >
+                            <X className="mr-1 h-3 w-3" />
+                            Batal
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="h-8 px-3 text-xs"
+                            onClick={handleSaveOverview}
+                            disabled={savingOverview}
+                          >
+                            {savingOverview ? (
+                              <>
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Menyimpan...
+                              </>
+                            ) : (
+                              "Simpan perubahan"
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* INFORMASI KONTAK */}
                     <div>
                       <p className="mb-1 text-xs font-medium text-muted-foreground">
                         Informasi Kontak
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <InfoRow label="Nama PIC" value={displayName} />
-                        <InfoRow label="WhatsApp" value={displayPhone} />
-                        <InfoRow label="Sumber Lead" value={displaySource} />
-                        <InfoRow label="Alamat" value={displayCity} />
+                        {/* Nama PIC */}
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Nama
+                          </p>
+                          {overviewEditing ? (
+                            <Input
+                              className="mt-1 h-9 text-xs sm:text-sm"
+                              value={overviewName}
+                              onChange={(e) => setOverviewName(e.target.value)}
+                            />
+                          ) : (
+                            <p className="text-xs sm:text-sm">{displayName}</p>
+                          )}
+                        </div>
+
+                        {/* WhatsApp */}
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            WhatsApp
+                          </p>
+                          {overviewEditing ? (
+                            <Input
+                              className="mt-1 h-9 text-xs sm:text-sm"
+                              value={overviewPhone}
+                              onChange={(e) => setOverviewPhone(e.target.value)}
+                              placeholder="62xxxxxxxxxxx"
+                            />
+                          ) : (
+                            <p className="text-xs sm:text-sm">{displayPhone}</p>
+                          )}
+                        </div>
+
+                        {/* Sumber Lead (hanya view, karena master-nya sendiri) */}
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Sumber Lead
+                          </p>
+                          <p className="text-xs sm:text-sm">{displaySource}</p>
+                        </div>
+
+                        {/* Alamat */}
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Alamat
+                          </p>
+                          {overviewEditing ? (
+                            <Textarea
+                              rows={2}
+                              className="mt-1 text-xs sm:text-sm"
+                              value={overviewAddress}
+                              onChange={(e) =>
+                                setOverviewAddress(e.target.value)
+                              }
+                            />
+                          ) : (
+                            <p className="text-xs sm:text-sm">{displayCity}</p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
+                    {/* INFORMASI PRODUK & STATUS */}
                     <div>
                       <p className="mb-1 text-xs font-medium text-muted-foreground">
                         Informasi Produk
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <InfoRow label="Produk" value={displayProductName} />
-                        <InfoRow
-                          label="Status"
-                          value={lead?.status?.name || "-"}
-                        />
+                        {/* Produk */}
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Produk
+                          </p>
+                          {overviewEditing ? (
+                            <Select
+                              value={overviewProductId}
+                              onValueChange={(v) => setOverviewProductId(v)}
+                              disabled={updatingProduct || detailLoading}
+                            >
+                              <SelectTrigger className="mt-1 h-9 text-xs sm:text-sm">
+                                <SelectValue placeholder="Pilih produk" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {products.map((p) => (
+                                  <SelectItem key={p.id} value={String(p.id)}>
+                                    {p.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="text-xs sm:text-sm">
+                              {displayProductName}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Status */}
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Status
+                          </p>
+                          {overviewEditing ? (
+                            <Select
+                              value={overviewStatusCode || ""}
+                              onValueChange={(v) => setOverviewStatusCode(v)}
+                            >
+                              <SelectTrigger className="mt-1 h-9 text-xs sm:text-sm">
+                                <SelectValue placeholder="Pilih status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {/* pakai master status dari detailRes */}
+                                {detailRes?.data?.statuses?.map((s) => (
+                                  <SelectItem key={s.id} value={s.code}>
+                                    {s.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="text-xs sm:text-sm">
+                              {lead?.status?.name || "-"}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
+
+                    {/* INFORMASI HARGA */}
+                    <div>
+                      <p className="mb-1 text-xs font-medium text-muted-foreground">
+                        Informasi Harga
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Harga Penawaran
+                          </p>
+                          {overviewEditing ? (
+                            <Input
+                              className="mt-1 h-9 text-xs sm:text-sm"
+                              value={overviewPriceOffering}
+                              onChange={(e) =>
+                                setOverviewPriceOffering(e.target.value)
+                              }
+                              placeholder="cth: 1500000"
+                            />
+                          ) : (
+                            <p className="text-xs sm:text-sm">
+                              {lead?.priceOffering ?? "-"}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Harga Nego
+                          </p>
+                          {overviewEditing ? (
+                            <Input
+                              className="mt-1 h-9 text-xs sm:text-sm"
+                              value={overviewPriceNegotiation}
+                              onChange={(e) =>
+                                setOverviewPriceNegotiation(e.target.value)
+                              }
+                            />
+                          ) : (
+                            <p className="text-xs sm:text-sm">
+                              {lead?.priceNegotiation ?? "-"}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Harga Closing
+                          </p>
+                          {overviewEditing ? (
+                            <Input
+                              className="mt-1 h-9 text-xs sm:text-sm"
+                              value={overviewPriceClosing}
+                              onChange={(e) =>
+                                setOverviewPriceClosing(e.target.value)
+                              }
+                            />
+                          ) : (
+                            <p className="text-xs sm:text-sm">
+                              {lead?.priceClosing ?? "-"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* FIELD DINAMIS */}
+                    {dynamicFields.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-medium text-muted-foreground">
+                          Informasi Tambahan
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {dynamicFields.map((f) => {
+                            const value = overviewCustomValues[f.id] ?? "";
+                            const requiredMark = f.isRequired ? " *" : "";
+
+                            if (!overviewEditing) {
+                              return (
+                                <div key={f.id}>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    {f.label}
+                                  </p>
+                                  <p className="text-xs sm:text-sm">
+                                    {value || "-"}
+                                  </p>
+                                </div>
+                              );
+                            }
+
+                            // mode edit
+                            switch (f.type) {
+                              case "TEXTAREA":
+                                return (
+                                  <div key={f.id}>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {f.label}
+                                      {requiredMark}
+                                    </p>
+                                    <Textarea
+                                      rows={3}
+                                      className="mt-1 text-xs sm:text-sm"
+                                      value={value}
+                                      onChange={(e) =>
+                                        setCustomValue(f.id, e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                );
+                              case "NUMBER":
+                                return (
+                                  <div key={f.id}>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {f.label}
+                                      {requiredMark}
+                                    </p>
+                                    <Input
+                                      type="number"
+                                      className="mt-1 h-9 text-xs sm:text-sm"
+                                      value={value}
+                                      onChange={(e) =>
+                                        setCustomValue(f.id, e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                );
+                              case "DATE":
+                                return (
+                                  <div key={f.id}>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {f.label}
+                                      {requiredMark}
+                                    </p>
+                                    <Input
+                                      type="date"
+                                      className="mt-1 h-9 text-xs sm:text-sm"
+                                      value={value}
+                                      onChange={(e) =>
+                                        setCustomValue(f.id, e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                );
+                              case "SINGLE_SELECT":
+                                return (
+                                  <div key={f.id}>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {f.label}
+                                      {requiredMark}
+                                    </p>
+                                    <Select
+                                      value={value}
+                                      onValueChange={(v) =>
+                                        setCustomValue(f.id, v)
+                                      }
+                                    >
+                                      <SelectTrigger className="mt-1 h-9 text-xs sm:text-sm">
+                                        <SelectValue placeholder="Pilih" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {f.options?.map((opt) => (
+                                          <SelectItem
+                                            key={opt.value}
+                                            value={opt.value}
+                                          >
+                                            {opt.label}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                );
+                              case "MULTI_SELECT": {
+                                let selected: string[] = [];
+                                try {
+                                  selected = value ? JSON.parse(value) : [];
+                                } catch {
+                                  selected = [];
+                                }
+                                return (
+                                  <div key={f.id} className="space-y-1">
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {f.label}
+                                      {requiredMark}
+                                    </p>
+                                    <div className="flex flex-wrap gap-2 rounded-md border bg-background/60 p-2">
+                                      {f.options?.map((opt) => {
+                                        const active = selected.includes(
+                                          opt.value
+                                        );
+                                        return (
+                                          <Button
+                                            key={opt.value}
+                                            type="button"
+                                            size="sm"
+                                            variant={
+                                              active ? "default" : "outline"
+                                            }
+                                            className="h-7 px-2 text-[11px]"
+                                            onClick={() => {
+                                              const next = active
+                                                ? selected.filter(
+                                                    (s) => s !== opt.value
+                                                  )
+                                                : [...selected, opt.value];
+                                              setCustomValue(
+                                                f.id,
+                                                JSON.stringify(next)
+                                              );
+                                            }}
+                                          >
+                                            {opt.label}
+                                          </Button>
+                                        );
+                                      })}
+                                      {!f.options?.length && (
+                                        <p className="text-[11px] text-muted-foreground">
+                                          Belum ada pilihan.
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              case "TEXT":
+                              default:
+                                return (
+                                  <div key={f.id}>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      {f.label}
+                                      {requiredMark}
+                                    </p>
+                                    <Input
+                                      className="mt-1 h-9 text-xs sm:text-sm"
+                                      value={value}
+                                      onChange={(e) =>
+                                        setCustomValue(f.id, e.target.value)
+                                      }
+                                    />
+                                  </div>
+                                );
+                            }
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </TabsContent>
 
                   {/* AKTIVITAS */}

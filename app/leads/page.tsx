@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const LEADS_API = "/api/leads";
-const LEAD_STATUS_API = "/api/lead-statuses"; 
+const LEAD_STATUS_API = "/api/lead-statuses";
 
 // ---- Types dari API ----
 type LeadStatusMaster = {
@@ -41,6 +41,7 @@ type LeadListItem = {
 type LeadListApiResponse = {
   ok: boolean;
   data: LeadListItem[];
+  countsByStatusCode?: Record<string, number>;
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -159,6 +160,8 @@ export default function LeadsPage() {
   );
 
   const leads = leadsResp?.data ?? [];
+  const counts = leadsResp?.countsByStatusCode ?? {};
+  const allCount = counts["ALL"] ?? 0;
 
   return (
     <DashboardLayout title="Lead" role="sales">
@@ -180,34 +183,61 @@ export default function LeadsPage() {
 
           {/* Filter status (pill) */}
           <div className="flex gap-2 overflow-x-auto pb-1">
+            {/* Pill: Semua */}
             <button
               type="button"
               className={cn(
-                "px-4 py-1.5 rounded-full text-sm font-medium border",
+                "px-4 py-1.5 rounded-full text-sm font-medium border inline-flex items-center",
                 activeStatusCode === "ALL"
                   ? "bg-red-500 text-white border-red-500"
                   : "bg-red-50 text-red-700 border-red-100"
               )}
               onClick={() => setActiveStatusCode("ALL")}
             >
-              Semua
+              <span>Semua</span>
+              <span
+                className={cn(
+                  "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
+                  activeStatusCode === "ALL"
+                    ? "bg-white/20 text-white"
+                    : "bg-red-100 text-red-700"
+                )}
+              >
+                {allCount}
+              </span>
             </button>
 
-            {statuses.map((st) => (
-              <button
-                key={st.id}
-                type="button"
-                className={cn(
-                  "px-4 py-1.5 rounded-full text-sm font-medium border",
-                  activeStatusCode === st.code
-                    ? "bg-red-500 text-white border-red-500"
-                    : "bg-red-50 text-red-700 border-red-100"
-                )}
-                onClick={() => setActiveStatusCode(st.code)}
-              >
-                {st.name}
-              </button>
-            ))}
+            {/* Pill: per status dari master */}
+            {statuses.map((st) => {
+              const isActive = activeStatusCode === st.code;
+              const count = counts[st.code] ?? 0;
+
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  className={cn(
+                    "px-4 py-1.5 rounded-full text-sm font-medium border inline-flex items-center",
+                    isActive
+                      ? "bg-red-500 text-white border-red-500"
+                      : "bg-red-50 text-red-700 border-red-100"
+                  )}
+                  onClick={() => setActiveStatusCode(st.code)}
+                >
+                  <span>{st.name}</span>
+                  <span
+                    className={cn(
+                      "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : "bg-red-100 text-red-700"
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

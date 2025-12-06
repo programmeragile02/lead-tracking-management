@@ -61,7 +61,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <h1 className="text-2xl font-bold text-center mb-2">
-            Sistem Tracking Lead
+            Lead Track
           </h1>
           <p className="text-sm text-muted-foreground text-center mb-6">
             Masuk untuk mengelola lead Anda
