@@ -47,6 +47,33 @@ export async function sendWaMessage(params: {
   };
 }
 
+export async function sendWaDocument(params: {
+  userId: number;
+  to: string; // "628xxxx"
+  fileUrl: string; // URL publik PDF
+  fileName: string;
+  mimetype: string; // "application/pdf"
+  caption?: string;
+}) {
+  const resp = await fetch(`${WA_SERVICE_BASE}/messages/send-document`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  const json = await resp.json();
+  if (!resp.ok || !json.ok) {
+    throw new Error(json.error || "Failed to send WA document");
+  }
+
+  return json as {
+    ok: boolean;
+    waMessageId: string;
+  };
+}
+
 export async function logoutWaClient(userId: number) {
   const resp = await fetch(`${WA_SERVICE_BASE}/clients/${userId}/logout`, {
     method: "POST",

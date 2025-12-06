@@ -52,6 +52,13 @@ model User {
   whatsappSession WhatsAppSession?
   leadMessages    LeadMessage[] @relation("UserLeadMessages")
 
+  stageHistoriesChanged  LeadStageHistory[]   @relation("LeadStageHistoryChangedBy")
+  stageHistoriesAsSales  LeadStageHistory[]   @relation("LeadStageHistorySales")
+  statusHistoriesChanged LeadStatusHistory[]  @relation("LeadStatusHistoryChangedBy")
+  statusHistoriesAsSales LeadStatusHistory[]  @relation("LeadStatusHistorySales")
+
+  leadActivities LeadActivity[] @relation("LeadActivityCreatedBy")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -93,6 +100,7 @@ model LeadStage {
   isActive  Boolean @default(true)
 
   leads     Lead[]
+  stageHistories  LeadStageHistory[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -105,8 +113,57 @@ model LeadStatus {
   isActive  Boolean @default(true)
 
   leads     Lead[]
+  statusHistories LeadStatusHistory[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model LeadStageHistory {
+  id          Int       @id @default(autoincrement())
+
+  leadId      Int
+  lead        Lead      @relation(fields: [leadId], references: [id])
+
+  stageId     Int
+  stage       LeadStage @relation(fields: [stageId], references: [id])
+
+  // siapa yang klik ubah tahap (biasanya sales / TL / manager)
+  changedById Int?
+  changedBy   User?     @relation("LeadStageHistoryChangedBy", fields: [changedById], references: [id])
+
+  // owner lead (sales pemilik lead) → buat laporan per sales
+  salesId     Int?
+  sales       User?     @relation("LeadStageHistorySales", fields: [salesId], references: [id])
+
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@index([leadId])
+  @@index([stageId])
+  @@index([salesId])
+}
+
+model LeadStatusHistory {
+  id          Int        @id @default(autoincrement())
+
+  leadId      Int
+  lead        Lead       @relation(fields: [leadId], references: [id])
+
+  statusId    Int
+  status      LeadStatus @relation(fields: [statusId], references: [id])
+
+  changedById Int?
+  changedBy   User?      @relation("LeadStatusHistoryChangedBy", fields: [changedById], references: [id])
+
+  salesId     Int?
+  sales       User?      @relation("LeadStatusHistorySales", fields: [salesId], references: [id])
+
+  note        String?
+  createdAt   DateTime   @default(now())
+
+  @@index([leadId])
+  @@index([statusId])
+  @@index([salesId])
 }
 
 model Lead {
@@ -149,6 +206,11 @@ model Lead {
 
   // relasi ke log chat wa
   messages    LeadMessage[]
+
+  stageHistories  LeadStageHistory[]
+  statusHistories LeadStatusHistory[]
+
+  activities  LeadActivity[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -242,6 +304,13 @@ model LeadFollowUpType {
   @@map("lead_followup_types")
 }
 
+enum FollowUpChannel {
+  WHATSAPP
+  CALL
+  ZOOM
+  VISIT
+}
+
 model LeadFollowUp {
   id          Int               @id @default(autoincrement())
 
@@ -258,6 +327,8 @@ model LeadFollowUp {
   note        String?           // catatan follow up
   doneAt      DateTime          @default(now())
   nextActionAt DateTime?        // jadwal follow up berikutnya (optional)
+
+  channel       FollowUpChannel   @default(WHATSAPP)
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -322,6 +393,11 @@ model WhatsAppSession {
   @@map("whatsapp_sessions")
 }
 
+enum LeadMessageType {
+  TEXT
+  MEDIA
+}
+
 model LeadMessage {
   id          Int                @id @default(autoincrement())
 
@@ -342,6 +418,12 @@ model LeadMessage {
   toNumber    String?            // "628987654321"
 
   content     String             // isi pesan
+
+  type        LeadMessageType    @default(TEXT)
+  mediaUrl    String?
+  mediaName   String?
+  mediaMime   String?
+
   sentAt      DateTime           @default(now())
 
   createdAt   DateTime           @default(now())
@@ -351,4 +433,25 @@ model LeadMessage {
   @@index([salesId])
   @@index([channel, direction])
   @@map("lead_messages")
+}
+
+model LeadActivity {
+  id          Int       @id @default(autoincrement())
+  leadId      Int
+  lead        Lead      @relation(fields: [leadId], references: [id])
+
+  title       String
+  description String?   @db.Text
+
+  /// Waktu kejadian aktivitas (tanggal + jam yg user input)
+  happenedAt  DateTime
+
+  /// URL / path foto opsional
+  photoUrl    String?
+
+  createdById Int?
+  createdBy   User?     @relation("LeadActivityCreatedBy", fields: [createdById], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }

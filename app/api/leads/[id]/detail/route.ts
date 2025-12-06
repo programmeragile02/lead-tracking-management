@@ -2,225 +2,280 @@
 // import { prisma } from "@/lib/prisma";
 // import { getCurrentUser } from "@/lib/auth-server";
 
+// export const dynamic = "force-dynamic";
+
 // export async function GET(
 //   req: NextRequest,
-//   ctx: { params: Promise<{ id: string }> }
+//   context: { params: Promise<{ id: string }> }
 // ) {
-//   const { id } = await ctx.params;
 //   const user = await getCurrentUser(req);
 //   if (!user) {
 //     return NextResponse.json(
-//       { ok: false, error: "unauthenticated" },
+//       { ok: false, error: "Unauthorized" },
 //       { status: 401 }
 //     );
 //   }
 
+//   const { id } = await context.params;
 //   const leadId = Number(id);
-//   console.log("[lead-detail] hit for id =", id, "-> leadId =", leadId);
 //   if (!leadId || Number.isNaN(leadId)) {
 //     return NextResponse.json(
-//       { ok: false, error: "invalid_id" },
+//       { ok: false, error: "Invalid lead id" },
 //       { status: 400 }
 //     );
 //   }
 
-//   // ambil lead + relasi penting + nilai custom
 //   const lead = await prisma.lead.findUnique({
 //     where: { id: leadId },
 //     include: {
 //       product: true,
 //       source: true,
-//       stage: true,
 //       status: true,
+//       stage: true,
 //       sales: {
-//         select: { id: true, name: true, phone: true },
+//         select: { id: true, name: true, email: true },
 //       },
 //       customValues: {
-//         include: {
-//           field: true,
-//         },
+//         include: { field: true },
 //       },
 //     },
 //   });
 
-//   console.log("[lead-detail] lead =", lead);
-
 //   if (!lead) {
 //     return NextResponse.json(
-//       { ok: false, error: "lead_not_found" },
+//       { ok: false, error: "Lead not found" },
 //       { status: 404 }
 //     );
 //   }
 
-//   // Kalau role sales, batasi hanya lead miliknya
+//   // kalau role SALES → hanya boleh akses lead-nya sendiri
 //   if (user.roleSlug === "sales" && lead.salesId !== user.id) {
 //     return NextResponse.json(
-//       { ok: false, error: "forbidden" },
+//       { ok: false, error: "Forbidden" },
 //       { status: 403 }
 //     );
 //   }
 
-//   // ambil daftar produk aktif
-//   const products = await prisma.product.findMany({
-//     where: {
-//       isAvailable: true,
-//       deletedAt: null,
-//     },
-//     orderBy: { name: "asc" },
-//   });
+//   const [products, statuses, stages, stageHistory, statusHistory] =
+//     await Promise.all([
+//       prisma.product.findMany({
+//         where: { isAvailable: true, deletedAt: null },
+//         orderBy: { name: "asc" },
+//       }),
+//       prisma.leadStatus.findMany({
+//         where: { isActive: true },
+//         orderBy: { order: "asc" },
+//       }),
+//       prisma.leadStage.findMany({
+//         where: { isActive: true },
+//         orderBy: { order: "asc" },
+//       }),
+//       prisma.leadStageHistory.findMany({
+//         where: { leadId },
+//         orderBy: { createdAt: "asc" },
+//         include: { stage: true },
+//       }),
+//       prisma.leadStatusHistory.findMany({
+//         where: { leadId },
+//         orderBy: { createdAt: "asc" },
+//         include: { status: true },
+//       }),
+//     ]);
 
-//   // ambil definisi field custom aktif (buat hitung completion)
-//   const customDefs = await prisma.leadCustomFieldDef.findMany({
-//     where: {
-//       isActive: true,
-//     },
-//     include: {
-//       options: true,
-//     },
-//     orderBy: { sortOrder: "asc" },
-//   });
-
-//   // --- hitung profile completion ---
-
-//   // field paten yang kita anggap bagian dari "kelengkapan profil"
-//   const baseFields: { key: string; filled: boolean }[] = [
-//     { key: "name", filled: !!lead.name?.trim() },
-//     { key: "phone", filled: !!lead.phone?.trim() },
-//     { key: "address", filled: !!lead.address?.trim() },
-//     { key: "product", filled: !!lead.productId },
-//     { key: "status", filled: !!lead.statusId },
-//     { key: "stage", filled: !!lead.stageId },
-//     { key: "source", filled: !!lead.sourceId },
-//   ];
-
-//   // field dinamis yang required
-//   const requiredDynamicDefs = customDefs.filter((d) => d.isRequired);
-//   const dynamicFilled = requiredDynamicDefs.map((def) => {
-//     const val = lead.customValues.find((v) => v.fieldId === def.id);
-//     return {
-//       key: def.key,
-//       filled: !!val?.value?.trim(),
-//     };
-//   });
-
-//   const allFields = [...baseFields, ...dynamicFilled];
-//   const total = allFields.length || 1;
-//   const filledCount = allFields.filter((f) => f.filled).length;
-//   const profileCompletion = Math.min(
-//     100,
-//     Math.round((filledCount / total) * 100)
-//   );
+//   const profileCompletion = computeProfileCompletion(lead);
 
 //   return NextResponse.json({
 //     ok: true,
 //     data: {
 //       lead,
 //       products,
+//       statuses,
+//       stages,
+//       stageHistory,
+//       statusHistory,
 //       profileCompletion,
-//       dynamicFields: customDefs,
+//       dynamicFields: lead.customValues,
 //     },
 //   });
+// }
+
+// function computeProfileCompletion(lead: any): number {
+//   let total = 0;
+//   let filled = 0;
+
+//   const check = (v: any) => {
+//     total++;
+//     if (v !== null && v !== undefined && String(v).trim() !== "") filled++;
+//   };
+
+//   // field utama
+//   check(lead.name);
+//   check(lead.phone);
+//   check(lead.address);
+//   check(lead.productId);
+//   check(lead.sourceId);
+//   check(lead.statusId);
+//   check(lead.stageId);
+
+//   // field dinamis
+//   for (const cv of lead.customValues ?? []) {
+//     check(cv.value);
+//   }
+
+//   if (!total) return 0;
+//   return Math.round((filled / total) * 100);
 // }
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(
   req: NextRequest,
-  ctx: { params: Promise<{ id: string }> }
+  context: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const { id } = await ctx.params;
-    const leadId = Number(id || 0);
-    if (!leadId || Number.isNaN(leadId)) {
-      return NextResponse.json(
-        { ok: false, error: "invalid_id" },
-        { status: 400 }
-      );
-    }
-
-    const authUser = await getCurrentUser(req);
-    if (!authUser) {
-      return NextResponse.json(
-        { ok: false, error: "unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    // lead + relasi penting
-    const lead = await prisma.lead.findUnique({
-      where: { id: leadId },
-      include: {
-        product: true,
-        status: true,
-        stage: true,
-        source: true,
-        sales: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (!lead) {
-      return NextResponse.json(
-        { ok: false, error: "lead_not_found" },
-        { status: 404 }
-      );
-    }
-
-    // option produk (untuk dropdown)
-    const products = await prisma.product.findMany({
-      where: { isAvailable: true, deletedAt: null },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-      select: { id: true, name: true },
-    });
-
-    // master tahap (urut by order)
-    const stages = await prisma.leadStage.findMany({
-      where: { isActive: true },
-      orderBy: [{ order: "asc" }, { id: "asc" }],
-      select: { id: true, name: true, code: true, order: true },
-    });
-
-    // master status (urut by order)
-    const statuses = await prisma.leadStatus.findMany({
-      where: { isActive: true },
-      orderBy: [{ order: "asc" }, { id: "asc" }],
-      select: { id: true, name: true, code: true, order: true },
-    });
-
-    // contoh scoring sederhana untuk progress profil:
-    let filled = 0;
-    let total = 6;
-
-    if (lead.phone) filled++;
-    if (lead.address) filled++;
-    if (lead.productId) filled++;
-    if (lead.statusId) filled++;
-    if (lead.stageId) filled++;
-    if (lead.sourceId) filled++;
-
-    const profileCompletion = Math.round((filled / total) * 100);
-
-    return NextResponse.json({
-      ok: true,
-      data: {
-        lead,
-        products,
-        stages,
-        statuses,
-        profileCompletion,
-      },
-    });
-  } catch (err) {
-    console.error("[lead-detail] error:", err);
+  // 1. Cek user login
+  const user = await getCurrentUser(req);
+  if (!user) {
     return NextResponse.json(
-      { ok: false, error: "internal_error" },
-      { status: 500 }
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
     );
   }
+
+  // 2. Ambil dan validasi leadId dari URL
+  const { id } = await context.params;
+  const leadId = Number(id);
+  if (!leadId || Number.isNaN(leadId)) {
+    return NextResponse.json(
+      { ok: false, error: "Invalid lead id" },
+      { status: 400 }
+    );
+  }
+
+  // 3. Ambil data lead + relasi penting
+  const lead = await prisma.lead.findUnique({
+    where: { id: leadId },
+    include: {
+      product: true,
+      source: true,
+      status: true,
+      stage: true,
+      sales: {
+        select: { id: true, name: true, email: true },
+      },
+      customValues: {
+        include: { field: true },
+      },
+    },
+  });
+
+  if (!lead) {
+    return NextResponse.json(
+      { ok: false, error: "Lead not found" },
+      { status: 404 }
+    );
+  }
+
+  // 4. Proteksi: kalau role SALES hanya boleh lihat lead miliknya
+  if (user.roleSlug === "sales" && lead.salesId !== user.id) {
+    return NextResponse.json(
+      { ok: false, error: "Forbidden" },
+      { status: 403 }
+    );
+  }
+
+  // 5. Ambil master & histori secara paralel:
+  //    - products  : daftar produk
+  //    - statuses  : master status lead
+  //    - stages    : master tahapan pipeline
+  //    - stageHistory  : histori perubahan tahap lead ini
+  //    - statusHistory : histori perubahan status lead ini
+  //    - followUpTypes : master tindak lanjut (FU1, KIRIM_PENAWARAN, dst)
+  const [
+    products,
+    statuses,
+    stages,
+    stageHistory,
+    statusHistory,
+    followUpTypes,
+  ] = await Promise.all([
+    prisma.product.findMany({
+      where: { isAvailable: true, deletedAt: null },
+      orderBy: { name: "asc" },
+    }),
+    prisma.leadStatus.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    }),
+    prisma.leadStage.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    }),
+    prisma.leadStageHistory.findMany({
+      where: { leadId },
+      orderBy: { createdAt: "asc" },
+      include: { stage: true },
+    }),
+    prisma.leadStatusHistory.findMany({
+      where: { leadId },
+      orderBy: { createdAt: "asc" },
+      include: { status: true },
+    }),
+    prisma.leadFollowUpType.findMany({
+      where: { isActive: true },
+      orderBy: { order: "asc" },
+    }),
+  ]);
+
+  // 6. Hitung persentase kelengkapan profil untuk progress bar di UI
+  const profileCompletion = computeProfileCompletion(lead);
+
+  // 7. Response ke frontend
+  return NextResponse.json({
+    ok: true,
+    data: {
+      lead,
+      products,
+      statuses,
+      stages,
+      stageHistory,
+      statusHistory,
+      profileCompletion,
+      dynamicFields: lead.customValues,
+
+      // NEW: master tindak lanjut (ini yang dipakai dropdown di modal)
+      followUpTypes,
+    },
+  });
+}
+
+// Helper: hitung kelengkapan profil lead
+function computeProfileCompletion(lead: any): number {
+  let total = 0;
+  let filled = 0;
+
+  const check = (v: any) => {
+    total++;
+    if (v !== null && v !== undefined && String(v).trim() !== "") filled++;
+  };
+
+  // field utama
+  check(lead.name);
+  check(lead.phone);
+  check(lead.address);
+  check(lead.productId);
+  check(lead.sourceId);
+  check(lead.statusId);
+  check(lead.stageId);
+
+  // field dinamis
+  for (const cv of lead.customValues ?? []) {
+    check(cv.value);
+  }
+
+  if (!total) return 0;
+  return Math.round((filled / total) * 100);
 }

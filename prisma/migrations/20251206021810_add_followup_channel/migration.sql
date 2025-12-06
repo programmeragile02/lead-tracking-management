@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE `lead_followups` ADD COLUMN `channel` ENUM('WHATSAPP', 'CALL', 'ZOOM', 'VISIT') NOT NULL DEFAULT 'WHATSAPP';

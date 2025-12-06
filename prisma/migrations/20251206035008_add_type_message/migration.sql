@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `lead_messages` ADD COLUMN `mediaMime` VARCHAR(191) NULL,
+    ADD COLUMN `mediaName` VARCHAR(191) NULL,
+    ADD COLUMN `mediaUrl` VARCHAR(191) NULL,
+    ADD COLUMN `type` ENUM('TEXT', 'MEDIA') NOT NULL DEFAULT 'TEXT';
