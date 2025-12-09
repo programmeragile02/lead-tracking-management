@@ -74,11 +74,11 @@ model Product {
   photo       String?  // URL gambar produk
   isAvailable Boolean  @default(true)
 
-  videoDemoUrl     String?  // link video demo (YouTube, Loom, dll)
-  testimonialUrl   String?  // link halaman/testimoni
-  educationPdfUrl  String?  // URL file PDF edukasi
-  educationLinkUrl String?  // link artikel/blog/landing edukasi
-
+  // multi link: array of { label, url }
+  demoLinks        Json?   // [{ "label": "Demo 3 menit", "url": "https://..." }, ...]
+  testimonialLinks Json?   // [{ label, url }, ...]
+  educationLinks   Json?   // [{ label, url }, ...]
+  
   leads       Lead[]
 
   createdAt   DateTime @default(now())

@@ -12,6 +12,39 @@ import {
 
 import { ensureWaClient, sendWaMessage } from "@/lib/whatsapp-service";
 
+// ==== helper multi-link product ====
+type ProductLinkItem = {
+  label?: string | null;
+  url?: string | null;
+};
+
+function buildLinkBlock(raw: any): string {
+  if (!raw) return "";
+
+  let arr: ProductLinkItem[] = [];
+
+  try {
+    if (Array.isArray(raw)) {
+      arr = raw as ProductLinkItem[];
+    } else {
+      arr = [];
+    }
+  } catch {
+    return "";
+  }
+
+  const clean = arr
+    .map((i) => ({
+      label: (i.label ?? "").toString().trim() || "Link",
+      url: (i.url ?? "").toString().trim(),
+    }))
+    .filter((i) => i.url);
+
+  if (!clean.length) return "";
+
+  return clean.map((item) => `• ${item.label}\n${item.url}`).join("\n\n");
+}
+
 // Render template: {{nama_lead}}, {{nama_sales}}, {{produk}}, {{brand}}, dll
 function renderTemplate(
   template: string | null | undefined,
@@ -100,15 +133,18 @@ export async function sendFirstNurturingForNewLead(leadId: number) {
   const now = new Date();
 
   // 4. Render isi pesan dari template FU1
+  const demoBlock = buildLinkBlock(lead.product?.demoLinks);
+  const testiBlock = buildLinkBlock(lead.product?.testimonialLinks);
+  const edukasiBlock = buildLinkBlock(lead.product?.educationLinks);
+
   const messageContent = renderTemplate(fo1.waTemplateBody, {
     nama_lead: lead.name,
     nama_sales: lead.sales?.name,
     produk: lead.product?.name,
     perusahaan: perusahaanName,
-    video_demo_link: lead.product?.videoDemoUrl ?? "",
-    testimoni_links: lead.product?.testimonialUrl ?? "",
-    edukasi_link:
-      lead.product?.educationLinkUrl ?? lead.product?.educationPdfUrl ?? "",
+    video_demo_links: demoBlock,
+    testimoni_links: testiBlock,
+    edukasi_links: edukasiBlock,
   });
 
   let waMessageId: string | null = null;

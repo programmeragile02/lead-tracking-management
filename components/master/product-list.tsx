@@ -10,6 +10,11 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 
 export const PRODUCTS_KEY = "/api/products";
 
+export type ProductLinkItem = {
+  label: string;
+  url: string;
+};
+
 export type Product = {
   id: number;
   category: string;
@@ -17,10 +22,11 @@ export type Product = {
   description?: string | null;
   photo?: string | null;
   isAvailable: boolean;
-  videoDemoUrl?: string | null;
-  testimonialUrl?: string | null;
-  educationPdfUrl?: string | null;
-  educationLinkUrl?: string | null;
+
+  demoLinks?: ProductLinkItem[] | null;
+  testimonialLinks?: ProductLinkItem[] | null;
+  educationLinks?: ProductLinkItem[] | null;
+
   createdAt: string;
   updatedAt: string;
 };

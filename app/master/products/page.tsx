@@ -40,17 +40,24 @@ import { useToast } from "@/hooks/use-toast";
 import { mutate } from "swr";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+type ProductLinkItem = {
+  label: string;
+  url: string;
+};
+
 type FormState = {
   category: string;
   name: string;
   description: string;
   photo: string;
   isAvailable: boolean;
-  videoDemoUrl: string;
-  testimonialUrl: string;
-  educationPdfUrl: string;
-  educationLinkUrl: string;
+
+  demoLinks: ProductLinkItem[];
+  testimonialLinks: ProductLinkItem[];
+  educationLinks: ProductLinkItem[];
 };
+
+const emptyLink: ProductLinkItem = { label: "", url: "" };
 
 const defaultForm: FormState = {
   category: "",
@@ -58,10 +65,9 @@ const defaultForm: FormState = {
   description: "",
   photo: "",
   isAvailable: true,
-  videoDemoUrl: "",
-  testimonialUrl: "",
-  educationPdfUrl: "",
-  educationLinkUrl: "",
+  demoLinks: [{ ...emptyLink }, { ...emptyLink }],
+  testimonialLinks: [{ ...emptyLink }, { ...emptyLink }],
+  educationLinks: [{ ...emptyLink }, { ...emptyLink }],
 };
 
 export default function ProductMasterPage() {
@@ -82,6 +88,39 @@ export default function ProductMasterPage() {
   const [uploadingEducationPdf, setUploadingEducationPdf] = useState(false);
   const educationFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // helper link array
+  const updateLinkItem = (
+    field: "demoLinks" | "testimonialLinks" | "educationLinks",
+    index: number,
+    key: "label" | "url",
+    value: string
+  ) => {
+    setForm((prev) => {
+      const arr = [...prev[field]];
+      arr[index] = { ...arr[index], [key]: value };
+      return { ...prev, [field]: arr };
+    });
+  };
+
+  const addLinkItem = (
+    field: "demoLinks" | "testimonialLinks" | "educationLinks"
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      [field]: [...prev[field], { ...emptyLink }],
+    }));
+  };
+
+  const removeLinkItem = (
+    field: "demoLinks" | "testimonialLinks" | "educationLinks",
+    index: number
+  ) => {
+    setForm((prev) => {
+      const arr = prev[field].filter((_, i) => i !== index);
+      return { ...prev, [field]: arr.length ? arr : [{ ...emptyLink }] };
+    });
+  };
+
   const openCreate = () => {
     setEditing(null);
     setForm(defaultForm);
@@ -90,17 +129,23 @@ export default function ProductMasterPage() {
 
   const openEdit = (product: Product) => {
     setEditing(product);
+
+    const toLinks = (items?: ProductLinkItem[] | null): ProductLinkItem[] => {
+      if (Array.isArray(items) && items.length > 0) return items;
+      return [{ ...emptyLink }, { ...emptyLink }];
+    };
+
     setForm({
       category: product.category || "",
       name: product.name || "",
       description: product.description || "",
       photo: product.photo || "",
       isAvailable: product.isAvailable,
-      videoDemoUrl: product.videoDemoUrl || "",
-      testimonialUrl: product.testimonialUrl || "",
-      educationPdfUrl: product.educationPdfUrl || "",
-      educationLinkUrl: product.educationLinkUrl || "",
+      demoLinks: toLinks(product.demoLinks),
+      testimonialLinks: toLinks(product.testimonialLinks),
+      educationLinks: toLinks(product.educationLinks),
     });
+
     setIsDialogOpen(true);
   };
 
@@ -121,16 +166,23 @@ export default function ProductMasterPage() {
     try {
       setIsSubmitting(true);
 
+      const cleanLinks = (items: ProductLinkItem[]) =>
+        items
+          .map((i) => ({
+            label: i.label.trim(),
+            url: i.url.trim(),
+          }))
+          .filter((i) => i.label || i.url);
+
       const payload = {
         category: form.category,
         name: form.name,
         description: form.description || null,
         photo: form.photo || null,
         isAvailable: form.isAvailable,
-        videoDemoUrl: form.videoDemoUrl || null,
-        testimonialUrl: form.testimonialUrl || null,
-        educationPdfUrl: form.educationPdfUrl || null,
-        educationLinkUrl: form.educationLinkUrl || null,
+        demoLinks: cleanLinks(form.demoLinks),
+        testimonialLinks: cleanLinks(form.testimonialLinks),
+        educationLinks: cleanLinks(form.educationLinks),
       };
 
       const url = editing ? `/api/products/${editing.id}` : "/api/products";
@@ -292,11 +344,24 @@ export default function ProductMasterPage() {
         throw new Error(json.message || "Gagal mengupload file edukasi");
       }
 
-      handleChange("educationPdfUrl", json.url);
+      // Tambahkan ke educationLinks sebagai link baru
+      const labelFromName = file.name.replace(/\.pdf$/i, "");
+
+      setForm((prev) => ({
+        ...prev,
+        educationLinks: [
+          ...prev.educationLinks,
+          {
+            label: labelFromName,
+            url: json.url as string,
+          },
+        ],
+      }));
 
       toast({
         title: "Berhasil",
-        description: "File edukasi berhasil diupload.",
+        description:
+          "File edukasi berhasil diupload dan ditambahkan sebagai link.",
       });
     } catch (err: any) {
       console.error(err);
@@ -493,29 +558,118 @@ export default function ProductMasterPage() {
 
               {/* Link Video Demo */}
               <div className="space-y-2">
-                <Label>Link Video Demo (opsional)</Label>
-                <Input
-                  value={form.videoDemoUrl}
-                  onChange={(e) => handleChange("videoDemoUrl", e.target.value)}
-                  placeholder="https://youtu.be/..."
-                />
+                <Label>Link Video Demo</Label>
+                <div className="space-y-2">
+                  {form.demoLinks.map((item, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        className="w-40"
+                        placeholder="Label (misal: Demo 3 menit)"
+                        value={item.label}
+                        onChange={(e) =>
+                          updateLinkItem(
+                            "demoLinks",
+                            index,
+                            "label",
+                            e.target.value
+                          )
+                        }
+                      />
+                      <Input
+                        placeholder="https://youtu.be/..."
+                        value={item.url}
+                        onChange={(e) =>
+                          updateLinkItem(
+                            "demoLinks",
+                            index,
+                            "url",
+                            e.target.value
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500"
+                        onClick={() => removeLinkItem("demoLinks", index)}
+                        disabled={form.demoLinks.length <= 1}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addLinkItem("demoLinks")}
+                >
+                  + Tambah link demo
+                </Button>
                 <p className="text-xs text-gray-500">
-                  Link video demo produk, misalnya YouTube.
+                  Bisa beberapa video: short version, full demo, webinar replay,
+                  dll.
                 </p>
               </div>
 
               {/* Link Testimoni */}
               <div className="space-y-2">
-                <Label>Link Testimoni / Website (opsional)</Label>
-                <Input
-                  value={form.testimonialUrl}
-                  onChange={(e) =>
-                    handleChange("testimonialUrl", e.target.value)
-                  }
-                  placeholder="https://contoh.com/testimoni-produk"
-                />
+                <Label>Link Testimoni / Website</Label>
+                <div className="space-y-2">
+                  {form.testimonialLinks.map((item, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <Input
+                        className="w-40"
+                        placeholder="Label (misal: Testimoni IG, Case Study)"
+                        value={item.label}
+                        onChange={(e) =>
+                          updateLinkItem(
+                            "testimonialLinks",
+                            index,
+                            "label",
+                            e.target.value
+                          )
+                        }
+                      />
+                      <Input
+                        placeholder="https://contoh.com/testimoni..."
+                        value={item.url}
+                        onChange={(e) =>
+                          updateLinkItem(
+                            "testimonialLinks",
+                            index,
+                            "url",
+                            e.target.value
+                          )
+                        }
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500"
+                        onClick={() =>
+                          removeLinkItem("testimonialLinks", index)
+                        }
+                        disabled={form.testimonialLinks.length <= 1}
+                      >
+                        ✕
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => addLinkItem("testimonialLinks")}
+                >
+                  + Tambah link testimoni
+                </Button>
                 <p className="text-xs text-gray-500">
-                  Bisa berupa halaman testimoni, portfolio, atau studi kasus.
+                  Bisa highlight IG, halaman testimoni, studi kasus, dsb.
                 </p>
               </div>
 
@@ -530,16 +684,59 @@ export default function ProductMasterPage() {
 
                   {/* TAB LINK */}
                   <TabsContent value="link" className="mt-3 space-y-2">
-                    <Input
-                      value={form.educationLinkUrl}
-                      onChange={(e) =>
-                        handleChange("educationLinkUrl", e.target.value)
-                      }
-                      placeholder="https://contoh.com/materi-edukasi"
-                    />
+                    <div className="space-y-2">
+                      {form.educationLinks.map((item, index) => (
+                        <div key={index} className="flex gap-2 items-center">
+                          <Input
+                            className="w-40"
+                            placeholder="Label (misal: Panduan singkat)"
+                            value={item.label}
+                            onChange={(e) =>
+                              updateLinkItem(
+                                "educationLinks",
+                                index,
+                                "label",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Input
+                            placeholder="https://contoh.com/materi-edukasi..."
+                            value={item.url}
+                            onChange={(e) =>
+                              updateLinkItem(
+                                "educationLinks",
+                                index,
+                                "url",
+                                e.target.value
+                              )
+                            }
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="text-red-500"
+                            onClick={() =>
+                              removeLinkItem("educationLinks", index)
+                            }
+                            disabled={form.educationLinks.length <= 1}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addLinkItem("educationLinks")}
+                    >
+                      + Tambah link edukasi
+                    </Button>
                     <p className="text-xs text-gray-500">
-                      Misalnya artikel blog, landing edukasi, atau halaman
-                      panduan.
+                      Artikel blog, dokumentasi, playlist video, dsb.
                     </p>
                   </TabsContent>
 
@@ -554,71 +751,35 @@ export default function ProductMasterPage() {
                       onChange={handleEducationFileChange}
                     />
 
-                    {form.educationPdfUrl ? (
-                      <div className="space-y-2">
-                        <a
-                          href={form.educationPdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary underline"
-                        >
-                          Lihat file edukasi saat ini
-                        </a>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              educationFileInputRef.current?.click()
-                            }
-                            disabled={uploadingEducationPdf}
-                          >
-                            {uploadingEducationPdf
-                              ? "Mengupload..."
-                              : "Ganti File"}
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:bg-red-50"
-                            onClick={() => handleChange("educationPdfUrl", "")}
-                            disabled={uploadingEducationPdf}
-                          >
-                            Hapus File
-                          </Button>
-                        </div>
+                    <div
+                      className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                      onClick={() => educationFileInputRef.current?.click()}
+                    >
+                      <div className="flex-1 text-center md:text-left space-y-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {uploadingEducationPdf
+                            ? "Mengupload file PDF..."
+                            : "Upload file edukasi (PDF)"}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          Format PDF, ukuran maksimal 5MB. File yang berhasil
+                          diupload akan otomatis ditambahkan ke daftar link
+                          edukasi di tab &quot;Via Link&quot;.
+                        </p>
                       </div>
-                    ) : (
-                      <div
-                        className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
-                        onClick={() => educationFileInputRef.current?.click()}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          educationFileInputRef.current?.click();
+                        }}
+                        disabled={uploadingEducationPdf}
                       >
-                        <div className="flex-1 text-center md:text-left space-y-1">
-                          <p className="text-sm font-medium text-gray-900">
-                            {uploadingEducationPdf
-                              ? "Mengupload file PDF..."
-                              : "Upload file edukasi (PDF)"}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            Format PDF, ukuran maksimal 5MB.
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            educationFileInputRef.current?.click();
-                          }}
-                          disabled={uploadingEducationPdf}
-                        >
-                          Pilih File
-                        </Button>
-                      </div>
-                    )}
+                        Pilih File
+                      </Button>
+                    </div>
                   </TabsContent>
                 </Tabs>
               </div>

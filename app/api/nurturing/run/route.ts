@@ -12,6 +12,39 @@ import { ensureWaClient, sendWaMessage } from "@/lib/whatsapp-service";
 // security key untuk cron
 const NURTURING_CRON_KEY = process.env.NURTURING_CRON_KEY || "";
 
+// ==== helper multi-link product ====
+type ProductLinkItem = {
+  label?: string | null;
+  url?: string | null;
+};
+
+function buildLinkBlock(raw: any): string {
+  if (!raw) return "";
+
+  let arr: ProductLinkItem[] = [];
+
+  try {
+    if (Array.isArray(raw)) {
+      arr = raw as ProductLinkItem[];
+    } else {
+      arr = [];
+    }
+  } catch {
+    return "";
+  }
+
+  const clean = arr
+    .map((i) => ({
+      label: (i.label ?? "").toString().trim() || "Link",
+      url: (i.url ?? "").toString().trim(),
+    }))
+    .filter((i) => i.url);
+
+  if (!clean.length) return "";
+
+  return clean.map((item) => `• ${item.label}\n${item.url}`).join("\n\n");
+}
+
 // Render template: {{nama_lead}}, {{nama_sales}}, {{produk}}, {{brand}}, dst.
 function renderTemplate(
   template: string | null | undefined,
@@ -271,15 +304,18 @@ export async function POST(req: NextRequest) {
 
       const waUserId = lead.salesId;
 
+      const demoBlock = buildLinkBlock(lead.product?.demoLinks);
+      const testiBlock = buildLinkBlock(lead.product?.testimonialLinks);
+      const edukasiBlock = buildLinkBlock(lead.product?.educationLinks);
+
       const messageContent = renderTemplate(stepType.waTemplateBody, {
         nama_lead: lead.name,
         nama_sales: lead.sales?.name,
         produk: lead.product?.name,
         perusahaan: perusahaanName,
-        video_demo_link: lead.product?.videoDemoUrl ?? "",
-        testimoni_links: lead.product?.testimonialUrl ?? "",
-        edukasi_link:
-          lead.product?.educationLinkUrl ?? lead.product?.educationPdfUrl ?? "",
+        video_demo_links: demoBlock,
+        testimoni_links: testiBlock,
+        edukasi_links: edukasiBlock,
       });
 
       if (!messageContent) {

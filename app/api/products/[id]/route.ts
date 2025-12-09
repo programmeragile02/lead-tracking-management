@@ -25,10 +25,9 @@ export async function PUT(req: Request, context: ParamsPromise) {
       description,
       photo,
       isAvailable,
-      videoDemoUrl,
-      testimonialUrl,
-      educationPdfUrl,
-      educationLinkUrl,
+      demoLinks,
+      testimonialLinks,
+      educationLinks,
     } = body;
 
     if (!category || !name) {
@@ -46,10 +45,16 @@ export async function PUT(req: Request, context: ParamsPromise) {
         description: description || null,
         photo: photo || null,
         isAvailable: typeof isAvailable === "boolean" ? isAvailable : true,
-        videoDemoUrl: videoDemoUrl || null,
-        testimonialUrl: testimonialUrl || null,
-        educationPdfUrl: educationPdfUrl || null,
-        educationLinkUrl: educationLinkUrl || null,
+        demoLinks:
+          Array.isArray(demoLinks) && demoLinks.length > 0 ? demoLinks : null,
+        testimonialLinks:
+          Array.isArray(testimonialLinks) && testimonialLinks.length > 0
+            ? testimonialLinks
+            : null,
+        educationLinks:
+          Array.isArray(educationLinks) && educationLinks.length > 0
+            ? educationLinks
+            : null,
       },
     });
 

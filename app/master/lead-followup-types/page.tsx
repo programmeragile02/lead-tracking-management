@@ -383,7 +383,7 @@ export default function LeadFollowUpTypeMasterPage() {
                         Contoh: 24 jam setelah Follow Up 1 untuk Follow Up 2
                       </p>
                     </div>
-                    <div className="space-y-1">
+                    {/* <div className="space-y-1">
                       <Label>Kirim Saat Lead Baru Masuk</Label>
                       <div className="flex flex-col items-start gap-2 mt-1">
                         <Switch
@@ -396,7 +396,7 @@ export default function LeadFollowUpTypeMasterPage() {
                           Biasanya hanya untuk Follow Up 1
                         </p>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 )}
               </div>
@@ -429,23 +429,47 @@ Terima kasih sudah tertarik dengan {{produk}}.
 Saat ini kendala utama yang paling mengganggu apa, Kak?`}
                   />
                   <p className="text-xs text-gray-500">
-                    Kamu bisa gunakan placeholder seperti{" "}
-                    <code className="bg-gray-100 px-1 rounded">
-                      {"{{nama_lead}}"}
-                    </code>
-                    ,{" "}
-                    <code className="bg-gray-100 px-1 rounded">
-                      {"{{nama_sales}}"}
-                    </code>
-                    ,{" "}
-                    <code className="bg-gray-100 px-1 rounded">
-                      {"{{produk}}"}
-                    </code>{" "}
-                    yang nanti akan diganti otomatis saat pengiriman.
+                    Kamu bisa gunakan placeholder seperti:
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{nama_lead}}"}
+                      </code>
+                    </p>
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{nama_sales}}"}
+                      </code>
+                    </p>
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{produk}}"}
+                      </code>
+                    </p>
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{perusahaan}}"}
+                      </code>
+                    </p>
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{video_demo_links}}"}
+                      </code>
+                    </p>
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{testimoni_links}}"}
+                      </code>
+                    </p>
+                    <p>
+                      <code className="font-bold bg-gray-100 px-1 rounded">
+                        {"{{edukasi_links}}"}
+                      </code>
+                    </p>
+                    yang nanti akan berubah menjadi teks saat terkirim ke whatsapp
                   </p>
                 </div>
 
-                <div className="space-y-1">
+                {/* <div className="space-y-1">
                   <Label>URL Media (Opsional)</Label>
                   <Input
                     value={form.waTemplateMedia}
@@ -454,7 +478,7 @@ Saat ini kendala utama yang paling mengganggu apa, Kak?`}
                     }
                     placeholder="Link brosur / gambar jika ada"
                   />
-                </div>
+                </div> */}
               </div>
 
               <div className="flex items-center justify-between py-2">
