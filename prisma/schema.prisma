@@ -498,6 +498,10 @@ model GeneralSetting {
   /// berapa jam setelah sales diam nurturing boleh jalan lagi
   maxIdleHoursBeforeResume Int    @default(48)
 
+  /// Pesan sambutan otomatis untuk lead baru dari WhatsApp
+  welcomeMessageEnabled    Boolean @default(true)
+  welcomeMessageTemplate   String? @db.Text
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

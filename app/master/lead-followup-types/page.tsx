@@ -365,7 +365,7 @@ export default function LeadFollowUpTypeMasterPage() {
                         }
                       />
                       <p className="text-xs text-gray-500">
-                        1 = Follow Up 1 (pertama), 2 = Follow Up2, dst
+                        1 = Follow Up 1 (pertama), 2 = Follow Up 2, dst
                       </p>
                     </div>
                     <div className="space-y-1">

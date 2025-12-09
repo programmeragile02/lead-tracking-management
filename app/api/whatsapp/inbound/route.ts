@@ -1,5 +1,6 @@
 // import { NextRequest, NextResponse } from "next/server";
 // import { prisma } from "@/lib/prisma";
+// import { NurturingStatus } from "@prisma/client";
 
 // const WEBHOOK_KEY = process.env.WA_WEBHOOK_KEY || "";
 
@@ -90,6 +91,14 @@
 //       orderBy: { order: "asc" },
 //     });
 
+//     // optional: cari status Warm (kalau mau auto naikkan status)
+//     const warmStatus = await prisma.leadStatus.findFirst({
+//       where: {
+//         isActive: true,
+//         OR: [{ code: "WARM" }, { name: { equals: "Warm" } }],
+//       },
+//     });
+
 //     // 3. cari lead berdasarkan nomor pengirim + sales
 //     let lead = await prisma.lead.findFirst({
 //       where: {
@@ -97,6 +106,9 @@
 //         salesId: sales.id,
 //       },
 //     });
+
+//     const now = new Date();
+//     let isNewLead = false;
 
 //     // 4. kalau belum ada, buat lead baru dari WA
 //     if (!lead) {
@@ -111,11 +123,27 @@
 //           stageId: defaultStage?.id ?? null,
 //           statusId: defaultStatus?.id ?? null,
 //           salesId: sales.id,
-//           sourceId: waSource?.id,
+//           sourceId: waSource?.id ?? null,
+//           // untuk nurturing: anggap sedang engage, jadi kita mulai dari PAUSED dulu
+//           nurturingStatus: NurturingStatus.PAUSED,
+//           nurturingCurrentStep: null,
+//           nurturingLastSentAt: null,
+//           nurturingStartedAt: null,
+//           nurturingPausedAt: now,
 //         },
 //       });
 
+//       isNewLead = true;
+
 //       console.log("[inbound] lead created from WA:", lead.id, fromNumber);
+//     }
+
+//     if (!lead) {
+//       // antisipasi saja, mestinya tidak mungkin masuk sini
+//       return NextResponse.json(
+//         { ok: false, error: "lead_not_found" },
+//         { status: 500 }
+//       );
 //     }
 
 //     // 5. simpan ke LeadMessage
@@ -137,6 +165,22 @@
 //       },
 //     });
 
+//     // 6. Treat inbound as engagement → auto naikkan status & PAUSE nurturing
+//     try {
+//       await prisma.lead.update({
+//         where: { id: lead.id },
+//         data: {
+//           // kalau sebelumnya NEW/COLD dan ada status Warm, naikkan jadi Warm
+//           statusId: warmStatus?.id ?? lead.statusId,
+//           // setiap ada engagement, nurturing di-pause dan baseline idle digeser ke sekarang
+//           nurturingStatus: NurturingStatus.PAUSED,
+//           nurturingPausedAt: now,
+//         },
+//       });
+//     } catch (e) {
+//       console.warn("[inbound] gagal update status/nurturing lead:", e);
+//     }
+
 //     return NextResponse.json({ ok: true });
 //   } catch (err) {
 //     console.error("[inbound] error:", err);
@@ -149,8 +193,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { sendFirstNurturingForNewLead } from "@/lib/nurturing";
 import { NurturingStatus } from "@prisma/client";
+import { ensureWaClient, sendWaMessage } from "@/lib/whatsapp-service";
 
 const WEBHOOK_KEY = process.env.WA_WEBHOOK_KEY || "";
 
@@ -158,6 +202,21 @@ function normalizeWaNumber(raw?: string | null): string | null {
   if (!raw) return null;
   return raw.replace(/@.*/, "");
 }
+
+// Render template {{nama_lead}}, {{nama_sales}}, {{perusahaan}}, dst.
+function renderTemplate(
+  template: string | null | undefined,
+  vars: Record<string, string | null | undefined>
+): string {
+  if (!template) return "";
+  return template.replace(/{{\s*([^}]+)\s*}}/g, (_, key) => {
+    const v = vars[key.trim()];
+    return (v ?? "").toString();
+  });
+}
+
+const DEFAULT_WELCOME_TEMPLATE =
+  "Halo kak, terima kasih sudah menghubungi {{perusahaan}}. Saya {{nama_sales}}. Ada yang bisa saya bantu terkait kebutuhan kakak?";
 
 export async function POST(req: NextRequest) {
   if (WEBHOOK_KEY) {
@@ -210,9 +269,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "from_is_sales" });
     }
 
-    // 2. pastikan sales pemilik client ada
+    // 2. pastikan sales pemilik client ada (include WA session)
     const sales = await prisma.user.findUnique({
       where: { id: salesId },
+      include: {
+        whatsappSession: true,
+      },
     });
 
     if (!sales) {
@@ -257,9 +319,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const now = new Date();
     let isNewLead = false;
 
-    // 4. kalau belum ada, buat lead baru dari WA
+    // 4. kalau belum ada, buat lead baru dari WA (nurturing langsung PAUSED)
     if (!lead) {
       const waSource = await prisma.leadSource.findFirst({
         where: { code: "WHATSAPP" },
@@ -273,8 +336,12 @@ export async function POST(req: NextRequest) {
           statusId: defaultStatus?.id ?? null,
           salesId: sales.id,
           sourceId: waSource?.id ?? null,
-          // nurturing: untuk lead dari WA, kita bisa langsung anggap engage,
-          // nanti FO1 akan mengonfirmasi dan nurturingStatus akan di-set di helper
+          // untuk nurturing: anggap sedang engage, jadi mulai dari PAUSED
+          nurturingStatus: NurturingStatus.PAUSED,
+          nurturingCurrentStep: null,
+          nurturingLastSentAt: null,
+          nurturingStartedAt: null,
+          nurturingPausedAt: now,
         },
       });
 
@@ -291,7 +358,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. simpan ke LeadMessage
+    // 5. simpan ke LeadMessage (INBOUND)
     const sentAt =
       timestamp != null ? new Date(Number(timestamp) * 1000) : new Date();
 
@@ -310,30 +377,79 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 6. Treat inbound as engagement → boleh auto naikkan status & pause nurturing
+    // 6. Treat inbound as engagement → auto naikkan status & PAUSE nurturing
     try {
       await prisma.lead.update({
         where: { id: lead.id },
         data: {
           // kalau sebelumnya NEW/COLD dan ada status Warm, naikkan jadi Warm
           statusId: warmStatus?.id ?? lead.statusId,
-          // kalau lagi ada sequence nurturing aktif, otomatis pause
+          // setiap ada engagement, nurturing di-pause dan baseline idle digeser ke sekarang
           nurturingStatus: NurturingStatus.PAUSED,
+          nurturingPausedAt: now,
         },
       });
     } catch (e) {
       console.warn("[inbound] gagal update status/nurturing lead:", e);
     }
 
-    // 7. Kalau lead baru diciptakan dari WA → kirim FO1 auto (sambutan)
+    // 7. Jika ini lead baru → kirim pesan sambutan WA (kalau diaktifkan)
     if (isNewLead) {
       try {
-        await sendFirstNurturingForNewLead(lead.id);
+        const general = await prisma.generalSetting.findFirst({
+          where: { id: 1 },
+        });
+
+        const welcomeEnabled = general?.welcomeMessageEnabled ?? true;
+
+        if (welcomeEnabled) {
+          const perusahaanName = general?.companyName || "Perusahaan Kami";
+          const templateRaw =
+            general?.welcomeMessageTemplate || DEFAULT_WELCOME_TEMPLATE;
+
+          const messageText = renderTemplate(templateRaw, {
+            // nama_lead: lead.name,
+            nama_sales: sales.name,
+            perusahaan: perusahaanName,
+          });
+
+          if (messageText) {
+            // pastikan WA client untuk sales ini aktif
+            await ensureWaClient(sales.id);
+
+            const result = await sendWaMessage({
+              userId: sales.id,
+              to: fromNumber,
+              body: messageText,
+              meta: {
+                kind: "WELCOME_WHATSAPP",
+                leadId: lead.id,
+              },
+            });
+
+            const waOutId = result.waMessageId ?? null;
+            // @ts-ignore tergantung return WA service kamu
+            const waOutChatId = result.meta?.chatId ?? null;
+            const fromNumberSales = sales.whatsappSession?.phoneNumber ?? null;
+
+            await prisma.leadMessage.create({
+              data: {
+                leadId: lead.id,
+                salesId: sales.id,
+                channel: "WHATSAPP",
+                direction: "OUTBOUND",
+                waMessageId: waOutId,
+                waChatId: waOutChatId,
+                fromNumber: fromNumberSales,
+                toNumber: fromNumber,
+                content: messageText,
+                sentAt: new Date(),
+              },
+            });
+          }
+        }
       } catch (e) {
-        console.error(
-          "[inbound] gagal menjalankan FO1 nurturing untuk lead baru:",
-          e
-        );
+        console.error("[inbound] gagal mengirim pesan sambutan WA:", e);
       }
     }
 
