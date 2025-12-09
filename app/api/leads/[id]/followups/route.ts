@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
-import { FollowUpChannel } from "@prisma/client";
+import { FollowUpChannel, NurturingStatus } from "@prisma/client";
 
 export async function GET(
   req: NextRequest,
@@ -105,57 +105,112 @@ export async function POST(
       );
     }
 
-    // Cari tipe follow up berdasar code (FU1/FU2/FU3/dsb)
-    const fuType = await prisma.leadFollowUpType.findUnique({
-      where: { code: typeCode },
-    });
+    // Jalankan dalam transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Pastikan lead ada & (opsional) milik sales ini
+      const lead = await tx.lead.findUnique({
+        where: { id: leadId },
+        select: {
+          id: true,
+          salesId: true,
+          nurturingStatus: true,
+        },
+      });
 
-    if (!fuType) {
-      return NextResponse.json(
-        { ok: false, error: "Tipe follow up tidak ditemukan" },
-        { status: 400 }
-      );
-    }
+      if (!lead) {
+        throw new Error("LEAD_NOT_FOUND");
+      }
 
-    // Parse jadwal → nextActionAt
-    // diasumsikan date+time adalah waktu lokal server
-    const nextActionAt = new Date(`${date}T${time}:00`);
+      // opsional: kalau mau pastikan hanya owner yg boleh
+      if (
+        lead.salesId &&
+        lead.salesId !== user.id &&
+        user.roleSlug === "sales"
+      ) {
+        throw new Error("FORBIDDEN_LEAD");
+      }
 
-    const created = await prisma.leadFollowUp.create({
-      data: {
-        leadId,
-        salesId: user.id,
-        typeId: fuType.id,
-        note: note || null,
-        channel: mapChannelUiToDb(channel),
-        // saat ini kita treat sebagai "follow up dijadwalkan sekarang"
-        doneAt: new Date(),
-        nextActionAt,
-      },
-      include: {
-        type: true,
-        sales: { select: { id: true, name: true } },
-      },
+      // 2. Cari tipe follow up berdasar code (FU1/FU2/FU3/dsb)
+      const fuType = await tx.leadFollowUpType.findUnique({
+        where: { code: typeCode },
+      });
+
+      if (!fuType) {
+        throw new Error("FU_TYPE_NOT_FOUND");
+      }
+
+      // 3. Parse jadwal → nextActionAt
+      const nextActionAt = new Date(`${date}T${time}:00`);
+
+      // 4. Buat follow up manual (isAutoNurturing default = false)
+      const created = await tx.leadFollowUp.create({
+        data: {
+          leadId,
+          salesId: user.id,
+          typeId: fuType.id,
+          note: note || null,
+          channel: mapChannelUiToDb(channel),
+          doneAt: new Date(),
+          nextActionAt,
+          // isAutoNurturing: false ← default dari schema
+        },
+        include: {
+          type: true,
+          sales: { select: { id: true, name: true } },
+        },
+      });
+
+      // 5. PAUSE nurturing utk lead ini (rule: Sales follow-up manual → pause)
+      await tx.lead.update({
+        where: { id: leadId },
+        data: {
+          nurturingStatus: NurturingStatus.PAUSED,
+          nurturingPausedAt: new Date(),
+        },
+      });
+
+      return created;
     });
 
     return NextResponse.json({
       ok: true,
       data: {
-        id: created.id,
-        typeId: created.typeId,
-        typeCode: created.type?.code,
-        typeName: created.type?.name,
-        channel: created.channel,
-        note: created.note,
-        doneAt: created.doneAt,
-        nextActionAt: created.nextActionAt,
-        createdAt: created.createdAt,
-        sales: created.sales
-          ? { id: created.sales.id, name: created.sales.name }
+        id: result.id,
+        typeId: result.typeId,
+        typeCode: result.type?.code,
+        typeName: result.type?.name,
+        channel: result.channel,
+        note: result.note,
+        doneAt: result.doneAt,
+        nextActionAt: result.nextActionAt,
+        createdAt: result.createdAt,
+        sales: result.sales
+          ? { id: result.sales.id, name: result.sales.name }
           : null,
       },
     });
-  } catch (err) {
+  } catch (err: any) {
+    if (err instanceof Error) {
+      if (err.message === "LEAD_NOT_FOUND") {
+        return NextResponse.json(
+          { ok: false, error: "Lead tidak ditemukan" },
+          { status: 404 }
+        );
+      }
+      if (err.message === "FORBIDDEN_LEAD") {
+        return NextResponse.json(
+          { ok: false, error: "Tidak boleh mengubah lead ini" },
+          { status: 403 }
+        );
+      }
+      if (err.message === "FU_TYPE_NOT_FOUND") {
+        return NextResponse.json(
+          { ok: false, error: "Tipe follow up tidak ditemukan" },
+          { status: 400 }
+        );
+      }
+    }
+
     console.error("POST followups error:", err);
     return NextResponse.json(
       { ok: false, error: "Gagal menyimpan tindak lanjut" },

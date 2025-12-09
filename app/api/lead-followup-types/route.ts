@@ -17,10 +17,7 @@ export async function GET(req: NextRequest) {
       deletedAt: null as Date | null,
       ...(q
         ? {
-            OR: [
-              { name: { contains: q } },
-              { code: { contains: q } },
-            ],
+            OR: [{ name: { contains: q } }, { code: { contains: q } }],
           }
         : {}),
     };
@@ -82,13 +79,34 @@ export async function POST(req: NextRequest) {
       select: { order: true },
     });
 
+    // convert numeric
+    const nurturingOrder =
+      body.nurturingOrder === null || body.nurturingOrder === undefined
+        ? null
+        : Number(body.nurturingOrder);
+    const autoDelayHours =
+      body.autoDelayHours === null || body.autoDelayHours === undefined
+        ? null
+        : Number(body.autoDelayHours);
+
     const created = await prisma.leadFollowUpType.create({
       data: {
         name,
         code,
         description: body.description || null,
         order: (lastOrder?.order ?? 0) + 1,
-        isActive: true,
+        isActive: body.isActive ?? true,
+
+        isNurturingStep: body.isNurturingStep ?? false,
+        nurturingOrder: body.isNurturingStep ? nurturingOrder : null,
+        autoDelayHours: body.isNurturingStep ? autoDelayHours : null,
+        autoOnLeadCreate: body.isNurturingStep
+          ? body.autoOnLeadCreate ?? false
+          : false,
+
+        waTemplateTitle: body.waTemplateTitle || null,
+        waTemplateBody: body.waTemplateBody || null,
+        waTemplateMedia: body.waTemplateMedia || null,
       },
     });
 

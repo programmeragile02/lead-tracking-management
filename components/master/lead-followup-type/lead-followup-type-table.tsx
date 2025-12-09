@@ -48,6 +48,11 @@ export function FollowUpTypeTable({ items, onEdit, onDelete }: Props) {
             >
               <TableCell>
                 <p className="font-semibold text-gray-900">{item.name}</p>
+                {item.isNurturingStep && (
+                  <p className="text-xs text-primary mt-1">
+                    Nurturing step #{item.nurturingOrder ?? "-"}
+                  </p>
+                )}
               </TableCell>
               <TableCell>
                 <Badge

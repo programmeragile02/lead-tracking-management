@@ -22,6 +22,15 @@ export async function PUT(req: NextRequest, ctx: ParamsPromise) {
     const rawCode = String(body.code || "").trim();
     const isActive = typeof body.isActive === "boolean" ? body.isActive : true;
 
+    const nurturingOrder =
+      body.nurturingOrder === null || body.nurturingOrder === undefined
+        ? null
+        : Number(body.nurturingOrder);
+    const autoDelayHours =
+      body.autoDelayHours === null || body.autoDelayHours === undefined
+        ? null
+        : Number(body.autoDelayHours);
+
     if (!name) {
       return NextResponse.json(
         { ok: false, message: "Nama tindak lanjut wajib diisi" },
@@ -40,6 +49,23 @@ export async function PUT(req: NextRequest, ctx: ParamsPromise) {
             .slice(0, 50) || undefined,
         description: body.description || null,
         isActive,
+
+        isNurturingStep: body.isNurturingStep ?? false,
+        nurturingOrder:
+          body.isNurturingStep && !Number.isNaN(nurturingOrder)
+            ? nurturingOrder
+            : null,
+        autoDelayHours:
+          body.isNurturingStep && !Number.isNaN(autoDelayHours)
+            ? autoDelayHours
+            : null,
+        autoOnLeadCreate: body.isNurturingStep
+          ? body.autoOnLeadCreate ?? false
+          : false,
+
+        waTemplateTitle: body.waTemplateTitle || null,
+        waTemplateBody: body.waTemplateBody || null,
+        waTemplateMedia: body.waTemplateMedia || null,
       },
     });
 

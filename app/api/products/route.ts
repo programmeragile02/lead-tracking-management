@@ -16,9 +16,9 @@ export async function GET(req: Request) {
   if (q) {
     const qTrim = q.trim();
     where.OR = [
-      { name: { contains: qTrim, mode: "insensitive" } },
-      { category: { contains: qTrim, mode: "insensitive" } },
-      { description: { contains: qTrim, mode: "insensitive" } },
+      { name: { contains: qTrim } },
+      { category: { contains: qTrim } },
+      { description: { contains: qTrim } },
     ];
   }
 
@@ -52,7 +52,17 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { category, name, description, photo, isAvailable } = body;
+    const {
+      category,
+      name,
+      description,
+      photo,
+      isAvailable,
+      videoDemoUrl,
+      testimonialUrl,
+      educationPdfUrl,
+      educationLinkUrl,
+    } = body;
 
     if (!category || !name) {
       return NextResponse.json(
@@ -68,6 +78,10 @@ export async function POST(req: Request) {
         description: description || null,
         photo: photo || null,
         isAvailable: typeof isAvailable === "boolean" ? isAvailable : true,
+        videoDemoUrl: videoDemoUrl || null,
+        testimonialUrl: testimonialUrl || null,
+        educationPdfUrl: educationPdfUrl || null,
+        educationLinkUrl: educationLinkUrl || null,
       },
     });
 

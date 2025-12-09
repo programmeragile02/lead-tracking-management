@@ -124,7 +124,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-sm mt-4">
-          © 2025 Sistem Tracking Lead. Hak cipta dilindungi
+          © 2025 Lead Track. Hak cipta dilindungi
         </p>
       </div>
     </div>

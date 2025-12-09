@@ -19,7 +19,17 @@ export async function PUT(req: Request, context: ParamsPromise) {
 
   try {
     const body = await req.json();
-    const { category, name, description, photo, isAvailable } = body;
+    const {
+      category,
+      name,
+      description,
+      photo,
+      isAvailable,
+      videoDemoUrl,
+      testimonialUrl,
+      educationPdfUrl,
+      educationLinkUrl,
+    } = body;
 
     if (!category || !name) {
       return NextResponse.json(
@@ -36,6 +46,10 @@ export async function PUT(req: Request, context: ParamsPromise) {
         description: description || null,
         photo: photo || null,
         isAvailable: typeof isAvailable === "boolean" ? isAvailable : true,
+        videoDemoUrl: videoDemoUrl || null,
+        testimonialUrl: testimonialUrl || null,
+        educationPdfUrl: educationPdfUrl || null,
+        educationLinkUrl: educationLinkUrl || null,
       },
     });
 

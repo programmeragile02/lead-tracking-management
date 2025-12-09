@@ -1139,7 +1139,7 @@ export default function CreateLeadPage() {
       toast({
         title: "Berhasil",
         description:
-          "Lead baru berhasil dibuat. Tahap otomatis: Kontak Awal, status: Warm.",
+          "Lead baru berhasil dibuat. Tahap otomatis: Kontak Awal, status: Baru.",
       });
 
       router.push("/leads");

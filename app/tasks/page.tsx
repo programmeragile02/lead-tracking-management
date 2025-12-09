@@ -551,7 +551,7 @@ function TaskCalendar({
                         : "bg-background"
                     )}
                   >
-                    <span className="text-[11px]">{d.getDate()}</span>
+                    <span className="text-[11px] md:text-[36px]">{d.getDate()}</span>
 
                     {/* Dot status */}
                     {dayTasks.length > 0 && (

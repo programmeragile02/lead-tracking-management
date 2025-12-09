@@ -36,6 +36,17 @@ type FormState = {
   code: string;
   description: string;
   isActive: boolean;
+
+  // nurturing
+  isNurturingStep: boolean;
+  nurturingOrder: string; // pakai string biar gampang di input
+  autoDelayHours: string; // string -> nanti di-convert ke number
+  autoOnLeadCreate: boolean;
+
+  // template WA
+  waTemplateTitle: string;
+  waTemplateBody: string;
+  waTemplateMedia: string;
 };
 
 const defaultForm: FormState = {
@@ -43,6 +54,15 @@ const defaultForm: FormState = {
   code: "",
   description: "",
   isActive: true,
+
+  isNurturingStep: false,
+  nurturingOrder: "",
+  autoDelayHours: "",
+  autoOnLeadCreate: false,
+
+  waTemplateTitle: "",
+  waTemplateBody: "",
+  waTemplateMedia: "",
 };
 
 export default function LeadFollowUpTypeMasterPage() {
@@ -70,6 +90,21 @@ export default function LeadFollowUpTypeMasterPage() {
       code: item.code || "",
       description: item.description || "",
       isActive: item.isActive,
+
+      isNurturingStep: item.isNurturingStep ?? false,
+      nurturingOrder:
+        item.nurturingOrder !== null && item.nurturingOrder !== undefined
+          ? String(item.nurturingOrder)
+          : "",
+      autoDelayHours:
+        item.autoDelayHours !== null && item.autoDelayHours !== undefined
+          ? String(item.autoDelayHours)
+          : "",
+      autoOnLeadCreate: item.autoOnLeadCreate ?? false,
+
+      waTemplateTitle: item.waTemplateTitle || "",
+      waTemplateBody: item.waTemplateBody || "",
+      waTemplateMedia: item.waTemplateMedia || "",
     });
     setIsDialogOpen(true);
   };
@@ -88,6 +123,30 @@ export default function LeadFollowUpTypeMasterPage() {
       return;
     }
 
+    // convert string -> number/null
+    const nurturingOrderNumber =
+      form.nurturingOrder.trim() === ""
+        ? null
+        : Number.parseInt(form.nurturingOrder.trim(), 10);
+
+    const autoDelayHoursNumber =
+      form.autoDelayHours.trim() === ""
+        ? null
+        : Number.parseInt(form.autoDelayHours.trim(), 10);
+
+    if (
+      form.isNurturingStep &&
+      (Number.isNaN(nurturingOrderNumber) || nurturingOrderNumber! <= 0)
+    ) {
+      toast({
+        variant: "destructive",
+        title: "Validasi gagal",
+        description:
+          "Urutan nurturing wajib diisi dan harus lebih dari 0 jika diaktifkan.",
+      });
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -98,6 +157,15 @@ export default function LeadFollowUpTypeMasterPage() {
           .toUpperCase(),
         description: form.description.trim() || null,
         isActive: form.isActive,
+
+        isNurturingStep: form.isNurturingStep,
+        nurturingOrder: form.isNurturingStep ? nurturingOrderNumber : null,
+        autoDelayHours: form.isNurturingStep ? autoDelayHoursNumber : null,
+        autoOnLeadCreate: form.isNurturingStep ? form.autoOnLeadCreate : false,
+
+        waTemplateTitle: form.waTemplateTitle.trim() || null,
+        waTemplateBody: form.waTemplateBody.trim() || null,
+        waTemplateMedia: form.waTemplateMedia.trim() || null,
       };
 
       const url = editing
@@ -257,6 +325,136 @@ export default function LeadFollowUpTypeMasterPage() {
                   onChange={(e) => handleChange("description", e.target.value)}
                   placeholder="Catatan internal (opsional)"
                 />
+              </div>
+
+              {/* Pengaturan Nurturing Otomatis */}
+              <div className="mt-4 rounded-xl border bg-muted/40 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <Label className="flex items-center gap-1">
+                      Nurturing Otomatis
+                    </Label>
+                    <p className="text-xs mt-1 text-gray-500">
+                      Aktifkan jika tindak lanjut ini termasuk dalam urutan
+                      nurturing otomatis
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={form.isNurturingStep}
+                      onCheckedChange={(v) =>
+                        handleChange("isNurturingStep", v)
+                      }
+                    />
+                    <span className="text-sm text-gray-700">
+                      {form.isNurturingStep ? "Aktif" : "Nonaktif"}
+                    </span>
+                  </div>
+                </div>
+
+                {form.isNurturingStep && (
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-1">
+                      <Label>Urutan Nurturing</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        value={form.nurturingOrder}
+                        onChange={(e) =>
+                          handleChange("nurturingOrder", e.target.value)
+                        }
+                      />
+                      <p className="text-xs text-gray-500">
+                        1 = Follow Up 1 (pertama), 2 = Follow Up2, dst
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Delay Otomatis (Jam)</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={form.autoDelayHours}
+                        onChange={(e) =>
+                          handleChange("autoDelayHours", e.target.value)
+                        }
+                        placeholder="24 = 24 jam setelah step sebelumnya"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Contoh: 24 jam setelah Follow Up 1 untuk Follow Up 2
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Kirim Saat Lead Baru Masuk</Label>
+                      <div className="flex flex-col items-start gap-2 mt-1">
+                        <Switch
+                          checked={form.autoOnLeadCreate}
+                          onCheckedChange={(v) =>
+                            handleChange("autoOnLeadCreate", v)
+                          }
+                        />
+                        <p className="text-xs text-gray-600">
+                          Biasanya hanya untuk Follow Up 1
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Template Pesan WhatsApp */}
+              <div className="mt-4 rounded-xl border bg-muted/40 p-4 space-y-3">
+                <div className="space-y-1">
+                  <Label>Judul Template (Opsional)</Label>
+                  <Input
+                    value={form.waTemplateTitle}
+                    onChange={(e) =>
+                      handleChange("waTemplateTitle", e.target.value)
+                    }
+                    placeholder="Misal: Sambutan Lead Baru"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label>Isi Pesan WhatsApp</Label>
+                  <textarea
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    rows={6}
+                    value={form.waTemplateBody}
+                    onChange={(e) =>
+                      handleChange("waTemplateBody", e.target.value)
+                    }
+                    placeholder={`Hai {{nama_lead}}, saya {{nama_sales}} dari {{brand}} 👋
+
+Terima kasih sudah tertarik dengan {{produk}}.
+Saat ini kendala utama yang paling mengganggu apa, Kak?`}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Kamu bisa gunakan placeholder seperti{" "}
+                    <code className="bg-gray-100 px-1 rounded">
+                      {"{{nama_lead}}"}
+                    </code>
+                    ,{" "}
+                    <code className="bg-gray-100 px-1 rounded">
+                      {"{{nama_sales}}"}
+                    </code>
+                    ,{" "}
+                    <code className="bg-gray-100 px-1 rounded">
+                      {"{{produk}}"}
+                    </code>{" "}
+                    yang nanti akan diganti otomatis saat pengiriman.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label>URL Media (Opsional)</Label>
+                  <Input
+                    value={form.waTemplateMedia}
+                    onChange={(e) =>
+                      handleChange("waTemplateMedia", e.target.value)
+                    }
+                    placeholder="Link brosur / gambar jika ada"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-between py-2">

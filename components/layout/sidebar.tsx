@@ -82,6 +82,11 @@ export function Sidebar({ role }: SidebarProps) {
       label: "Konfigurasi Data Lead",
       icon: Settings,
     },
+    {
+      href: "/settings/general",
+      label: "Pengaturan Umum",
+      icon: Settings,
+    },
     { href: "/profile", label: "Profil", icon: User },
   ];
 

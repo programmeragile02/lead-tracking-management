@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
+import { sendFirstNurturingForNewLead } from "@/lib/nurturing";
+import { NurturingStatus } from "@prisma/client";
 
 function toNumberOrNull(value: any): number | null {
   if (value === null || value === undefined) return null;
@@ -8,6 +10,36 @@ function toNumberOrNull(value: any): number | null {
   if (!s) return null;
   const n = Number(s.replace(/,/g, ""));
   return Number.isNaN(n) ? null : n;
+}
+
+function normalizePhoneTo62(input: string | null | undefined): string | null {
+  if (!input) return null;
+
+  // hilangkan spasi, dash, dsb
+  let s = input.trim().replace(/[^\d+]/g, "");
+
+  // kalau ada + di depan, buang dulu
+  if (s.startsWith("+")) {
+    s = s.slice(1);
+  }
+
+  // 0812xxxxxx -> 62812xxxxxx
+  if (s.startsWith("0")) {
+    return "62" + s.slice(1);
+  }
+
+  // sudah 62xxxx -> biarkan
+  if (s.startsWith("62")) {
+    return s;
+  }
+
+  // kalau format lain (misal 812xxxx), optional mau dipaksa 62 atau dibiarkan
+  // di sini aku pilih dipaksa ke 62xxxx
+  if (/^\d+$/.test(s)) {
+    return "62" + s;
+  }
+
+  return s;
 }
 
 type CustomValueInput = {
@@ -93,17 +125,12 @@ export async function GET(req: NextRequest) {
     });
 
     // ---- query tambahan: hitung jumlah per status (untuk badge) ----
-    // pakai baseWhere supaya:
-    // - tetap milik sales yg sama
-    // - tetap terfilter keyword (q)
-    // - TIDAK dikunci ke status tertentu (ALL)
     const grouped = await prisma.lead.groupBy({
       where: baseWhere,
       by: ["statusId"],
       _count: { _all: true },
     });
 
-    // ambil statusId yang terpakai
     const statusIds = grouped
       .map((g) => g.statusId)
       .filter((id): id is number => id !== null);
@@ -133,7 +160,6 @@ export async function GET(req: NextRequest) {
           countsByStatusCode[key] = (countsByStatusCode[key] || 0) + count;
         }
       } else {
-        // kalau ada lead tanpa statusId, bisa dimasukkan ke "UNASSIGNED" kalau mau
         countsByStatusCode["UNASSIGNED"] =
           (countsByStatusCode["UNASSIGNED"] || 0) + count;
       }
@@ -149,7 +175,7 @@ export async function GET(req: NextRequest) {
         name: lead.name,
         productName: lead.product?.name ?? null,
         sourceName: lead.source?.name ?? null,
-        statusCode: lead.status?.code ?? null, // COLD/WARM/HOT/...
+        statusCode: lead.status?.code ?? null,
         statusName: lead.status?.name ?? null,
         createdAt: lead.createdAt.toISOString(),
         nextActionAt: latestFU?.nextActionAt
@@ -163,7 +189,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       data,
-      countsByStatusCode, // ← tambahan untuk badge
+      countsByStatusCode,
     });
   } catch (err: any) {
     console.error("GET /api/leads error", err);
@@ -174,7 +200,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// =================== POST: buat lead baru (sudah pernah kita buat) ===================
+// =================== POST: buat lead baru + auto FO1 ===================
 
 export async function POST(req: NextRequest) {
   try {
@@ -200,7 +226,8 @@ export async function POST(req: NextRequest) {
 
     const name = String(body?.name ?? "").trim();
     const address = body?.address ? String(body.address) : null;
-    const phone = body?.phone ? String(body.phone) : null;
+    const rawPhone = body?.phone ? String(body.phone) : null;
+    const phone = normalizePhoneTo62(rawPhone);
     const photoUrl = body?.photoUrl ? String(body.photoUrl) : null;
 
     const priceOffering = toNumberOrNull(body?.priceOffering);
@@ -261,6 +288,7 @@ export async function POST(req: NextRequest) {
       orderBy: { order: "asc" },
     });
 
+    // Lead baru
     const lead = await prisma.lead.create({
       data: {
         name,
@@ -275,6 +303,7 @@ export async function POST(req: NextRequest) {
         productId,
         sourceId,
         salesId: currentUser.id,
+        // nurturingStatus: NurturingStatus.ACTIVE,
       },
     });
 
@@ -293,6 +322,14 @@ export async function POST(req: NextRequest) {
           skipDuplicates: true,
         });
       }
+    }
+
+    // FO1 auto sambutan via WA
+    try {
+      await sendFirstNurturingForNewLead(lead.id);
+    } catch (e) {
+      console.error("[POST /api/leads] Error menjalankan FO1 nurturing:", e);
+      // sengaja tidak di-throw supaya lead tetap berhasil dibuat
     }
 
     return NextResponse.json({ ok: true, data: lead });

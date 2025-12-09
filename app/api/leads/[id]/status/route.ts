@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
+import { NurturingStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,12 @@ export async function POST(
     );
   }
 
+  const statusCode = body.statusCode.toUpperCase();
+
   const [lead, targetStatus] = await Promise.all([
     prisma.lead.findUnique({ where: { id: leadId } }),
     prisma.leadStatus.findUnique({
-      where: { code: body.statusCode },
+      where: { code: statusCode },
     }),
   ]);
 
@@ -63,10 +66,27 @@ export async function POST(
 
   const ownerSalesId = lead.salesId ?? user.id;
 
+  // Rule: HOT / CLOSE_WON / CLOSE_LOST → nurturing STOPPED
+  const targetCodeUpper = targetStatus.code.toUpperCase();
+  const shouldStopNurturing = ["HOT", "CLOSE_WON", "CLOSE_LOST"].includes(
+    targetCodeUpper
+  );
+
   const [updatedLead] = await prisma.$transaction([
     prisma.lead.update({
       where: { id: leadId },
-      data: { statusId: targetStatus.id },
+      data: {
+        statusId: targetStatus.id,
+        ...(shouldStopNurturing
+          ? {
+              nurturingStatus: NurturingStatus.STOPPED,
+              nurturingCurrentStep: null,
+              nurturingLastSentAt: null,
+              nurturingStartedAt: null,
+              nurturingPausedAt: null,
+            }
+          : {}),
+      },
     }),
     prisma.leadStatusHistory.create({
       data: {

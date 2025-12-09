@@ -65,6 +65,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/api/nurturing")) {
+    return NextResponse.next();
+  }
+
   // skip static & asset
   if (
     pathname.startsWith("/_next") ||

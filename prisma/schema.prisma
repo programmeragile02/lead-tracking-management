@@ -74,6 +74,11 @@ model Product {
   photo       String?  // URL gambar produk
   isAvailable Boolean  @default(true)
 
+  videoDemoUrl     String?  // link video demo (YouTube, Loom, dll)
+  testimonialUrl   String?  // link halaman/testimoni
+  educationPdfUrl  String?  // URL file PDF edukasi
+  educationLinkUrl String?  // link artikel/blog/landing edukasi
+
   leads       Lead[]
 
   createdAt   DateTime @default(now())
@@ -166,6 +171,12 @@ model LeadStatusHistory {
   @@index([salesId])
 }
 
+enum NurturingStatus {
+  ACTIVE    // mesin nurturing boleh jalan
+  PAUSED    // dipause karena sales follow up / lead lagi aktif di pipeline
+  STOPPED   // dimatikan permanen (closing / lost / diputuskan)
+}
+
 model Lead {
   id        Int      @id @default(autoincrement())
 
@@ -211,6 +222,12 @@ model Lead {
   statusHistories LeadStatusHistory[]
 
   activities  LeadActivity[]
+
+  nurturingStatus      NurturingStatus @default(ACTIVE)
+  nurturingCurrentStep Int?            // step ke berapa dlm sequence nurturing (1 = FO1, 2 = FO2, dst)
+  nurturingLastSentAt  DateTime?       // kapan terakhir pesan nurturing dikirim
+  nurturingStartedAt   DateTime?       // kapan nurturing pertama kali dimulai (opsional, bisa dipakai utk hitung 14-30 hari)
+  nurturingPausedAt    DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -294,6 +311,20 @@ model LeadFollowUpType {
   order       Int      @default(0)
   isActive    Boolean  @default(true)
 
+  // PENGATURAN NURTURING OTOMATIS
+  isNurturingStep   Boolean  @default(false)
+  nurturingOrder    Int?                 // urutan nurturing: 1 = FO1, 2 = FO2, 3 = FO3, 4 = FO4, 5 = nurturing ringan
+  autoDelayHours    Int?                 // jeda jam dari step sebelumnya sebelum step ini dikirim
+  autoOnLeadCreate  Boolean @default(false) // true hanya utk step yg mau dikirim saat lead baru dibuat (FO1)
+
+  // Template pesan WA untuk nurturing
+  waTemplateTitle   String?
+  waTemplateBody    String?   @db.Text    // isi pesan nurturing (pakai placeholder)
+  waTemplateMedia   String?              // url brosur/gambar kalau ada
+
+  // optional: filter status target nurturing (misal nurturing ringan hanya utk COLD)
+  targetStatusCode  String?              // contoh: "COLD", "WARM", "HOT" (kalau mau dipakai)
+
   // relasi ke histori tindak lanjut
   followUps   LeadFollowUp[]
 
@@ -329,6 +360,8 @@ model LeadFollowUp {
   nextActionAt DateTime?        // jadwal follow up berikutnya (optional)
 
   channel       FollowUpChannel   @default(WHATSAPP)
+
+  isAutoNurturing Boolean @default(false) // true kalau dikirim oleh mesin nurturing
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -454,4 +487,19 @@ model LeadActivity {
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model GeneralSetting {
+  id                      Int     @id @default(1)
+
+  companyName             String  @default("Perusahaan Kami")
+  autoNurturingEnabled    Boolean @default(true)
+
+  /// berapa jam setelah sales diam nurturing boleh jalan lagi
+  maxIdleHoursBeforeResume Int    @default(48)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("general_settings")
 }

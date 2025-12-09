@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
+import { NurturingStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -96,6 +97,15 @@ export async function PATCH(
           description,
           happenedAt: new Date(),
           createdById: user.id,
+        },
+      });
+
+      // Pastikan nurturing tetap PAUSED saat ada reschedule
+      await tx.lead.update({
+        where: { id: existing.leadId },
+        data: {
+          nurturingStatus: NurturingStatus.PAUSED,
+          nurturingPausedAt: new Date(),
         },
       });
 

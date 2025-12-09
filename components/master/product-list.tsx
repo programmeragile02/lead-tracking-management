@@ -17,6 +17,10 @@ export type Product = {
   description?: string | null;
   photo?: string | null;
   isAvailable: boolean;
+  videoDemoUrl?: string | null;
+  testimonialUrl?: string | null;
+  educationPdfUrl?: string | null;
+  educationLinkUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 };

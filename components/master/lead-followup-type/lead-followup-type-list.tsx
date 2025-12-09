@@ -16,6 +16,17 @@ export type FollowUpType = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+
+  // nurturing
+  isNurturingStep: boolean;
+  nurturingOrder: number | null;
+  autoDelayHours: number | null;
+  autoOnLeadCreate: boolean;
+
+  // template WA
+  waTemplateTitle?: string | null;
+  waTemplateBody?: string | null;
+  waTemplateMedia?: string | null;
 };
 
 type FollowUpTypeApiResponse = {

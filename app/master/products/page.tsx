@@ -38,6 +38,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { mutate } from "swr";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type FormState = {
   category: string;
@@ -45,6 +46,10 @@ type FormState = {
   description: string;
   photo: string;
   isAvailable: boolean;
+  videoDemoUrl: string;
+  testimonialUrl: string;
+  educationPdfUrl: string;
+  educationLinkUrl: string;
 };
 
 const defaultForm: FormState = {
@@ -53,6 +58,10 @@ const defaultForm: FormState = {
   description: "",
   photo: "",
   isAvailable: true,
+  videoDemoUrl: "",
+  testimonialUrl: "",
+  educationPdfUrl: "",
+  educationLinkUrl: "",
 };
 
 export default function ProductMasterPage() {
@@ -70,6 +79,9 @@ export default function ProductMasterPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [uploadingEducationPdf, setUploadingEducationPdf] = useState(false);
+  const educationFileInputRef = useRef<HTMLInputElement | null>(null);
+
   const openCreate = () => {
     setEditing(null);
     setForm(defaultForm);
@@ -84,6 +96,10 @@ export default function ProductMasterPage() {
       description: product.description || "",
       photo: product.photo || "",
       isAvailable: product.isAvailable,
+      videoDemoUrl: product.videoDemoUrl || "",
+      testimonialUrl: product.testimonialUrl || "",
+      educationPdfUrl: product.educationPdfUrl || "",
+      educationLinkUrl: product.educationLinkUrl || "",
     });
     setIsDialogOpen(true);
   };
@@ -111,6 +127,10 @@ export default function ProductMasterPage() {
         description: form.description || null,
         photo: form.photo || null,
         isAvailable: form.isAvailable,
+        videoDemoUrl: form.videoDemoUrl || null,
+        testimonialUrl: form.testimonialUrl || null,
+        educationPdfUrl: form.educationPdfUrl || null,
+        educationLinkUrl: form.educationLinkUrl || null,
       };
 
       const url = editing ? `/api/products/${editing.id}` : "/api/products";
@@ -228,6 +248,66 @@ export default function ProductMasterPage() {
       if (e.target) {
         e.target.value = "";
       }
+    }
+  };
+
+  const handleEducationFileChange = async (
+    e: ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast({
+        variant: "destructive",
+        title: "Format tidak didukung",
+        description: "Silakan upload file PDF.",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        variant: "destructive",
+        title: "File terlalu besar",
+        description: "Ukuran maksimal file PDF adalah 5MB.",
+      });
+      return;
+    }
+
+    try {
+      setUploadingEducationPdf(true);
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/uploads/product-education", {
+        method: "POST",
+        body: formData,
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !json.ok) {
+        throw new Error(json.message || "Gagal mengupload file edukasi");
+      }
+
+      handleChange("educationPdfUrl", json.url);
+
+      toast({
+        title: "Berhasil",
+        description: "File edukasi berhasil diupload.",
+      });
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Gagal upload",
+        description: err?.message || "Terjadi kesalahan saat upload file.",
+      });
+    } finally {
+      setUploadingEducationPdf(false);
+      if (e.target) e.target.value = "";
     }
   };
 
@@ -409,6 +489,138 @@ export default function ProductMasterPage() {
                     </Button>
                   </div>
                 )}
+              </div>
+
+              {/* Link Video Demo */}
+              <div className="space-y-2">
+                <Label>Link Video Demo (opsional)</Label>
+                <Input
+                  value={form.videoDemoUrl}
+                  onChange={(e) => handleChange("videoDemoUrl", e.target.value)}
+                  placeholder="https://youtu.be/..."
+                />
+                <p className="text-xs text-gray-500">
+                  Link video demo produk, misalnya YouTube.
+                </p>
+              </div>
+
+              {/* Link Testimoni */}
+              <div className="space-y-2">
+                <Label>Link Testimoni / Website (opsional)</Label>
+                <Input
+                  value={form.testimonialUrl}
+                  onChange={(e) =>
+                    handleChange("testimonialUrl", e.target.value)
+                  }
+                  placeholder="https://contoh.com/testimoni-produk"
+                />
+                <p className="text-xs text-gray-500">
+                  Bisa berupa halaman testimoni, portfolio, atau studi kasus.
+                </p>
+              </div>
+
+              {/* Materi Edukasi */}
+              <div className="space-y-2">
+                <Label>Materi Edukasi Produk</Label>
+                <Tabs defaultValue="link" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="link">Via Link</TabsTrigger>
+                    <TabsTrigger value="pdf">Upload PDF</TabsTrigger>
+                  </TabsList>
+
+                  {/* TAB LINK */}
+                  <TabsContent value="link" className="mt-3 space-y-2">
+                    <Input
+                      value={form.educationLinkUrl}
+                      onChange={(e) =>
+                        handleChange("educationLinkUrl", e.target.value)
+                      }
+                      placeholder="https://contoh.com/materi-edukasi"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Misalnya artikel blog, landing edukasi, atau halaman
+                      panduan.
+                    </p>
+                  </TabsContent>
+
+                  {/* TAB PDF */}
+                  <TabsContent value="pdf" className="mt-3 space-y-2">
+                    {/* input file hidden */}
+                    <input
+                      ref={educationFileInputRef}
+                      type="file"
+                      accept="application/pdf"
+                      className="hidden"
+                      onChange={handleEducationFileChange}
+                    />
+
+                    {form.educationPdfUrl ? (
+                      <div className="space-y-2">
+                        <a
+                          href={form.educationPdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary underline"
+                        >
+                          Lihat file edukasi saat ini
+                        </a>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              educationFileInputRef.current?.click()
+                            }
+                            disabled={uploadingEducationPdf}
+                          >
+                            {uploadingEducationPdf
+                              ? "Mengupload..."
+                              : "Ganti File"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:bg-red-50"
+                            onClick={() => handleChange("educationPdfUrl", "")}
+                            disabled={uploadingEducationPdf}
+                          >
+                            Hapus File
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div
+                        className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                        onClick={() => educationFileInputRef.current?.click()}
+                      >
+                        <div className="flex-1 text-center md:text-left space-y-1">
+                          <p className="text-sm font-medium text-gray-900">
+                            {uploadingEducationPdf
+                              ? "Mengupload file PDF..."
+                              : "Upload file edukasi (PDF)"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Format PDF, ukuran maksimal 5MB.
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            educationFileInputRef.current?.click();
+                          }}
+                          disabled={uploadingEducationPdf}
+                        >
+                          Pilih File
+                        </Button>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
 
               <div className="flex items-center justify-between py-2">
