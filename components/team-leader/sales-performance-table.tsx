@@ -1,68 +1,132 @@
-export function SalesPerformanceTable() {
+"use client";
+
+type SalesPerformanceRow = {
+  salesId: number;
+  salesName: string;
+  leadTarget: number;
+  leadActual: number;
+  revenueTarget: number;
+  revenueActual: number;
+  closingCount: number;
+};
+
+interface SalesPerformanceTableProps {
+  rows: SalesPerformanceRow[];
+  loading?: boolean;
+}
+
+function percent(target: number, actual: number) {
+  if (!target || target <= 0) return 0;
+  return Math.round((actual / target) * 100);
+}
+
+function formatRupiahShort(value: number) {
+  if (!value) return "0";
+  const jt = value / 1_000_000;
+  return `${jt.toLocaleString("id-ID", {
+    maximumFractionDigits: 1,
+  })} jt`;
+}
+
+export function SalesPerformanceTable({
+  rows,
+  loading,
+}: SalesPerformanceTableProps) {
+  if (loading) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border p-4 text-sm text-gray-500">
+        Memuat performa sales...
+      </div>
+    );
+  }
+
+  if (!rows || rows.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm border p-6 text-sm text-gray-500">
+        Belum ada data sales di tim ini.
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-muted">
+          <thead className="bg-muted/70">
             <tr>
-              <th className="text-left p-4 text-sm font-semibold">Sales Name</th>
-              <th className="text-left p-4 text-sm font-semibold">Lead Target</th>
-              <th className="text-left p-4 text-sm font-semibold">Revenue Target</th>
-              <th className="text-left p-4 text-sm font-semibold">Closings</th>
+              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+                Sales
+              </th>
+              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+                Lead (bulan ini)
+              </th>
+              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+                Pendapatan
+              </th>
+              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+                Closing
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            <tr>
-              <td className="p-4">
-                <p className="font-medium">Andi Wijaya</p>
-              </td>
-              <td className="p-4">
-                <div className="space-y-1">
-                  <p className="text-sm">6 / 10</p>
-                  <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-red-500 rounded-full" style={{ width: "60%" }} />
-                  </div>
-                </div>
-              </td>
-              <td className="p-4">
-                <div className="space-y-1">
-                  <p className="text-sm">28jt / 50jt</p>
-                  <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: "56%" }} />
-                  </div>
-                </div>
-              </td>
-              <td className="p-4">
-                <p className="font-medium">3</p>
-              </td>
-            </tr>
-            <tr>
-              <td className="p-4">
-                <p className="font-medium">Sari Dewi</p>
-              </td>
-              <td className="p-4">
-                <div className="space-y-1">
-                  <p className="text-sm">8 / 10</p>
-                  <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-red-500 rounded-full" style={{ width: "80%" }} />
-                  </div>
-                </div>
-              </td>
-              <td className="p-4">
-                <div className="space-y-1">
-                  <p className="text-sm">42jt / 50jt</p>
-                  <div className="h-2 bg-muted rounded-full w-24">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: "84%" }} />
-                  </div>
-                </div>
-              </td>
-              <td className="p-4">
-                <p className="font-medium">5</p>
-              </td>
-            </tr>
+            {rows.map((row) => {
+              const leadPct = percent(row.leadTarget, row.leadActual);
+              const revPct = percent(row.revenueTarget, row.revenueActual);
+
+              return (
+                <tr key={row.salesId}>
+                  <td className="p-4 align-top">
+                    <p className="font-medium text-sm text-gray-900">
+                      {row.salesName}
+                    </p>
+                  </td>
+
+                  {/* Lead target */}
+                  <td className="p-4 align-top">
+                    <div className="space-y-1 text-xs">
+                      <p className="text-gray-700">
+                        {row.leadActual} / {row.leadTarget} lead
+                      </p>
+                      <div className="h-2 bg-muted rounded-full w-28">
+                        <div
+                          className="h-full rounded-full bg-red-500"
+                          style={{
+                            width: `${Math.min(leadPct, 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Revenue target */}
+                  <td className="p-4 align-top">
+                    <div className="space-y-1 text-xs">
+                      <p className="text-gray-700">
+                        {formatRupiahShort(row.revenueActual)} /{" "}
+                        {formatRupiahShort(row.revenueTarget)}
+                      </p>
+                      <div className="h-2 bg-muted rounded-full w-28">
+                        <div
+                          className="h-full rounded-full bg-orange-500"
+                          style={{
+                            width: `${Math.min(revPct, 100)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+
+                  <td className="p-4 align-top">
+                    <p className="font-medium text-sm text-gray-900">
+                      {row.closingCount}
+                    </p>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
-  )
+  );
 }

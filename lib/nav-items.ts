@@ -53,9 +53,9 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       href: "/dashboard/team-leader",
       icon: Home,
     },
-    { id: "leads", label: "Lead", href: "/leads", icon: Users },
+    // { id: "leads", label: "Lead", href: "/leads", icon: Users },
     { id: "team", label: "Tim", href: "/team", icon: BarChart3 },
-    { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
+    // { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
   ],
 
   manager: [

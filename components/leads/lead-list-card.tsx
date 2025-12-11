@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 interface LeadListCardProps {
   leadId: number | string;
@@ -53,6 +54,8 @@ export function LeadListCard({
     updated: "bg-green-500",
     normal: "bg-gray-200",
   };
+
+  const { user } = useCurrentUser();
 
   return (
     <div className="bg-white rounded-xl shadow-md border-2 border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
@@ -114,15 +117,17 @@ export function LeadListCard({
             </div>
 
             <div className="flex gap-2">
-              <Link href={`/leads/${leadId}`}>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-9 w-9 p-0 hover:bg-red-100 text-red-600"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </Link>
+              {user?.roleCode === "SALES" && (
+                <Link href={`/leads/${leadId}`}>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-9 w-9 p-0 hover:bg-red-100 text-red-600"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

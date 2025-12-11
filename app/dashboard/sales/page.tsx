@@ -138,7 +138,7 @@ export default function SalesDashboardPage() {
             target={closingTarget}
             actual={closingActual}
             color="orange"
-            format={formatRupiah} // <-- full RpX format
+            format={formatRupiah}
           />
           <KPICard
             title="Lead Aktif (Hot/Warm)"
