@@ -66,13 +66,13 @@ export async function GET(req: NextRequest) {
 
       let status: "overdue" | "today" | "upcoming";
 
-      if (next < now) {
+      if (next < now && fu.doneAt === null ) {
         // termasuk yang jam-nya sudah lewat hari ini
         status = "overdue";
-      } else if (next >= now && next < startOfTomorrow) {
+      } else if (next >= now && next < startOfTomorrow && fu.doneAt === null) {
         // hari ini tapi jamnya belum lewat
         status = "today";
-      } else {
+      } else if (fu.doneAt === null) {
         // besok dan seterusnya
         status = "upcoming";
       }
@@ -89,6 +89,8 @@ export async function GET(req: NextRequest) {
         status,
         stageName: fu.lead.stage?.name ?? null,
         statusName: fu.lead.status?.name ?? null,
+        isDone: fu.doneAt ? true : false,
+        doneAt: fu.doneAt ? fu.doneAt.toISOString() : null,
       };
     });
 

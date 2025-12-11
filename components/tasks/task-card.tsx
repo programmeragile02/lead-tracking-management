@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Clock, ChevronRight } from "lucide-react";
+import { Clock, ChevronRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useSWRConfig } from "swr";
 
-type TaskStatus = "overdue" | "today" | "upcoming";
+type TaskStatus = "overdue" | "today" | "upcoming" | "done";
 
 interface TaskCardProps {
   followUpId: number;
@@ -26,10 +26,12 @@ interface TaskCardProps {
   leadName: string;
   product: string;
   followUpType: string;
-  nextActionAt: string; // ISO
+  nextActionAt: string; // ISO string
   status: TaskStatus;
   stageName?: string;
   statusName?: string;
+  isDone: boolean;
+  doneAt?: string | null;
 }
 
 export function TaskCard({
@@ -42,6 +44,8 @@ export function TaskCard({
   status,
   stageName,
   statusName,
+  isDone,
+  doneAt,
 }: TaskCardProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -49,6 +53,11 @@ export function TaskCard({
 
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [markingDone, setMarkingDone] = useState(false);
+
+  // status yang dipakai di UI:
+  // kalau isDone true, paksa pakai "done"
+  const effectiveStatus: TaskStatus = isDone ? "done" : status;
 
   // untuk input type="datetime-local"
   const initDateTimeLocal = (() => {
@@ -69,12 +78,14 @@ export function TaskCard({
     overdue: "bg-red-100 text-red-700",
     today: "bg-orange-100 text-orange-700",
     upcoming: "bg-blue-100 text-blue-700",
+    done: "bg-emerald-100 text-emerald-700",
   };
 
   const statusLabel: Record<TaskStatus, string> = {
     overdue: "Terlambat",
     today: "Hari Ini",
     upcoming: "Mendatang",
+    done: "Selesai",
   };
 
   const date = new Date(nextActionAt);
@@ -87,6 +98,17 @@ export function TaskCard({
     hour: "2-digit",
     minute: "2-digit",
   });
+
+  const doneDate = doneAt ? new Date(doneAt) : null;
+  const doneStr =
+    doneDate &&
+    doneDate.toLocaleString("id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   const handleReschedule = async () => {
     if (!newNextAction) {
@@ -134,15 +156,63 @@ export function TaskCard({
     }
   };
 
+  const handleMarkDone = async () => {
+    if (isDone) return; // sudah selesai, jangan dobel klik
+
+    setMarkingDone(true);
+    try {
+      const res = await fetch(`/api/followups/${followUpId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          markDone: true,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Gagal menandai selesai");
+      }
+
+      toast({
+        title: "Tugas selesai",
+        description: "Follow up ini sudah ditandai sebagai selesai.",
+      });
+
+      mutate("/api/tasks");
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal menandai selesai",
+        description: err.message || "Terjadi kesalahan saat menyimpan.",
+      });
+    } finally {
+      setMarkingDone(false);
+    }
+  };
+
   return (
     <>
-      <div className="bg-white rounded-xl p-4 shadow-sm border">
+      <div
+        className={cn(
+          "bg-white rounded-xl p-4 shadow-sm border",
+          isDone && "opacity-90"
+        )}
+      >
         <div className="flex items-start justify-between mb-3 gap-2">
           <div className="flex-1 space-y-1">
             <div className="flex items-center gap-2">
               <h4 className="font-semibold">{leadName}</h4>
-              <Badge className={cn("text-xs capitalize", statusColors[status])}>
-                {statusLabel[status]}
+              <Badge
+                className={cn(
+                  "text-xs capitalize flex items-center gap-1",
+                  statusColors[effectiveStatus]
+                )}
+              >
+                {effectiveStatus === "done" && (
+                  <CheckCircle2 className="h-3 w-3" />
+                )}
+                {statusLabel[effectiveStatus]}
               </Badge>
             </div>
 
@@ -160,7 +230,7 @@ export function TaskCard({
           </div>
         </div>
 
-        <div className="flex flex-col items-between justify-between pt-3 border-t gap-2">
+        <div className="flex flex-col justify-between pt-3 border-t gap-3">
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -168,20 +238,48 @@ export function TaskCard({
                 {dateStr}, {timeStr}
               </span>
             </div>
+
+            {isDone && doneStr && (
+              <p className="text-xs text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                <span>Ditandai selesai: {doneStr}</span>
+              </p>
+            )}
           </div>
 
-          <div className="flex items-end justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant={isDone ? "outline" : "secondary"}
+              size="sm"
+              onClick={handleMarkDone}
+              disabled={isDone || markingDone}
+              className={cn(
+                "flex items-center gap-1",
+                isDone && "cursor-default"
+              )}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {isDone
+                ? "Sudah selesai"
+                : markingDone
+                ? "Menyimpan..."
+                : "Tandai selesai"}
+            </Button>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => setRescheduleOpen(true)}
+              disabled={markingDone}
             >
               Reschedule
             </Button>
+
             <Button
               size="sm"
               className="gradient-primary text-white"
               onClick={() => router.push(`/leads/${leadId}`)}
+              disabled={markingDone}
             >
               Buka Lead
               <ChevronRight className="ml-1 h-4 w-4" />
@@ -199,9 +297,7 @@ export function TaskCard({
 
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium">
-                Jadwal baru
-              </label>
+              <label className="text-xs font-medium">Jadwal baru</label>
               <Input
                 type="datetime-local"
                 value={newNextAction}

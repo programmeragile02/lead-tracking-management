@@ -314,10 +314,7 @@ export default function LeadsPage() {
             })
           )}
 
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-xs text-muted-foreground">
-              Halaman {leadsRespPage}
-            </p>
+          <div className="flex items-center justify-start pt-2">
             <div className="flex gap-2">
               <Button
                 variant="outline"

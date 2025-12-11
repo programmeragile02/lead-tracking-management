@@ -15,7 +15,7 @@ import {
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-type TaskStatus = "overdue" | "today" | "upcoming";
+type TaskStatus = "overdue" | "today" | "upcoming" | "done";
 
 type TaskItem = {
   id: number; // followup id
@@ -29,6 +29,8 @@ type TaskItem = {
   status: TaskStatus;
   stageName?: string | null;
   statusName?: string | null;
+  isDone: boolean;
+  doneAt: string | null;
 };
 
 type UntouchedLeadItem = {
@@ -52,7 +54,7 @@ const fetcher = (url: string) =>
       json.ok ? (json.data as ApiData) : { tasks: [], untouchedLeads: [] }
     );
 
-type FilterTab = "all" | "today" | "overdue" | "upcoming";
+type FilterTab = "all" | "today" | "overdue" | "upcoming" | "done";
 type ViewMode = "list" | "calendar";
 
 export default function TasksPage() {
@@ -64,12 +66,16 @@ export default function TasksPage() {
   const tasks = data?.tasks ?? [];
   const untouchedLeads = data?.untouchedLeads ?? [];
 
-  const { todayCount, overdueCount, upcomingCount } = useMemo(() => {
+  const { todayCount, overdueCount, upcomingCount, doneCount } = useMemo(() => {
     let today = 0;
     let overdue = 0;
     let upcoming = 0;
+    let done = 0;
 
     for (const t of tasks) {
+      if (t.isDone) {
+        done++;
+      }
       if (t.status === "today") today++;
       else if (t.status === "overdue") overdue++;
       else if (t.status === "upcoming") upcoming++;
@@ -79,6 +85,7 @@ export default function TasksPage() {
       todayCount: today,
       overdueCount: overdue,
       upcomingCount: upcoming,
+      doneCount: done,
     };
   }, [tasks]);
 
@@ -92,6 +99,9 @@ export default function TasksPage() {
     }
     if (activeFilter === "upcoming") {
       return tasks.filter((t) => t.status === "upcoming");
+    }
+    if (activeFilter === "done") {
+      return tasks.filter((t) => t.isDone);
     }
     return tasks;
   }, [tasks, activeFilter]);
@@ -161,6 +171,12 @@ export default function TasksPage() {
                 onClick={() => setActiveFilter("upcoming")}
                 count={upcomingCount}
               />
+              <FilterChip
+                label="Selesai"
+                active={activeFilter === "done"}
+                onClick={() => setActiveFilter("done")}
+                count={doneCount}
+              />
             </div>
 
             {/* Task List */}
@@ -191,6 +207,8 @@ export default function TasksPage() {
                   status={task.status}
                   stageName={task.stageName || undefined}
                   statusName={task.statusName || undefined}
+                  isDone={task.isDone}
+                  doneAt={task.doneAt || undefined}
                 />
               ))}
             </div>

@@ -10,7 +10,8 @@ interface KPICardProps {
   hot?: number;
   warm?: number;
   unit?: string;
-  color: "red" | "orange" | "amber" | "coral" | "rose"
+  color: "red" | "orange" | "amber" | "coral" | "rose";
+  format?: (value: number) => string;
 }
 
 export function KPICard({
@@ -23,8 +24,10 @@ export function KPICard({
   warm,
   unit = "",
   color,
+  format,
 }: KPICardProps) {
-  const percentage = target && actual ? Math.round((actual / target) * 100) : 0;
+  const percentage =
+    target && actual && target > 0 ? Math.round((actual / target) * 100) : 0;
 
   const colorClasses = {
     red: "bg-red-500",
@@ -42,6 +45,12 @@ export function KPICard({
     rose: "bg-rose-50",
   };
 
+  const renderValue = (value: number | undefined) => {
+    if (value === undefined) return "-";
+    if (format) return format(value);
+    return `${value} ${unit}`.trim();
+  };
+
   return (
     <div
       className={cn(
@@ -51,12 +60,7 @@ export function KPICard({
     >
       <div className="flex items-start justify-between mb-4">
         <h3 className="font-semibold text-sm text-gray-700">{title}</h3>
-        <div
-          className={cn(
-            "p-3 rounded-xl shadow-lg",
-            colorClasses[color]
-          )}
-        >
+        <div className={cn("p-3 rounded-xl shadow-lg", colorClasses[color])}>
           <Icon className="h-5 w-5 text-white" />
         </div>
       </div>
@@ -67,13 +71,13 @@ export function KPICard({
             <div className="flex items-baseline gap-2">
               <span className="text-sm text-gray-600 font-medium">Target:</span>
               <span className="font-semibold text-gray-800">
-                {target} {unit}
+                {renderValue(target)}
               </span>
             </div>
             <div className="flex items-baseline gap-2">
               <span className="text-sm text-gray-600 font-medium">Actual:</span>
               <span className="text-3xl font-bold text-gray-900">
-                {actual} {unit}
+                {renderValue(actual)}
               </span>
             </div>
           </div>
@@ -85,10 +89,7 @@ export function KPICard({
             </div>
             <div className="h-3 bg-white/60 rounded-full overflow-hidden shadow-inner">
               <div
-                className={cn(
-                  "h-full shadow-sm",
-                  colorClasses[color]
-                )}
+                className={cn("h-full shadow-sm", colorClasses[color])}
                 style={{ width: `${Math.min(percentage, 100)}%` }}
               />
             </div>

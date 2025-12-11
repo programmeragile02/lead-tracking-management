@@ -119,7 +119,7 @@ interface LeadFollowUpItem {
   typeName: string | null;
   channel: "WHATSAPP" | "CALL" | "ZOOM" | "VISIT";
   note?: string | null;
-  doneAt: string;
+  doneAt: string | null;
   nextActionAt?: string | null;
   createdAt: string;
   sales?: {
@@ -677,6 +677,14 @@ export default function LeadDetailPage() {
 
     // 3) Tindak lanjut
     for (const fu of followUps) {
+      // tentukan teks waktu
+      let waktuText = "";
+      if (fu.doneAt) {
+        waktuText = `Dilakukan: ${formatDateTime(fu.doneAt)}`;
+      } else if (fu.nextActionAt) {
+        waktuText = `Jadwal: ${formatDateTime(fu.nextActionAt)}`;
+      }
+
       list.push({
         id: `fu-${fu.id}`,
         kind: "FOLLOW_UP",
@@ -684,13 +692,12 @@ export default function LeadDetailPage() {
           fu.typeName || getFollowUpTypeLabel(fu.typeCode) || "Tindak lanjut",
         description: [
           fu.channel ? `Channel: ${fu.channel}` : "",
-          fu.nextActionAt
-            ? `Jadwal: ${formatDateTime(fu.nextActionAt)}`
-            : `Dilakukan: ${formatDateTime(fu.doneAt)}`,
+          waktuText,
           fu.note ? `Catatan: ${fu.note}` : "",
         ]
           .filter(Boolean)
           .join(" • "),
+        // pakai waktu yang paling relevan untuk timeline
         at: fu.createdAt,
       });
     }
@@ -1226,6 +1233,46 @@ export default function LeadDetailPage() {
     }
   }
 
+  const [markingFollowUpDone, setMarkingFollowUpDone] = useState(false);
+
+  async function handleMarkFollowUpDone(followUpId: number) {
+    if (!leadId) return;
+
+    try {
+      setMarkingFollowUpDone(true);
+
+      const res = await fetch(
+        `/api/leads/${leadId}/followups/${followUpId}/done`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Gagal menandai tindak lanjut");
+      }
+
+      toast({
+        title: "Tindak lanjut selesai",
+        description: "Follow up berhasil ditandai sebagai selesai.",
+      });
+
+      // refresh data follow up + aktivitas (timeline)
+      await Promise.all([mutateFollowUps(), mutateActivities()]);
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Gagal menandai tindak lanjut",
+        description: err?.message || "Terjadi kesalahan.",
+      });
+    } finally {
+      setMarkingFollowUpDone(false);
+    }
+  }
+
   return (
     <DashboardLayout title="Detail Leads">
       <div className="flex min-h-screen flex-col bg-background">
@@ -1349,11 +1396,13 @@ export default function LeadDetailPage() {
                         </Badge>
                       </p>
                       <p className="text-[11px] md:text-sm text-muted-foreground mt-2">
-                        {lastFollowUp.nextActionAt
+                        {lastFollowUp.doneAt
+                          ? `Terakhir: ${formatDateTime(lastFollowUp.doneAt)}`
+                          : lastFollowUp.nextActionAt
                           ? `Jadwal: ${formatDateTime(
                               lastFollowUp.nextActionAt
                             )}`
-                          : `Terakhir: ${formatDateTime(lastFollowUp.doneAt)}`}
+                          : "Belum ada tindak lanjut"}
                       </p>
                       {lastFollowUp.channel && (
                         <p className="text-[11px] md:text-sm text-muted-foreground">
@@ -1947,6 +1996,22 @@ export default function LeadDetailPage() {
                             size="sm"
                             variant="outline"
                             className="h-7 px-2 text-[11px] md:text-sm"
+                            onClick={() => handleQuickStatus("new")}
+                          >
+                            New
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[11px] md:text-sm"
+                            onClick={() => handleQuickStatus("cold")}
+                          >
+                            Cold
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-[11px] md:text-sm"
                             onClick={() => handleQuickStatus("warm")}
                           >
                             Warm
@@ -1978,7 +2043,7 @@ export default function LeadDetailPage() {
                         </div>
                       </div>
 
-                      {/* Quick Tindak Lanjut (buka modal) */}
+                      {/* Quick Tindak Lanjut (buka modal + tandai selesai) */}
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="text-[11px] md:text-sm text-muted-foreground">
                           <div>
@@ -1990,28 +2055,63 @@ export default function LeadDetailPage() {
                                 : "Belum ada"}
                             </span>
                           </div>
-                          {lastFollowUp?.nextActionAt ? (
-                            <div>
-                              Jadwal:{" "}
-                              {formatDateTime(lastFollowUp.nextActionAt)} (
-                              {followUpChannelLabel(
-                                lastFollowUp.channel.toLowerCase()
-                              )}
-                              )
-                            </div>
-                          ) : lastFollowUp ? (
-                            <div>
-                              Terakhir: {formatDateTime(lastFollowUp.doneAt)} (
-                              {followUpChannelLabel(
-                                lastFollowUp.channel.toLowerCase()
-                              )}
-                              )
-                            </div>
+
+                          {lastFollowUp ? (
+                            lastFollowUp.doneAt ? (
+                              <div>
+                                Terakhir: {formatDateTime(lastFollowUp.doneAt)}{" "}
+                                (
+                                {followUpChannelLabel(
+                                  lastFollowUp.channel.toLowerCase()
+                                )}
+                                )
+                              </div>
+                            ) : lastFollowUp.nextActionAt ? (
+                              <div>
+                                Jadwal:{" "}
+                                {formatDateTime(lastFollowUp.nextActionAt)} (
+                                {followUpChannelLabel(
+                                  lastFollowUp.channel.toLowerCase()
+                                )}
+                                )
+                              </div>
+                            ) : (
+                              <div>
+                                Sudah ada tindak lanjut, tanpa jadwal
+                                berikutnya.
+                              </div>
+                            )
                           ) : (
                             <div>Belum ada jadwal tersimpan.</div>
                           )}
                         </div>
+
                         <div className="flex flex-wrap gap-2">
+                          {/* Tombol Tandai selesai → hanya muncul kalau sudah ada follow up & belum done */}
+                          {lastFollowUp && !lastFollowUp.doneAt && (
+                            <Button
+                              size="sm"
+                              variant=""
+                              className="h-8 px-3 text-xs"
+                              onClick={() =>
+                                handleMarkFollowUpDone(lastFollowUp.id)
+                              }
+                              disabled={markingFollowUpDone}
+                            >
+                              {markingFollowUpDone ? (
+                                <>
+                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                  Menyimpan...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  Tandai selesai
+                                </>
+                              )}
+                            </Button>
+                          )}
+
                           <Button
                             size="sm"
                             variant="outline"

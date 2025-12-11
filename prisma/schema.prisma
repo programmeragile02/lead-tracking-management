@@ -356,8 +356,13 @@ model LeadFollowUp {
   type        LeadFollowUpType? @relation(fields: [typeId], references: [id])
 
   note        String?           // catatan follow up
-  doneAt      DateTime          @default(now())
-  nextActionAt DateTime?        // jadwal follow up berikutnya (optional)
+  
+  // null = masih JADWAL / belum dikerjakan
+  // terisi = sudah DIKERJAKAN (ditandai selesai)
+  doneAt       DateTime?
+
+  // jadwal follow up berikutnya (tanggal + jam yang kamu input dari modal)
+  nextActionAt DateTime?
 
   channel       FollowUpChannel   @default(WHATSAPP)
 

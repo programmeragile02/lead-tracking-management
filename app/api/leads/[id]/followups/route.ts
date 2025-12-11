@@ -25,7 +25,7 @@ export async function GET(
           select: { id: true, name: true },
         },
       },
-      orderBy: [{ nextActionAt: "desc" }, { createdAt: "desc" }],
+      orderBy: { createdAt: "desc" },
     });
 
     const data = followUps.map((f) => ({
@@ -150,7 +150,6 @@ export async function POST(
           typeId: fuType.id,
           note: note || null,
           channel: mapChannelUiToDb(channel),
-          doneAt: new Date(),
           nextActionAt,
           // isAutoNurturing: false ← default dari schema
         },

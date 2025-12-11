@@ -1,3 +1,4 @@
+// app/api/followups/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
@@ -26,10 +27,18 @@ export async function PATCH(
     );
   }
 
-  const body = await req.json().catch(() => null);
-  const { nextActionAt, note } = body || {};
+  const body = (await req.json().catch(() => null)) as {
+    nextActionAt?: string;
+    note?: string;
+    markDone?: boolean;
+  } | null;
 
-  if (!nextActionAt) {
+  const nextActionAt = body?.nextActionAt;
+  const note = body?.note;
+  const markDone = body?.markDone === true;
+
+  // kalau bukan markDone dan tidak ada nextActionAt → error
+  if (!markDone && !nextActionAt) {
     return NextResponse.json(
       { ok: false, error: "nextActionAt is required" },
       { status: 400 }
@@ -43,30 +52,93 @@ export async function PATCH(
           id: followUpId,
           salesId: user.id, // pastikan ini follow up milik sales ini
         },
+        include: {
+          type: true,
+        },
       });
 
       if (!existing) {
         throw new Error("NOT_FOUND");
       }
 
+      const now = new Date();
+
+      // ========================
+      // MODE 1: TANDAI SELESAI
+      // ========================
+      if (markDone) {
+        const updated = await tx.leadFollowUp.update({
+          where: { id: followUpId },
+          data: {
+            doneAt: now,
+            ...(note && note.trim()
+              ? {
+                  note:
+                    (existing.note ? existing.note + "\n\n" : "") +
+                    `[DONE ${now.toISOString()}] ${note}`,
+                }
+              : {}),
+          },
+        });
+
+        // Catat aktivitas "Follow up selesai"
+        let description = `Follow up "${
+          existing.type?.name || existing.type?.code || "Tindak lanjut"
+        }" ditandai selesai pada ${now.toLocaleString("id-ID", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })}.`;
+
+        if (note && note.trim()) {
+          description += `\n\nCatatan: ${note}`;
+        }
+
+        await tx.leadActivity.create({
+          data: {
+            leadId: existing.leadId,
+            title: "Follow up selesai",
+            description,
+            happenedAt: now,
+            createdById: user.id,
+          },
+        });
+
+        // Jaga-jaga: nurturing tetap PAUSED setelah aktivitas manual
+        await tx.lead.update({
+          where: { id: existing.leadId },
+          data: {
+            nurturingStatus: NurturingStatus.PAUSED,
+            nurturingPausedAt: now,
+          },
+        });
+
+        return updated;
+      }
+
+      // ========================
+      // MODE 2: RESCHEDULE
+      // ========================
       const oldNext = existing.nextActionAt;
-      const newNext = new Date(nextActionAt);
+      const newNext = new Date(nextActionAt!);
 
       const updated = await tx.leadFollowUp.update({
         where: { id: followUpId },
         data: {
+          doneAt: null,
           nextActionAt: newNext,
-          ...(note
+          ...(note && note.trim()
             ? {
                 note:
                   (existing.note ? existing.note + "\n\n" : "") +
-                  `[RESCHEDULE ${new Date().toISOString()}] ${note}`,
+                  `[RESCHEDULE ${now.toISOString()}] ${note}`,
               }
             : {}),
         },
       });
 
-      // Catat sebagai LeadActivity
       const oldStr = oldNext
         ? oldNext.toLocaleString("id-ID", {
             day: "2-digit",
@@ -86,7 +158,7 @@ export async function PATCH(
       });
 
       let description = `Reschedule follow up dari ${oldStr} ke ${newStr}.`;
-      if (note) {
+      if (note && note.trim()) {
         description += `\n\nAlasan: ${note}`;
       }
 
@@ -95,17 +167,17 @@ export async function PATCH(
           leadId: existing.leadId,
           title: "Reschedule follow up",
           description,
-          happenedAt: new Date(),
+          happenedAt: now,
           createdById: user.id,
         },
       });
 
-      // Pastikan nurturing tetap PAUSED saat ada reschedule
+      // Pastikan nurturing tetap PAUSED saat reschedule
       await tx.lead.update({
         where: { id: existing.leadId },
         data: {
           nurturingStatus: NurturingStatus.PAUSED,
-          nurturingPausedAt: new Date(),
+          nurturingPausedAt: now,
         },
       });
 
@@ -121,9 +193,9 @@ export async function PATCH(
       );
     }
 
-    console.error("Reschedule error", err);
+    console.error("PATCH /api/followups/[id] error", err);
     return NextResponse.json(
-      { ok: false, error: "Failed to reschedule follow up" },
+      { ok: false, error: "Failed to update follow up" },
       { status: 500 }
     );
   }
