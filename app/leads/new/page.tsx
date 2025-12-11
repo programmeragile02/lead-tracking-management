@@ -337,7 +337,7 @@
 //   };
 
 //   return (
-//     <DashboardLayout title="Tambah Lead Baru" role="sales">
+//     <DashboardLayout title="Tambah Lead Baru" >
 //       <div className="max-w-4xl mx-auto space-y-6">
 //         <div className="space-y-1">
 //           <h2 className="text-2xl font-bold text-gray-900">Tambah Lead Baru</h2>
@@ -1157,7 +1157,7 @@ export default function CreateLeadPage() {
   };
 
   return (
-    <DashboardLayout title="Tambah Lead Baru" role="sales">
+    <DashboardLayout title="Tambah Lead Baru">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="space-y-1">
           <h2 className="text-2xl font-bold text-gray-900">Tambah Lead Baru</h2>
@@ -1183,7 +1183,9 @@ export default function CreateLeadPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>No. HP<span className="text-red-500">*</span></Label>
+              <Label>
+                No. HP<span className="text-red-500">*</span>
+              </Label>
               <Input
                 value={form.phone}
                 type="number"
@@ -1237,7 +1239,9 @@ export default function CreateLeadPage() {
 
             {/* Sumber Lead */}
             <div className="space-y-2">
-              <Label>Sumber Lead <span className="text-red-500">*</span></Label>
+              <Label>
+                Sumber Lead <span className="text-red-500">*</span>
+              </Label>
               <Select
                 value={form.sourceId}
                 onValueChange={(v) => handleChange("sourceId", v)}
@@ -1276,7 +1280,9 @@ export default function CreateLeadPage() {
 
           {/* Alamat */}
           <div className="space-y-2">
-            <Label>Alamat <span className="text-red-500">*</span></Label>
+            <Label>
+              Alamat <span className="text-red-500">*</span>
+            </Label>
             <Textarea
               value={form.address}
               onChange={(e) => handleChange("address", e.target.value)}

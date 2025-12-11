@@ -223,7 +223,7 @@ export async function GET(req: NextRequest) {
         channel: lead.source?.name ?? "Unknown",
         createdAt: lead.createdAt.toISOString(),
       })),
-      recentActivities: recentFollowUps.map((fu) => ({
+      recentActivities: recentFollowUps.slice(0,5).map((fu) => ({
         id: fu.id,
         time: fu.doneAt.toISOString(),
         type: fu.type?.name ?? "Follow Up",

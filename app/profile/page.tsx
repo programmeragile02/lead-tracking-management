@@ -9,6 +9,7 @@ import { ProfileSettings } from "@/components/profile/profile-settings";
 import { ProfileStats } from "@/components/profile/profile-stats";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { ProfileChangePasswordDialog } from "@/components/profile/profile-change-password-dialog";
 
 export type ProfileUser = {
   id: number;
@@ -48,10 +49,11 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const { data, error, isLoading, mutate } = useSWR(PROFILE_API, fetcher);
   const [isEditing, setIsEditing] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
 
   if (isLoading) {
     return (
-      <DashboardLayout title="Profil Saya" role="sales">
+      <DashboardLayout title="Profil Saya">
         <div className="flex items-center justify-center py-16">
           <Loader2 className="w-6 h-6 animate-spin mr-2" />
           <span className="text-sm text-muted-foreground">
@@ -64,7 +66,7 @@ export default function ProfilePage() {
 
   if (error || !data?.ok) {
     return (
-      <DashboardLayout title="Profil Saya" role="sales">
+      <DashboardLayout title="Profil Saya">
         <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
           <AlertCircle className="w-10 h-10 text-red-500" />
           <p className="font-semibold">Gagal memuat profil</p>
@@ -124,7 +126,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <DashboardLayout title="Profil Saya" role="sales">
+    <DashboardLayout title="Profil Saya">
       <div className="space-y-6">
         <ProfileHeader
           user={user}
@@ -142,7 +144,12 @@ export default function ProfilePage() {
           onUpdated={handleUpdated}
           onError={handleUpdateError}
         />
-        <ProfileSettings />
+        <ProfileSettings onSecurityClick={() => setSecurityOpen(true)} />
+
+        <ProfileChangePasswordDialog
+          open={securityOpen}
+          onOpenChange={setSecurityOpen}
+        />
       </div>
     </DashboardLayout>
   );

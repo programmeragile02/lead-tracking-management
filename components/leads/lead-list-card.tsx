@@ -11,6 +11,7 @@ interface LeadListCardProps {
   product: string;
   channel: string;
   createdDate: string;
+  leadAge: string;
   nextFollowUp?: string;
   followUpType?: string;
   indicator: "overdue" | "due-today" | "updated" | "normal";
@@ -23,6 +24,7 @@ export function LeadListCard({
   product,
   channel,
   createdDate,
+  leadAge,
   nextFollowUp,
   followUpType,
   indicator,
@@ -58,22 +60,35 @@ export function LeadListCard({
         <div className={cn("w-1.5", indicatorColors[indicator])} />
 
         <div className="flex-1 p-4">
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-bold text-gray-900">{leadName}</h4>
-                <Badge
-                  className={cn(
-                    "text-xs font-semibold border",
-                    statusColors[status]
-                  )}
-                >
-                  {statusLabels[status]}
-                </Badge>
+          <div className="flex justify-between">
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-bold text-gray-900">{leadName}</h4>
+                  <Badge
+                    className={cn(
+                      "text-xs font-semibold border",
+                      statusColors[status]
+                    )}
+                  >
+                    {statusLabels[status]}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 font-medium">
+                  {product} • {channel}
+                </p>
               </div>
-              <p className="text-sm text-gray-600 font-medium">
-                {product} • {channel} • {createdDate}
-              </p>
+            </div>
+
+            <div className="flex flex-col items-end gap-1">
+              <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1">
+                <span className="text-[11px] font-medium text-slate-500 mr-1">
+                  Umur lead
+                </span>
+                <span className="text-xs font-semibold text-slate-900">
+                  {leadAge}
+                </span>
+              </div>
             </div>
           </div>
 

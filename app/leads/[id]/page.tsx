@@ -178,6 +178,8 @@ type DynamicField = {
   value?: string | null; // string / JSON (multi select)
 };
 
+type PriceKind = "OFFERING" | "NEGOTIATION" | "CLOSING";
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 // mapping UI ↔ DB code
@@ -215,6 +217,37 @@ function mapStatusUiToDb(ui: LeadStatusUi): string {
     case "lost":
       return "CLOSE_LOST";
   }
+}
+
+function formatCurrencyIDR(value?: number | string | null) {
+  if (value === null || value === undefined || value === "") return "-";
+
+  const n = typeof value === "string" ? Number(value) : value;
+
+  if (Number.isNaN(n)) return String(value);
+
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
+// untuk mask input: "12000000" -> "12.000.000"
+function formatRupiahInput(value: string): string {
+  // ambil hanya angka
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+
+  // tambahkan titik tiap 3 digit dari belakang
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// untuk ambil angka mentah: "12.000.000" -> 12000000
+function parseRupiahToNumber(value: string): number {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return 0;
+  return Number(digits);
 }
 
 export default function LeadDetailPage() {
@@ -273,12 +306,12 @@ export default function LeadDetailPage() {
   }, [lead?.status?.code]);
 
   const statusLabelMap: Record<LeadStatusUi, string> = {
-    new: "Lead Baru",
-    cold: "Tidak Aktif (Cold)",
-    warm: "Prospek (Warm)",
-    hot: "Siap Closing (Hot)",
-    won: "Berhasil (Close Won)",
-    lost: "Gagal (Close Lost)",
+    new: "New",
+    cold: "Cold",
+    warm: "Warm",
+    hot: "Hot",
+    won: "Close Won",
+    lost: "Close Lost",
   };
 
   function getStatusBadgeClass(s: LeadStatusUi) {
@@ -607,7 +640,7 @@ export default function LeadDetailPage() {
 
   const statusBadge = (
     <Badge
-      className={`rounded-full px-3 py-0.5 text-xs ${getStatusBadgeClass(
+      className={`rounded-full px-3 py-0.5 text-md ${getStatusBadgeClass(
         status
       )}`}
     >
@@ -1000,12 +1033,6 @@ export default function LeadDetailPage() {
   const [overviewPhone, setOverviewPhone] = useState("");
   const [overviewAddress, setOverviewAddress] = useState("");
   const [overviewProductId, setOverviewProductId] = useState<string>("");
-  const [overviewStatusCode, setOverviewStatusCode] = useState<string>("");
-  const [overviewPriceOffering, setOverviewPriceOffering] =
-    useState<string>("");
-  const [overviewPriceNegotiation, setOverviewPriceNegotiation] =
-    useState<string>("");
-  const [overviewPriceClosing, setOverviewPriceClosing] = useState<string>("");
 
   // field dinamis, disimpan per fieldId
   const [overviewCustomValues, setOverviewCustomValues] = useState<
@@ -1020,16 +1047,6 @@ export default function LeadDetailPage() {
     setOverviewPhone(lead.phone || "");
     setOverviewAddress(lead.address || "");
     setOverviewProductId(lead.productId ? String(lead.productId) : "");
-    setOverviewStatusCode(lead.status?.code || "");
-    setOverviewPriceOffering(
-      lead.priceOffering ?? "" ? String(lead.priceOffering) : ""
-    );
-    setOverviewPriceNegotiation(
-      lead.priceNegotiation ?? "" ? String(lead.priceNegotiation) : ""
-    );
-    setOverviewPriceClosing(
-      lead.priceClosing ?? "" ? String(lead.priceClosing) : ""
-    );
 
     // field dinamis
     const map: Record<number, string> = {};
@@ -1062,10 +1079,6 @@ export default function LeadDetailPage() {
           phone: overviewPhone,
           address: overviewAddress,
           productId: overviewProductId ? Number(overviewProductId) : null,
-          statusCode: overviewStatusCode || null,
-          priceOffering: overviewPriceOffering || null,
-          priceNegotiation: overviewPriceNegotiation || null,
-          priceClosing: overviewPriceClosing || null,
           customValues: customValuesPayload,
         }),
       });
@@ -1105,8 +1118,116 @@ export default function LeadDetailPage() {
     }
   }
 
+  // harga
+  const [priceModalOpen, setPriceModalOpen] = useState(false);
+  const [priceKind, setPriceKind] = useState<PriceKind>("OFFERING");
+  const [priceInput, setPriceInput] = useState("");
+  const [savingPrice, setSavingPrice] = useState(false);
+
+  function getLeadPriceForKind(kind: PriceKind) {
+    if (!lead) return "";
+    const raw =
+      kind === "OFFERING"
+        ? lead.priceOffering
+        : kind === "NEGOTIATION"
+        ? lead.priceNegotiation
+        : lead.priceClosing;
+
+    if (raw === null || raw === undefined) return "";
+
+    // pastikan jadi string digit dulu
+    const asNumber = typeof raw === "number" ? raw : Number(raw);
+    if (Number.isNaN(asNumber)) return "";
+
+    return formatRupiahInput(String(asNumber));
+  }
+
+  function handleOpenPriceModal() {
+    if (lead) {
+      // heuristik: penawaran dulu, kalau sudah → nego, kalau sudah → closing
+      let initialKind: PriceKind = "OFFERING";
+      if (lead.priceOffering != null) initialKind = "NEGOTIATION";
+      if (lead.priceNegotiation != null) initialKind = "CLOSING";
+
+      setPriceKind(initialKind);
+      setPriceInput(getLeadPriceForKind(initialKind));
+    }
+    setPriceModalOpen(true);
+  }
+
+  function handleChangePriceKind(next: PriceKind) {
+    setPriceKind(next);
+    setPriceInput(getLeadPriceForKind(next));
+  }
+
+  async function handleSavePrice() {
+    if (!leadId) return;
+
+    if (!priceInput.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Nominal belum diisi",
+        description: "Isi nominal harga terlebih dahulu.",
+      });
+      return;
+    }
+
+    const numeric = parseRupiahToNumber(priceInput);
+    if (!numeric) {
+      // kalau mau 0 dianggap valid, ceknya bisa diubah (numeric < 0 misalnya)
+      toast({
+        variant: "destructive",
+        title: "Format angka tidak valid",
+        description: "Pastikan nominal hanya berisi angka.",
+      });
+      return;
+    }
+
+    const field =
+      priceKind === "OFFERING"
+        ? "priceOffering"
+        : priceKind === "NEGOTIATION"
+        ? "priceNegotiation"
+        : "priceClosing";
+
+    try {
+      setSavingPrice(true);
+
+      const res = await fetch(`/api/leads/${leadId}/price`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          field,
+          value: numeric,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Gagal menyimpan harga");
+      }
+
+      toast({
+        title: "Harga tersimpan",
+        description: "Harga berhasil diperbarui untuk lead ini.",
+      });
+
+      setPriceModalOpen(false);
+      await mutateDetail();
+    } catch (err: any) {
+      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Gagal menyimpan harga",
+        description: err?.message || "Terjadi kesalahan.",
+      });
+    } finally {
+      setSavingPrice(false);
+    }
+  }
+
   return (
-    <DashboardLayout title="Detail Leads" role="sales">
+    <DashboardLayout title="Detail Leads">
       <div className="flex min-h-screen flex-col bg-background">
         <main className="mx-auto flex w-full flex-1 flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 md:pb-8">
           {/* RINGKASAN LEAD */}
@@ -1119,14 +1240,14 @@ export default function LeadDetailPage() {
                 <p className="text-sm font-semibold sm:text-base">
                   {displayName}
                 </p>
-                <p className="text-xs text-muted-foreground sm:text-sm">
+                <p className="text-md text-muted-foreground sm:text-sm">
                   {displayProductName} • {displayCity}
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  <Badge variant="outline" className="text-[11px]">
+                  <Badge variant="outline" className="text-[12px]">
                     {displaySource}
                   </Badge>
-                  <Badge variant="outline" className="text-[11px]">
+                  <Badge variant="outline" className="text-[12px]">
                     WA: {displayPhone}
                   </Badge>
                 </div>
@@ -1134,7 +1255,7 @@ export default function LeadDetailPage() {
             </div>
 
             <div className="flex w-full flex-col gap-2 md:w-72">
-              <div className="flex items-center justify-between text-xs font-medium text-muted-foreground">
+              <div className="flex items-center justify-between text-md font-medium text-muted-foreground">
                 <span>Kelengkapan profil</span>
                 <span>{profileCompletion}%</span>
               </div>
@@ -1160,38 +1281,30 @@ export default function LeadDetailPage() {
           <section className="grid gap-3 md:grid-cols-4">
             {/* Tahap ringkas */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Tahap Penjualan</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-sm md:text-lg">
+                  Tahap Penjualan Aktif
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-xs sm:text-sm">
+              <CardContent className="space-y-3 text-md sm:text-sm">
                 <div className="space-y-1">
-                  <p className="text-[11px] text-muted-foreground">
-                    Tahap aktif sekarang
-                  </p>
-                  <p className="text-sm font-medium">
-                    {currentStage?.label || "-"}
+                  <p className="text-xl font-medium">
+                    <Badge className="text-sm md:text-xl">
+                      {currentStage?.label || "-"}
+                    </Badge>
                   </p>
                 </div>
-
-                <p className="text-[11px] text-muted-foreground">
-                  Riwayat lengkap tahapan terlihat di panel Quick Tahapan.
-                </p>
-                {stageUpdating && (
-                  <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Menyimpan perubahan tahapan...
-                  </p>
-                )}
               </CardContent>
             </Card>
 
             {/* Status lead */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Status Lead</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-sm md:text-lg">
+                  Status Lead Saat Ini
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2 text-xs sm:text-sm">
-                <p className="text-xs text-muted-foreground">Status saat ini</p>
+              <CardContent className="text-xs sm:text-sm flex justify-around flex-wrap items-center">
                 <div className="flex items-center gap-2">
                   {statusBadge}
                   {statusUpdating && (
@@ -1203,16 +1316,16 @@ export default function LeadDetailPage() {
                   onValueChange={(v) => updateStatus(v as LeadStatusUi)}
                   disabled={statusUpdating}
                 >
-                  <SelectTrigger className="mt-1 h-9 text-xs">
+                  <SelectTrigger className="mt-1 h-9 text-sm md:text-lg">
                     <SelectValue placeholder="Pilih status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">Lead Baru</SelectItem>
-                    <SelectItem value="cold">Tidak Aktif (Cold)</SelectItem>
-                    <SelectItem value="warm">Prospek (Warm)</SelectItem>
-                    <SelectItem value="hot">Siap Closing (Hot)</SelectItem>
-                    <SelectItem value="won">Berhasil (Close Won)</SelectItem>
-                    <SelectItem value="lost">Gagal (Close Lost)</SelectItem>
+                    <SelectItem value="new">New</SelectItem>
+                    <SelectItem value="cold">Cold</SelectItem>
+                    <SelectItem value="warm">Warm</SelectItem>
+                    <SelectItem value="hot">Hot</SelectItem>
+                    <SelectItem value="won">Close Won</SelectItem>
+                    <SelectItem value="lost">Close Lost</SelectItem>
                   </SelectContent>
                 </Select>
               </CardContent>
@@ -1220,29 +1333,30 @@ export default function LeadDetailPage() {
 
             {/* Tindak lanjut ringkas (REAL) */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Tindak Lanjut</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-sm md:text-lg">
+                  Tindak Lanjut Saat Ini
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-xs sm:text-sm">
                 <div className="space-y-0.5">
-                  <p className="text-xs text-muted-foreground">
-                    Step follow up terakhir
-                  </p>
                   {lastFollowUp ? (
                     <>
-                      <p className="text-xs font-medium">
-                        {lastFollowUp.typeName ||
-                          getFollowUpTypeLabel(lastFollowUp.typeCode)}
+                      <p className="font-medium">
+                        <Badge className="text-sm md:text-lg bg-blue-500">
+                          {lastFollowUp.typeName ||
+                            getFollowUpTypeLabel(lastFollowUp.typeCode)}
+                        </Badge>
                       </p>
-                      <p className="text-[11px] text-muted-foreground">
+                      <p className="text-[11px] md:text-sm text-muted-foreground mt-2">
                         {lastFollowUp.nextActionAt
-                          ? `Jadwal berikutnya: ${formatDateTime(
+                          ? `Jadwal: ${formatDateTime(
                               lastFollowUp.nextActionAt
                             )}`
                           : `Terakhir: ${formatDateTime(lastFollowUp.doneAt)}`}
                       </p>
                       {lastFollowUp.channel && (
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-[11px] md:text-sm text-muted-foreground">
                           Channel:{" "}
                           {followUpChannelLabel(
                             lastFollowUp.channel.toLowerCase()
@@ -1251,33 +1365,28 @@ export default function LeadDetailPage() {
                       )}
                     </>
                   ) : (
-                    <p className="text-xs text-muted-foreground">
-                      Belum ada tindak lanjut tercatat untuk lead ini.
+                    <p className="text-sm text-muted-foreground">
+                      Belum ada tindak lanjut tercatat untuk lead ini
                     </p>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Atur jadwal dan detail tindak lanjut cepat dari tab WhatsApp
-                  (tombol “Atur tindak lanjut”).
-                </p>
               </CardContent>
             </Card>
 
             {/* Produk */}
             <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Produk yang Diminati</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-sm md:text-lg">
+                  Produk yang Diminati
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-xs sm:text-sm">
-                <p className="text-xs text-muted-foreground">
-                  Pilih produk utama untuk lead ini.
-                </p>
                 <Select
                   value={lead?.productId ? String(lead.productId) : ""}
                   onValueChange={handleChangeProduct}
                   disabled={updatingProduct || detailLoading}
                 >
-                  <SelectTrigger className="mt-1 h-9 text-xs">
+                  <SelectTrigger className="mt-1 h-9 text-sm md:text-lg">
                     <SelectValue placeholder="Pilih produk" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1302,7 +1411,7 @@ export default function LeadDetailPage() {
           <section>
             <Card className="overflow-hidden">
               <CardHeader className="pb-0">
-                <CardTitle className="text-base">
+                <CardTitle className="text-base md:text-xl">
                   Detail & Interaksi Lead
                 </CardTitle>
               </CardHeader>
@@ -1331,10 +1440,7 @@ export default function LeadDetailPage() {
 
                   {/* OVERVIEW */}
                   <TabsContent value="overview" className="space-y-4 text-sm">
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Ringkasan data lead
-                      </p>
+                    <div className="mb-2 flex items-center justify-end">
                       {!overviewEditing ? (
                         <Button
                           size="sm"
@@ -1379,13 +1485,13 @@ export default function LeadDetailPage() {
 
                     {/* INFORMASI KONTAK */}
                     <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
+                      <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
                         Informasi Kontak
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
                         {/* Nama PIC */}
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Nama
                           </p>
                           {overviewEditing ? (
@@ -1401,7 +1507,7 @@ export default function LeadDetailPage() {
 
                         {/* WhatsApp */}
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             WhatsApp
                           </p>
                           {overviewEditing ? (
@@ -1418,7 +1524,7 @@ export default function LeadDetailPage() {
 
                         {/* Sumber Lead (hanya view, karena master-nya sendiri) */}
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Sumber Lead
                           </p>
                           <p className="text-xs sm:text-sm">{displaySource}</p>
@@ -1426,7 +1532,7 @@ export default function LeadDetailPage() {
 
                         {/* Alamat */}
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Alamat
                           </p>
                           {overviewEditing ? (
@@ -1447,13 +1553,13 @@ export default function LeadDetailPage() {
 
                     {/* INFORMASI PRODUK & STATUS */}
                     <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
+                      <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
                         Informasi Produk
                       </p>
                       <div className="grid gap-2 sm:grid-cols-2">
                         {/* Produk */}
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Produk
                           </p>
                           {overviewEditing ? (
@@ -1482,95 +1588,45 @@ export default function LeadDetailPage() {
 
                         {/* Status */}
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Status
                           </p>
-                          {overviewEditing ? (
-                            <Select
-                              value={overviewStatusCode || ""}
-                              onValueChange={(v) => setOverviewStatusCode(v)}
-                            >
-                              <SelectTrigger className="mt-1 h-9 text-xs sm:text-sm">
-                                <SelectValue placeholder="Pilih status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {/* pakai master status dari detailRes */}
-                                {detailRes?.data?.statuses?.map((s) => (
-                                  <SelectItem key={s.id} value={s.code}>
-                                    {s.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <p className="text-xs sm:text-sm">
-                              {lead?.status?.name || "-"}
-                            </p>
-                          )}
+                          <p className="text-xs sm:text-sm font-medium">
+                            {lead?.status?.name || "-"}
+                          </p>
                         </div>
                       </div>
                     </div>
 
                     {/* INFORMASI HARGA */}
                     <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
+                      <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
                         Informasi Harga
                       </p>
                       <div className="grid gap-2 sm:grid-cols-3">
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Harga Penawaran
                           </p>
-                          {overviewEditing ? (
-                            <Input
-                              className="mt-1 h-9 text-xs sm:text-sm"
-                              value={overviewPriceOffering}
-                              onChange={(e) =>
-                                setOverviewPriceOffering(e.target.value)
-                              }
-                              placeholder="cth: 1500000"
-                            />
-                          ) : (
-                            <p className="text-xs sm:text-sm">
-                              {lead?.priceOffering ?? "-"}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Harga Nego
+                          <p className="text-xs sm:text-sm font-medium">
+                            {formatCurrencyIDR(lead?.priceOffering)}
                           </p>
-                          {overviewEditing ? (
-                            <Input
-                              className="mt-1 h-9 text-xs sm:text-sm"
-                              value={overviewPriceNegotiation}
-                              onChange={(e) =>
-                                setOverviewPriceNegotiation(e.target.value)
-                              }
-                            />
-                          ) : (
-                            <p className="text-xs sm:text-sm">
-                              {lead?.priceNegotiation ?? "-"}
-                            </p>
-                          )}
                         </div>
                         <div>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
+                            Harga Negosiasi
+                          </p>
+                          <p className="text-xs sm:text-sm font-medium">
+                            {formatCurrencyIDR(lead?.priceNegotiation)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             Harga Closing
                           </p>
-                          {overviewEditing ? (
-                            <Input
-                              className="mt-1 h-9 text-xs sm:text-sm"
-                              value={overviewPriceClosing}
-                              onChange={(e) =>
-                                setOverviewPriceClosing(e.target.value)
-                              }
-                            />
-                          ) : (
-                            <p className="text-xs sm:text-sm">
-                              {lead?.priceClosing ?? "-"}
-                            </p>
-                          )}
+                          <p className="text-xs sm:text-sm font-medium">
+                            {formatCurrencyIDR(lead?.priceClosing)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1578,7 +1634,7 @@ export default function LeadDetailPage() {
                     {/* FIELD DINAMIS */}
                     {dynamicFields.length > 0 && (
                       <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
+                        <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
                           Informasi Tambahan
                         </p>
                         <div className="grid gap-2 sm:grid-cols-2">
@@ -1589,7 +1645,7 @@ export default function LeadDetailPage() {
                             if (!overviewEditing) {
                               return (
                                 <div key={f.id}>
-                                  <p className="text-[11px] text-muted-foreground">
+                                  <p className="text-[11px] md:text-sm text-muted-foreground">
                                     {f.label}
                                   </p>
                                   <p className="text-xs sm:text-sm">
@@ -1604,7 +1660,7 @@ export default function LeadDetailPage() {
                               case "TEXTAREA":
                                 return (
                                   <div key={f.id}>
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-[11px] md:text-sm text-muted-foreground">
                                       {f.label}
                                       {requiredMark}
                                     </p>
@@ -1621,7 +1677,7 @@ export default function LeadDetailPage() {
                               case "NUMBER":
                                 return (
                                   <div key={f.id}>
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-[11px] md:text-sm text-muted-foreground">
                                       {f.label}
                                       {requiredMark}
                                     </p>
@@ -1638,7 +1694,7 @@ export default function LeadDetailPage() {
                               case "DATE":
                                 return (
                                   <div key={f.id}>
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-[11px] md:text-sm text-muted-foreground">
                                       {f.label}
                                       {requiredMark}
                                     </p>
@@ -1655,7 +1711,7 @@ export default function LeadDetailPage() {
                               case "SINGLE_SELECT":
                                 return (
                                   <div key={f.id}>
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-[11px] md:text-sm text-muted-foreground">
                                       {f.label}
                                       {requiredMark}
                                     </p>
@@ -1690,7 +1746,7 @@ export default function LeadDetailPage() {
                                 }
                                 return (
                                   <div key={f.id} className="space-y-1">
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-[11px] md:text-sm text-muted-foreground">
                                       {f.label}
                                       {requiredMark}
                                     </p>
@@ -1725,7 +1781,7 @@ export default function LeadDetailPage() {
                                         );
                                       })}
                                       {!f.options?.length && (
-                                        <p className="text-[11px] text-muted-foreground">
+                                        <p className="text-[11px] md:text-sm text-muted-foreground">
                                           Belum ada pilihan.
                                         </p>
                                       )}
@@ -1737,7 +1793,7 @@ export default function LeadDetailPage() {
                               default:
                                 return (
                                   <div key={f.id}>
-                                    <p className="text-[11px] text-muted-foreground">
+                                    <p className="text-[11px] md:text-sm text-muted-foreground">
                                       {f.label}
                                       {requiredMark}
                                     </p>
@@ -1759,10 +1815,7 @@ export default function LeadDetailPage() {
 
                   {/* AKTIVITAS */}
                   <TabsContent value="activity" className="space-y-3 text-sm">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs font-medium text-muted-foreground">
-                        Riwayat aktivitas lead
-                      </p>
+                    <div className="flex items-center justify-end">
                       <Button
                         size="sm"
                         variant="outline"
@@ -1773,11 +1826,11 @@ export default function LeadDetailPage() {
                     </div>
 
                     {activitiesLoading ? (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Memuat aktivitas...
                       </p>
                     ) : activities.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm text-muted-foreground">
                         Belum ada aktivitas tercatat untuk lead ini.
                       </p>
                     ) : (
@@ -1803,8 +1856,10 @@ export default function LeadDetailPage() {
                             </div>
                             <div className="flex-1">
                               <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-medium">{a.title}</p>
-                                <span className="text-[11px] text-muted-foreground">
+                                <p className="text-xs md:text-sm font-medium">
+                                  {a.title}
+                                </p>
+                                <span className="text-[11px] md:text-sm text-muted-foreground">
                                   {formatDateTime(a.at)}
                                 </span>
                               </div>
@@ -1845,22 +1900,21 @@ export default function LeadDetailPage() {
                     {/* Info WA header */}
                     <div className="flex flex-col gap-2 rounded-md bg-muted/60 p-3 md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500/10 text-xs font-semibold text-emerald-700">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-700">
                           WA
                         </div>
                         <div className="space-y-0.5">
-                          <p className="text-sm font-medium">
+                          <p className="text-sm md:text-lg font-medium">
                             Chat dengan {displayName}
                           </p>
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
                             {displayPhone !== "-"
                               ? displayPhone
                               : "Nomor WA belum diisi"}{" "}
-                            • Sinkron dengan WhatsApp sales kamu
                           </p>
                         </div>
                       </div>
-                      <div className="flex flex-wrap gap-2">
+                      {/* <div className="flex flex-wrap gap-2">
                         <Button
                           size="sm"
                           variant="outline"
@@ -1877,14 +1931,14 @@ export default function LeadDetailPage() {
                           <Sparkles className="mr-1 h-3 w-3" />
                           Template
                         </Button>
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* QUICK ACTIONS DI ATAS CHAT */}
                     <div className="space-y-2 rounded-md border bg-muted/40 p-2">
                       {/* Quick Status */}
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[11px] md:text-sm text-muted-foreground">
                           Status lead:
                         </span>
                         {statusBadge}
@@ -1892,7 +1946,7 @@ export default function LeadDetailPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2 text-[11px]"
+                            className="h-7 px-2 text-[11px] md:text-sm"
                             onClick={() => handleQuickStatus("warm")}
                           >
                             Warm
@@ -1900,7 +1954,7 @@ export default function LeadDetailPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2 text-[11px]"
+                            className="h-7 px-2 text-[11px] md:text-sm"
                             onClick={() => handleQuickStatus("hot")}
                           >
                             Hot
@@ -1908,7 +1962,7 @@ export default function LeadDetailPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2 text-[11px]"
+                            className="h-7 px-2 text-[11px] md:text-sm"
                             onClick={() => handleQuickStatus("won")}
                           >
                             Close Won
@@ -1916,7 +1970,7 @@ export default function LeadDetailPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2 text-[11px]"
+                            className="h-7 px-2 text-[11px] md:text-sm"
                             onClick={() => handleQuickStatus("lost")}
                           >
                             Close Lost
@@ -1926,7 +1980,7 @@ export default function LeadDetailPage() {
 
                       {/* Quick Tindak Lanjut (buka modal) */}
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-[11px] text-muted-foreground">
+                        <div className="text-[11px] md:text-sm text-muted-foreground">
                           <div>
                             Tindak lanjut:{" "}
                             <span className="font-medium text-foreground">
@@ -1968,22 +2022,58 @@ export default function LeadDetailPage() {
                           </Button>
                         </div>
                       </div>
+
+                      {/* Quick Harga */}
+                      <div className="flex flex-col gap-2 rounded-md bg-background/60 p-2 border-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="space-y-1">
+                            <p className="text-[11px] md:text-sm text-muted-foreground font-semibold">
+                              Harga saat ini
+                            </p>
+                            <div className="grid gap-2 md:gap-4 text-[11px] md:text-sm sm:grid-cols-3">
+                              <div>
+                                <p className="text-[10px] md:text-xs uppercase tracking-wide text-muted-foreground">
+                                  Penawaran
+                                </p>
+                                <p className="font-medium">
+                                  {formatCurrencyIDR(lead?.priceOffering)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] md:text-xs uppercase tracking-wide text-muted-foreground">
+                                  Nego
+                                </p>
+                                <p className="font-medium">
+                                  {formatCurrencyIDR(lead?.priceNegotiation)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] md:text-xs uppercase tracking-wide text-muted-foreground">
+                                  Closing
+                                </p>
+                                <p className="font-medium">
+                                  {formatCurrencyIDR(lead?.priceClosing)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 whitespace-nowrap px-3 text-xs"
+                            onClick={handleOpenPriceModal}
+                          >
+                            Input / update harga
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Chat + Quick Tahapan di kanan */}
                     <div className="flex flex-col gap-3 lg:flex-row">
                       {/* CHAT PANEL */}
                       <div className="flex-1 space-y-2">
-                        <div className="mb-1 flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span>
-                            Tahap penjualan:{" "}
-                            <span className="font-medium text-foreground">
-                              {currentStage?.label || "-"}
-                            </span>
-                          </span>
-                          <span>Log percakapan WhatsApp</span>
-                        </div>
-
                         <div className="h-[320px] rounded-md border bg-background/90 p-2 shadow-inner sm:h-[380px]">
                           <div className="flex h-full flex-col gap-2 overflow-y-auto pr-1 text-sm">
                             {messagesLoading && (
@@ -2007,7 +2097,7 @@ export default function LeadDetailPage() {
                                   }`}
                                 >
                                   <div
-                                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs shadow-sm ${
+                                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs md:text-sm shadow-sm ${
                                       isSales
                                         ? "rounded-br-sm bg-emerald-500 text-white"
                                         : "rounded-bl-sm bg-muted text-foreground"
@@ -2067,11 +2157,10 @@ export default function LeadDetailPage() {
                           />
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                              <span>Shortcut:</span>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 px-2 text-[11px]"
+                                className="h-7 px-2 text-[11px] md:text-sm"
                                 onClick={() => setProposalModalOpen(true)}
                               >
                                 <FileText className="mr-1 h-3 w-3" />
@@ -2080,7 +2169,7 @@ export default function LeadDetailPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 px-2 text-[11px]"
+                                className="h-7 px-2 text-[11px] md:text-sm"
                                 onClick={() => setScheduleModalOpen(true)}
                               >
                                 Follow up
@@ -2105,18 +2194,21 @@ export default function LeadDetailPage() {
                       {/* QUICK TAHAPAN DI KANAN */}
                       <div className="w-full space-y-3 lg:w-72">
                         <Card>
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">
+                          <CardHeader>
+                            <CardTitle className="text-sm md:text-lg">
                               Quick Tahapan
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-2 text-xs sm:text-sm">
                             <div className="space-y-1.5 rounded-md border bg-muted/40 p-2">
-                              <p className="text-[11px] font-medium">
-                                Tahap aktif: {currentStage?.label || "-"}
+                              <p className="text-[11px] md:text-sm">
+                                Tahap aktif:{" "}
+                                <span className="font-medium">
+                                  {currentStage?.label || "-"}
+                                </span>
                               </p>
                               {stageUpdating && (
-                                <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                                <p className="flex items-center gap-1 text-[11px] md:text-sm text-muted-foreground">
                                   <Loader2 className="h-3 w-3 animate-spin" />
                                   Menyimpan tahapan...
                                 </p>
@@ -2124,7 +2216,7 @@ export default function LeadDetailPage() {
                               <div className="mt-1 flex flex-wrap gap-2">
                                 <Button
                                   size="sm"
-                                  className="h-7 px-2 text-[11px]"
+                                  className="h-7 px-2 text-[11px] md:text-sm"
                                   onClick={handleStageDone}
                                   disabled={stageUpdating || !currentStage}
                                 >
@@ -2134,7 +2226,7 @@ export default function LeadDetailPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="h-7 px-2 text-[11px]"
+                                  className="h-7 px-2 text-[11px] md:text-sm"
                                   onClick={handleGoToNextStage}
                                   disabled={stageUpdating || !currentStage}
                                 >
@@ -2145,7 +2237,7 @@ export default function LeadDetailPage() {
 
                             <button
                               type="button"
-                              className="mt-2 flex w-full items-center justify-between rounded-md border bg-background px-2 py-1.5 text-[11px] text-muted-foreground hover:bg-muted/70"
+                              className="mt-2 flex w-full items-center justify-between rounded-md border bg-background px-2 py-1.5 text-[11px] md:text-sm text-muted-foreground hover:bg-muted/70"
                               onClick={() =>
                                 setTimelineExpanded((prev) => !prev)
                               }
@@ -2709,6 +2801,119 @@ export default function LeadDetailPage() {
                       </div>
                     </DialogContent>
                   </Dialog>
+
+                  {/* MODAL ATUR HARGA (STEP BY STEP) */}
+                  <Dialog
+                    open={priceModalOpen}
+                    onOpenChange={setPriceModalOpen}
+                  >
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>Input / Update Harga</DialogTitle>
+                        <DialogDescription>
+                          Pilih jenis harga yang ingin diupdate, lalu isi
+                          nominalnya
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <div className="space-y-4">
+                        {/* Segmented button: Penawaran / Nego / Closing */}
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                              priceKind === "OFFERING" ? "default" : "outline"
+                            }
+                            className="h-8 px-3 text-xs md:text-sm"
+                            onClick={() => handleChangePriceKind("OFFERING")}
+                          >
+                            Penawaran
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                              priceKind === "NEGOTIATION"
+                                ? "default"
+                                : "outline"
+                            }
+                            className="h-8 px-3 text-xs md:text-sm"
+                            onClick={() => handleChangePriceKind("NEGOTIATION")}
+                          >
+                            Negosiasi
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={
+                              priceKind === "CLOSING" ? "default" : "outline"
+                            }
+                            className="h-8 px-3 text-xs md:text-sm"
+                            onClick={() => handleChangePriceKind("CLOSING")}
+                          >
+                            Closing
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <p className="text-[11px] md:text-sm text-muted-foreground">
+                            {priceKind === "OFFERING" &&
+                              "Nominal penawaran awal yang kamu ajukan ke lead"}
+                            {priceKind === "NEGOTIATION" &&
+                              "Nominal hasil negosiasi terbaru dengan lead"}
+                            {priceKind === "CLOSING" &&
+                              "Nominal deal akhir saat lead benar-benar closing"}
+                          </p>
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            className="h-9 text-xs md:text-sm"
+                            value={priceInput}
+                            onChange={(e) =>
+                              setPriceInput(formatRupiahInput(e.target.value))
+                            }
+                            placeholder="Masukkan harga disini.."
+                          />
+                        </div>
+                      </div>
+
+                      <DialogFooter className="mt-4 flex items-center justify-between gap-2">
+                        <p className="text-[10px] md:text-xs text-muted-foreground">
+                          Simpan satu per satu: mulai dari penawaran, lalu
+                          negosiasi, kemudian closing
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-xs md:text-sm"
+                            onClick={() => setPriceModalOpen(false)}
+                            disabled={savingPrice}
+                          >
+                            Batal
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-8 px-3 text-xs md:text-sm"
+                            onClick={handleSavePrice}
+                            disabled={savingPrice}
+                          >
+                            {savingPrice ? (
+                              <>
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Menyimpan...
+                              </>
+                            ) : (
+                              "Simpan harga"
+                            )}
+                          </Button>
+                        </div>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
                 </Tabs>
               </CardContent>
             </Card>
@@ -2799,7 +3004,7 @@ function StageTimeline({
               )}
             </div>
 
-            <div className="pb-3 text-xs">
+            <div className="pb-3 text-xs md:text-sm">
               <div className="flex items-center gap-2">
                 <p
                   className={`font-medium ${

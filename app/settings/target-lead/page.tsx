@@ -126,7 +126,7 @@ export default function TargetLeadSettingPage() {
   }
 
   return (
-    <DashboardLayout title="Setting Target Lead" role="manager">
+    <DashboardLayout title="Setting Target Lead">
       <div className="max-w-xl space-y-4">
         <div className="flex items-start gap-2">
           <div>

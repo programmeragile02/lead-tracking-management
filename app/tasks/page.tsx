@@ -97,7 +97,7 @@ export default function TasksPage() {
   }, [tasks, activeFilter]);
 
   return (
-    <DashboardLayout title="Tugas" role="sales">
+    <DashboardLayout title="Tugas">
       <div className="space-y-4">
         {/* Header: Switch Daftar / Kalender */}
         <div className="flex items-center justify-center md:justify-between">
@@ -551,7 +551,9 @@ function TaskCalendar({
                         : "bg-background"
                     )}
                   >
-                    <span className="text-[11px] md:text-[36px]">{d.getDate()}</span>
+                    <span className="text-[11px] md:text-[36px]">
+                      {d.getDate()}
+                    </span>
 
                     {/* Dot status */}
                     {dayTasks.length > 0 && (

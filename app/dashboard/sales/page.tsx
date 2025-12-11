@@ -101,7 +101,7 @@ export default function SalesDashboardPage() {
   const recentActivities = data?.data.recentActivities ?? [];
 
   return (
-    <DashboardLayout title="Dashboard Sales" role="sales">
+    <DashboardLayout title="Dashboard Sales">
       <div className="space-y-6">
         <div>
           <h2 className="text-2xl font-bold">
@@ -139,7 +139,7 @@ export default function SalesDashboardPage() {
             color="amber"
           />
           <KPICard
-            title="Tindak Lanjut Terlambat"
+            title="Follow Up Terlambat"
             icon={AlertCircle}
             count={lateFollowUpCount}
             color="rose"
@@ -149,7 +149,7 @@ export default function SalesDashboardPage() {
         {/* Tindak Lanjut Hari Ini */}
         <section>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Tindak Lanjut Hari Ini</h3>
+            <h3 className="text-lg font-semibold">Follow Up Hari Ini</h3>
             <a
               href="/tasks"
               className="text-sm text-primary hover:text-primary-hover"
@@ -159,11 +159,11 @@ export default function SalesDashboardPage() {
           </div>
           {loading ? (
             <p className="text-sm text-muted-foreground">
-              Memuat tindak lanjut hari ini...
+              Memuat follow up hari ini...
             </p>
           ) : followUpsToday.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Belum ada jadwal tindak lanjut untuk hari ini.
+              Belum ada jadwal follow up untuk hari ini.
             </p>
           ) : (
             <div className="space-y-3">

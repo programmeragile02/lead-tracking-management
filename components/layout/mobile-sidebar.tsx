@@ -1,21 +1,6 @@
 "use client";
 
-import {
-  Home,
-  Users,
-  CheckSquare,
-  User,
-  BarChart3,
-  Settings,
-  Package,
-  BookUser,
-  Network,
-  BriefcaseBusiness,
-  Footprints,
-  FileChartColumn,
-  Target,
-  Phone,
-} from "lucide-react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -25,9 +10,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import type { AppRole, NavItem } from "@/lib/nav-items";
+import { NAV_ITEMS } from "@/lib/nav-items";
 
 interface MobileSidebarProps {
-  role: "sales" | "team-leader" | "manager";
+  role: AppRole;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -38,105 +26,145 @@ export function MobileSidebar({
   onOpenChange,
 }: MobileSidebarProps) {
   const pathname = usePathname();
+  const navItems = NAV_ITEMS[role];
 
-  const salesNav = [
-    { href: "/dashboard/sales", label: "Dashboard", icon: Home },
-    { href: "/leads", label: "Lead", icon: Users },
-    { href: "/tasks", label: "Tugas", icon: CheckSquare },
-    { href: "/profile", label: "Profil", icon: User },
-    { href: "/whatsapp/me", label: "Koneksi Whatsapp", icon: Phone },
-  ];
+  // state group yang kebuka (bisa lebih dari satu)
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    master: true,
+    "settings-group": true,
+  });
 
-  const teamLeaderNav = [
-    { href: "/dashboard/team-leader", label: "Dashboard", icon: Home },
-    { href: "/leads", label: "Lead", icon: Users },
-    { href: "/team", label: "Tim", icon: BarChart3 },
-    { href: "/tasks", label: "Tugas", icon: CheckSquare },
-    { href: "/profile", label: "Profil", icon: User },
-  ];
+  function toggleGroup(id: string) {
+    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
+  }
 
-  const managerNav = [
-    { href: "/dashboard/manager", label: "Dashboard", icon: Home },
-    {
-      href: "/master/jabatan",
-      label: "Master Jabatan",
-      icon: BriefcaseBusiness,
-    },
-    { href: "/master/pegawai", label: "Master Pegawai", icon: BookUser },
-    { href: "/master/products", label: "Master Produk", icon: Package },
-    { href: "/master/tahap", label: "Master Tahap", icon: Footprints },
-    {
-      href: "/master/status",
-      label: "Master Status Lead",
-      icon: FileChartColumn,
-    },
-    {
-      href: "/master/lead-sources",
-      label: "Master Sumber Lead",
-      icon: FileChartColumn,
-    },
-    {
-      href: "/master/lead-followup-types",
-      label: "Master Tindak Lanjut",
-      icon: FileChartColumn,
-    },
-    { href: "/organisasi", label: "Struktur Organisasi", icon: Network },
-    { href: "/leads", label: "Lead", icon: Users },
-    { href: "/reports", label: "Laporan", icon: BarChart3 },
-    { href: "/settings/fields", label: "Pengaturan", icon: Settings },
-    {
-      href: "/settings/target-lead",
-      label: "Pengaturan Target Lead",
-      icon: Target,
-    },
-
-    {
-      href: "/settings/lead-fields",
-      label: "Konfigurasi Data Lead",
-      icon: Settings,
-    },
-    {
-      href: "/settings/general",
-      label: "Pengaturan Umum",
-      icon: Settings,
-    },
-    { href: "/profile", label: "Profil", icon: User },
-  ];
-
-  const navItems =
-    role === "sales"
-      ? salesNav
-      : role === "team-leader"
-      ? teamLeaderNav
-      : managerNav;
+  function isItemActive(item: NavItem): boolean {
+    if (item.href) {
+      return pathname === item.href || pathname.startsWith(item.href + "/");
+    }
+    if (item.children) {
+      return item.children.some((child) => child.href && isItemActive(child));
+    }
+    return false;
+  }
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-72 p-0 bg-white">
-        <SheetHeader className="p-4.5 border-b gradient-primary">
-          <SheetTitle className="text-white text-lg">Menu Navigasi</SheetTitle>
+      <SheetContent side="left" className="w-72 p-0 bg-white flex flex-col">
+        <SheetHeader className="px-4 py-4 border-b border-slate-200 bg-red-100">
+          <SheetTitle className="text-red-800 text-base">
+            Menu Navigasi
+          </SheetTitle>
         </SheetHeader>
-        <nav className="flex flex-col p-4 space-y-2">
+
+        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
           {navItems.map((item) => {
+            const active = isItemActive(item);
+            const hasChildren = !!item.children?.length;
             const Icon = item.icon;
-            const isActive =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+
+            // item biasa (tanpa submenu)
+            if (!hasChildren) {
+              if (!item.href) return null;
+
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  onClick={() => onOpenChange(false)}
+                  className={cn(
+                    "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all",
+                    active
+                      ? "bg-red-50 text-red-700 font-semibold border border-red-100"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-red-700"
+                  )}
+                >
+                  {Icon && (
+                    <Icon
+                      className={cn(
+                        "h-5 w-5",
+                        active
+                          ? "text-red-500"
+                          : "text-slate-400 group-hover:text-red-500"
+                      )}
+                    />
+                  )}
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            }
+
+            // item dengan submenu (dropdown)
+            const isOpen = openGroups[item.id] ?? true;
 
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => onOpenChange(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all",
-                  isActive
-                    ? "gradient-primary text-white font-semibold shadow-md"
-                    : "text-gray-600 hover:bg-white/60 hover:text-gray-900"
+              <div key={item.id} className="space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(item.id)}
+                  className={cn(
+                    "w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all",
+                    active
+                      ? "bg-red-50 text-red-700 font-semibold border border-red-100"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-red-700"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    {Icon && (
+                      <Icon
+                        className={cn(
+                          "h-5 w-5",
+                          active ? "text-red-500" : "text-slate-400"
+                        )}
+                      />
+                    )}
+                    <span className="truncate font-medium">{item.label}</span>
+                  </div>
+                  <span className="text-slate-400">
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </span>
+                </button>
+
+                {isOpen && (
+                  <div className="ml-8 mt-1 space-y-0.5">
+                    {item.children!.map((child) => {
+                      if (!child.href) return null;
+                      const ChildIcon = child.icon;
+                      const childActive = isItemActive(child);
+
+                      return (
+                        <Link
+                          key={child.id}
+                          href={child.href}
+                          onClick={() => onOpenChange(false)}
+                          className={cn(
+                            "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-all",
+                            childActive
+                              ? "bg-red-50 text-red-700 font-semibold border border-red-100"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-red-700"
+                          )}
+                        >
+                          {ChildIcon && (
+                            <ChildIcon
+                              className={cn(
+                                "h-4 w-4 flex-shrink-0",
+                                childActive
+                                  ? "text-red-500"
+                                  : "text-slate-300 group-hover:text-red-500"
+                              )}
+                            />
+                          )}
+                          <span className="truncate">{child.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <Icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </Link>
+              </div>
             );
           })}
         </nav>

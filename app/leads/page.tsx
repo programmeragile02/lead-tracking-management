@@ -1,4 +1,3 @@
-// app/leads/page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -42,6 +41,9 @@ type LeadListApiResponse = {
   ok: boolean;
   data: LeadListItem[];
   countsByStatusCode?: Record<string, number>;
+  page?: number;
+  pageSize?: number;
+  hasNext?: boolean;
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -130,11 +132,35 @@ function computeIndicator(
   return "normal";
 }
 
+// helper umur lead
+function computeLeadAgeLabel(iso: string): string {
+  const created = new Date(iso);
+  const now = new Date();
+
+  const diffMs = now.getTime() - created.getTime();
+  if (diffMs <= 0) return "< 1 hari";
+
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 1) return "< 1 hari";
+  if (diffDays < 30) return `${diffDays} hari`;
+
+  const months = Math.floor(diffDays / 30);
+  const daysRemainder = diffDays % 30;
+
+  if (daysRemainder === 0) {
+    return `${months} bln`;
+  }
+
+  return `${months} bln ${daysRemainder} hari`;
+}
+
 // =================== PAGE ===================
 
 export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [activeStatusCode, setActiveStatusCode] = useState<string>("ALL"); // ALL / HOT / WARM / ...
+  const [page, setPage] = useState(1);
 
   // ambil master status
   const { data: statusResp } = useSWR<LeadStatusApiResponse>(
@@ -144,15 +170,16 @@ export default function LeadsPage() {
   const statuses = statusResp?.data ?? [];
 
   // URL API leads dengan query & filter status
-  const queryParam = search.trim()
+  const searchQuery = search.trim()
     ? `&q=${encodeURIComponent(search.trim())}`
     : "";
-  const statusParam =
-    activeStatusCode && activeStatusCode !== "ALL"
-      ? `&status=${encodeURIComponent(activeStatusCode)}`
-      : "&status=ALL";
 
-  const leadsUrl = `${LEADS_API}?${statusParam.slice(1)}${queryParam}`;
+  const statusQuery =
+    activeStatusCode && activeStatusCode !== "ALL"
+      ? `status=${encodeURIComponent(activeStatusCode)}`
+      : "status=ALL";
+
+  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${searchQuery}`;
 
   const { data: leadsResp, isLoading } = useSWR<LeadListApiResponse>(
     leadsUrl,
@@ -163,11 +190,14 @@ export default function LeadsPage() {
   const counts = leadsResp?.countsByStatusCode ?? {};
   const allCount = counts["ALL"] ?? 0;
 
+  const leadsRespPage = leadsResp?.page ?? page;
+  const hasNext = leadsResp?.hasNext ?? false;
+
   return (
-    <DashboardLayout title="Lead" role="sales">
+    <DashboardLayout title="Lead">
       <div className="space-y-4">
         {/* Search + Filter Bar */}
-        <div className="sticky top-0 z-10 bg-background pb-4 space-y-3 pt-1">
+        <div className="top-0 z-10 bg-background pb-4 space-y-3 pt-1">
           {/* Search */}
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -176,7 +206,10 @@ export default function LeadsPage() {
                 placeholder="Cari berdasarkan nama, telepon, atau produk..."
                 className="pl-10 h-11"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
               />
             </div>
           </div>
@@ -192,7 +225,10 @@ export default function LeadsPage() {
                   ? "bg-red-500 text-white border-red-500"
                   : "bg-red-50 text-red-700 border-red-100"
               )}
-              onClick={() => setActiveStatusCode("ALL")}
+              onClick={() => {
+                setActiveStatusCode("ALL");
+                setPage(1);
+              }}
             >
               <span>Semua</span>
               <span
@@ -222,7 +258,10 @@ export default function LeadsPage() {
                       ? "bg-red-500 text-white border-red-500"
                       : "bg-red-50 text-red-700 border-red-100"
                   )}
-                  onClick={() => setActiveStatusCode(st.code)}
+                  onClick={() => {
+                    setActiveStatusCode(st.code);
+                    setPage(1);
+                  }}
                 >
                   <span>{st.name}</span>
                   <span
@@ -253,6 +292,7 @@ export default function LeadsPage() {
             leads.map((lead) => {
               const uiStatus = mapStatusCodeToUiStatus(lead.statusCode);
               const createdLabel = formatRelativeCreatedAt(lead.createdAt);
+              const ageLabel = computeLeadAgeLabel(lead.createdAt);
               const nextLabel = formatNextFollowUp(lead.nextActionAt);
               const indicator = computeIndicator(lead.nextActionAt);
 
@@ -265,6 +305,7 @@ export default function LeadsPage() {
                   product={lead.productName || "Tanpa produk"}
                   channel={lead.sourceName || "Tanpa sumber"}
                   createdDate={createdLabel}
+                  leadAge={ageLabel}
                   nextFollowUp={nextLabel}
                   followUpType={lead.followUpTypeName || undefined}
                   indicator={indicator}
@@ -272,6 +313,30 @@ export default function LeadsPage() {
               );
             })
           )}
+
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-xs text-muted-foreground">
+              Halaman {leadsRespPage}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={leadsRespPage <= 1}
+                onClick={() => setPage((prev) => (prev > 1 ? prev - 1 : 1))}
+              >
+                Sebelumnya
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!hasNext}
+                onClick={() => setPage((prev) => prev + 1)}
+              >
+                Berikutnya
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </DashboardLayout>

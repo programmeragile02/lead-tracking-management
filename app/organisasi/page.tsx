@@ -3,7 +3,7 @@ import { OrgTree } from "@/components/organization/org-tree";
 
 export default function OrgPage() {
   return (
-    <DashboardLayout title="Struktur Organisasi" role="manager">
+    <DashboardLayout title="Struktur Organisasi">
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">

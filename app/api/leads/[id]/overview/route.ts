@@ -22,20 +22,12 @@ export async function PUT(
       phone,
       address,
       productId,
-      statusCode,
-      priceOffering,
-      priceNegotiation,
-      priceClosing,
       customValues,
     }: {
       name: string;
       phone?: string | null;
       address?: string | null;
       productId?: number | null;
-      statusCode?: string | null;
-      priceOffering?: string | null;
-      priceNegotiation?: string | null;
-      priceClosing?: string | null;
       customValues?: { fieldId: number; value: string }[];
     } = body;
 
@@ -44,16 +36,6 @@ export async function PUT(
         { ok: false, error: "Nama lead wajib diisi" },
         { status: 400 }
       );
-    }
-
-    // cari statusId dari code kalau ada
-    let statusId: number | null = null;
-    if (statusCode) {
-      const status = await prisma.leadStatus.findUnique({
-        where: { code: statusCode },
-        select: { id: true },
-      });
-      statusId = status?.id ?? null;
     }
 
     const productIdNumber = productId ? Number(productId) : null;
@@ -66,16 +48,6 @@ export async function PUT(
         phone: phone?.trim() || null,
         address: address?.trim() || null,
         productId: productIdNumber,
-        statusId: statusId,
-        priceOffering: priceOffering
-          ? new prisma.Prisma.Decimal(priceOffering)
-          : null,
-        priceNegotiation: priceNegotiation
-          ? new prisma.Prisma.Decimal(priceNegotiation)
-          : null,
-        priceClosing: priceClosing
-          ? new prisma.Prisma.Decimal(priceClosing)
-          : null,
       },
     });
 

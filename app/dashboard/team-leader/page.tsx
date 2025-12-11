@@ -6,7 +6,7 @@ import { Users, Target, DollarSign } from "lucide-react"
 
 export default function TeamLeaderDashboardPage() {
   return (
-    <DashboardLayout title="Dashboard Tim" role="team-leader">
+    <DashboardLayout title="Dashboard Tim">
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <KPICard title="Total Lead Tim" icon={Users} count={45} color="red" />

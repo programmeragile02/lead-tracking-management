@@ -140,7 +140,7 @@ export default function GeneralSettingPage() {
   }
 
   return (
-    <DashboardLayout title="General Setting" role="manager">
+    <DashboardLayout title="General Setting">
       <div className="space-y-6">
         {/* Header */}
         <div className="space-y-1">

@@ -120,7 +120,7 @@ export default function WhatsappConnectPage() {
   }
 
   return (
-    <DashboardLayout title="Koneksi WhatsApp" role="sales">
+    <DashboardLayout title="Koneksi WhatsApp">
       <div className="mx-auto space-y-6">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -165,9 +165,7 @@ export default function WhatsappConnectPage() {
               <div className="flex flex-col items-center justify-center py-8 gap-4">
                 <CheckCircle2 className="w-10 h-10 text-emerald-500" />
                 <div className="space-y-1 text-center">
-                  <p className="font-medium">
-                    WhatsApp kamu sudah terhubung
-                  </p>
+                  <p className="font-medium">WhatsApp kamu sudah terhubung</p>
                   <p className="text-sm text-muted-foreground max-w-md">
                     Kamu bisa langsung mulai chat dari halaman detail lead.
                     Semua pesan yang masuk ke nomor ini akan otomatis dimirror

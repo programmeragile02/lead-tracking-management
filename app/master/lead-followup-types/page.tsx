@@ -246,7 +246,7 @@ export default function LeadFollowUpTypeMasterPage() {
   };
 
   return (
-    <DashboardLayout title="Master Tindak Lanjut Lead" role="manager">
+    <DashboardLayout title="Master Tindak Lanjut Lead">
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -465,7 +465,8 @@ Saat ini kendala utama yang paling mengganggu apa, Kak?`}
                         {"{{edukasi_links}}"}
                       </code>
                     </p>
-                    yang nanti akan berubah menjadi teks saat terkirim ke whatsapp
+                    yang nanti akan berubah menjadi teks saat terkirim ke
+                    whatsapp
                   </p>
                 </div>
 

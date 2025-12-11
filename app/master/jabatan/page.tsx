@@ -3,7 +3,7 @@ import { JabatanList } from "@/components/master/jabatan/jabatan-list";
 
 export default function JabatanMasterPage() {
   return (
-    <DashboardLayout title="Master Jabatan" role="manager">
+    <DashboardLayout title="Master Jabatan">
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Master Jabatan</h2>

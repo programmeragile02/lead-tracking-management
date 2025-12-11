@@ -383,7 +383,7 @@ export async function POST(req: NextRequest) {
         where: { id: lead.id },
         data: {
           // kalau sebelumnya NEW/COLD dan ada status Warm, naikkan jadi Warm
-          statusId: warmStatus?.id ?? lead.statusId,
+          // statusId: warmStatus?.id ?? lead.statusId,
           // setiap ada engagement, nurturing di-pause dan baseline idle digeser ke sekarang
           nurturingStatus: NurturingStatus.PAUSED,
           nurturingPausedAt: now,

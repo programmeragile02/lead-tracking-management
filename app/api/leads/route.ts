@@ -417,6 +417,10 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get("q")?.trim() || "";
     const statusCodeParam = searchParams.get("status")?.trim().toUpperCase(); // contoh: HOT, WARM, COLD
 
+    const pageParam = searchParams.get("page");
+    const page = Math.max(1, Number(pageParam || 1) || 1);
+    const pageSize = 10;
+
     // ---- baseWhere: filter sales + keyword (tanpa status) ----
     const baseWhere: any = {
       salesId: currentUser.id,
@@ -446,6 +450,8 @@ export async function GET(req: NextRequest) {
     }
 
     // ---- query utama: list lead sesuai status pill ----
+    const skip = (page - 1) * pageSize;
+
     const leads = await prisma.lead.findMany({
       where: leadsWhere,
       include: {
@@ -465,7 +471,12 @@ export async function GET(req: NextRequest) {
       orderBy: {
         createdAt: "desc",
       },
+      skip,
+      take: pageSize + 1,
     });
+
+    const hasNext = leads.length > pageSize;
+    const leadsPage = hasNext ? leads.slice(0, pageSize) : leads;
 
     // ---- query tambahan: hitung jumlah per status (untuk badge) ----
     const grouped = await prisma.lead.groupBy({
@@ -533,6 +544,9 @@ export async function GET(req: NextRequest) {
       ok: true,
       data,
       countsByStatusCode,
+      page,
+      pageSize,
+      hasNext,
     });
   } catch (err: any) {
     console.error("GET /api/leads error", err);

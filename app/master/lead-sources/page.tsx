@@ -179,7 +179,7 @@ export default function LeadSourceMasterPage() {
   };
 
   return (
-    <DashboardLayout title="Master Sumber Lead" role="manager">
+    <DashboardLayout title="Master Sumber Lead">
       <div className="space-y-6">
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

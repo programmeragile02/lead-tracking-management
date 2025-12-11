@@ -6,7 +6,7 @@ import { EmployeeList } from "@/components/master/pegawai/pegawai-list";
 
 export default function EmployeeMasterPage() {
   return (
-    <DashboardLayout title="Master Pegawai" role="manager">
+    <DashboardLayout title="Master Pegawai">
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Master Pegawai</h2>

@@ -1,13 +1,47 @@
-import { Bell, Lock, Globe, HelpCircle } from "lucide-react"
-import { ChevronRight } from "lucide-react"
+import { Bell, Lock, Globe, HelpCircle } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 
-export function ProfileSettings() {
+type ProfileSettingsProps = {
+  onSecurityClick?: () => void;
+};
+
+export function ProfileSettings({ onSecurityClick }: ProfileSettingsProps) {
   const settings = [
-    { label: "Notifikasi", description: "Atur preferensi notifikasi Anda", icon: Bell },
-    { label: "Keamanan", description: "Ubah password dan keamanan akun", icon: Lock },
-    { label: "Bahasa & Region", description: "Pilih bahasa dan zona waktu", icon: Globe },
-    { label: "Bantuan & Dukungan", description: "Pusat bantuan dan FAQ", icon: HelpCircle },
-  ]
+    {
+      key: "notification",
+      label: "Notifikasi",
+      description: "Atur preferensi notifikasi Anda",
+      icon: Bell,
+      onClick: () => {
+        // TODO: nanti kalau ada
+      },
+    },
+    {
+      key: "security",
+      label: "Keamanan",
+      description: "Ubah password dan keamanan akun",
+      icon: Lock,
+      onClick: onSecurityClick,
+    },
+    {
+      key: "language",
+      label: "Bahasa & Region",
+      description: "Pilih bahasa dan zona waktu",
+      icon: Globe,
+      onClick: () => {
+        // TODO: nanti
+      },
+    },
+    {
+      key: "help",
+      label: "Bantuan & Dukungan",
+      description: "Pusat bantuan dan FAQ",
+      icon: HelpCircle,
+      onClick: () => {
+        // TODO: nanti
+      },
+    },
+  ];
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
@@ -15,7 +49,9 @@ export function ProfileSettings() {
       <div className="space-y-2">
         {settings.map((setting) => (
           <button
-            key={setting.label}
+            key={setting.key}
+            type="button"
+            onClick={setting.onClick}
             className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-red-50 hover:from-violet-50 hover:to-purple-50 transition-all group"
           >
             <div className="w-10 h-10 rounded-lg bg-red-50 from-violet-100 to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -30,5 +66,5 @@ export function ProfileSettings() {
         ))}
       </div>
     </div>
-  )
+  );
 }
