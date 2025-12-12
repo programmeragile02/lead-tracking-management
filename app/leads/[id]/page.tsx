@@ -2160,7 +2160,7 @@ export default function LeadDetailPage() {
 
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="default"
                             className="h-8 whitespace-nowrap px-3 text-xs"
                             onClick={handleOpenPriceModal}
                           >

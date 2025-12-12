@@ -16,6 +16,8 @@ import {
   FileChartColumn,
   Target,
   Phone,
+  ChartColumnIncreasing,
+  ChartBarIncreasing,
 } from "lucide-react";
 
 export type AppRole = "sales" | "team-leader" | "manager";
@@ -53,8 +55,27 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       href: "/dashboard/team-leader",
       icon: Home,
     },
-    // { id: "leads", label: "Lead", href: "/leads", icon: Users },
     { id: "team", label: "Tim", href: "/team", icon: BarChart3 },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: ChartColumnIncreasing,
+      children: [
+        {
+          id: "laporan-tahapan",
+          label: "Laporan Tahapan",
+          href: "/reports/stages",
+          icon: ChartBarIncreasing,
+        },
+        {
+          id: "laporan-status",
+          label: "Laporan Status Lead",
+          href: "/reports/statuses",
+          icon: ChartBarIncreasing,
+        },
+      ],
+    },
+    // { id: "leads", label: "Lead", href: "/leads", icon: Users },
     // { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
   ],
 
@@ -124,7 +145,26 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       icon: Network,
     },
     { id: "leads", label: "Lead", href: "/leads", icon: Users },
-    { id: "reports", label: "Laporan", href: "/reports", icon: BarChart3 },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: ChartColumnIncreasing,
+      children: [
+        {
+          id: "laporan-tahapan",
+          label: "Laporan Tahapan",
+          href: "/reports/stages",
+          icon: ChartBarIncreasing,
+        },
+        {
+          id: "laporan-status",
+          label: "Laporan Status Lead",
+          href: "/reports/statuses",
+          icon: ChartBarIncreasing,
+        },
+        { id: "reports", label: "Laporan", href: "/reports", icon: BarChart3 },
+      ],
+    },
 
     // === Group PENGATURAN ===
     {

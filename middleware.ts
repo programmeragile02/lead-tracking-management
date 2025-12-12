@@ -21,10 +21,14 @@ function isPublicPath(pathname: string) {
 }
 
 function isAllowed(pathname: string, role: RoleSlug): boolean {
+  // Laporan: manager + team-leader
+  if (pathname.startsWith("/reports")) {
+    return role === "manager" || role === "team-leader";
+  }
+
   // Manager area khusus
   if (
     pathname.startsWith("/dashboard/manager") ||
-    pathname.startsWith("/reports") ||
     pathname.startsWith("/master") ||
     pathname.startsWith("/settings")
   ) {
@@ -75,7 +79,7 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/assets") ||
     pathname.startsWith("/public") ||
-     pathname.startsWith("/uploads")
+    pathname.startsWith("/uploads")
   ) {
     return NextResponse.next();
   }

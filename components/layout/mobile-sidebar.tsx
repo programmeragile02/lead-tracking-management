@@ -29,10 +29,7 @@ export function MobileSidebar({
   const navItems = NAV_ITEMS[role];
 
   // state group yang kebuka (bisa lebih dari satu)
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    master: true,
-    "settings-group": true,
-  });
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   function toggleGroup(id: string) {
     setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));

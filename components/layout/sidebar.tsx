@@ -18,7 +18,7 @@ interface SidebarProps {
 export function Sidebar({ role, collapsed = false }: SidebarProps) {
   const pathname = usePathname();
   const { user, loading } = useCurrentUser();
-  const [openGroupId, setOpenGroupId] = useState<string | null>("master"); // default buka "Master"
+  const [openGroupId, setOpenGroupId] = useState<string | null>("");
 
   const navItems = NAV_ITEMS[role];
 
