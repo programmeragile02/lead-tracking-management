@@ -59,6 +59,9 @@ model User {
 
   leadActivities LeadActivity[] @relation("LeadActivityCreatedBy")
 
+  trackedLinks       LeadTrackedLink[]      @relation("LeadTrackedLinks_Sales")
+  trackedLinkClicks  LeadTrackedLinkClick[] @relation("LeadTrackedLinkClicks_Sales")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -235,6 +238,9 @@ model Lead {
   activities  LeadActivity[]
 
   nurturingState LeadNurturingState?
+
+  trackedLinks       LeadTrackedLink[]      @relation("LeadTrackedLinks_Lead")
+  trackedLinkClicks  LeadTrackedLinkClick[] @relation("LeadTrackedLinkClicks_Lead")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -486,6 +492,8 @@ model LeadMessage {
   deliveredAt DateTime?       // ACK 2
   readAt      DateTime?       // ACK 3
 
+  trackedLinks LeadTrackedLink[] @relation("LeadTrackedLinks_LeadMessage")
+
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -704,4 +712,72 @@ model LeadNurturingState {
   @@index([planId])
   @@unique([lastMessageKey])
   @@map("lead_nurturing_states")
+}
+
+enum TrackedLinkKind {
+  DEMO
+  TESTIMONIAL
+  EDUCATION
+  FILE
+  OTHER
+}
+
+model LeadTrackedLink {
+  id            Int      @id @default(autoincrement())
+
+  leadId        Int
+  lead          Lead     @relation("LeadTrackedLinks_Lead", fields: [leadId], references: [id])
+
+  salesId       Int
+  sales         User     @relation("LeadTrackedLinks_Sales", fields: [salesId], references: [id])
+
+  leadMessageId Int?
+  leadMessage   LeadMessage? @relation("LeadTrackedLinks_LeadMessage", fields: [leadMessageId], references: [id])
+
+  kind          TrackedLinkKind @default(OTHER)
+
+  slug          String
+  code          String   @unique
+
+  label         String?
+  targetUrl     String   @db.Text
+
+  productId     Int?
+  planId        Int?
+  stepOrder     Int?
+
+  createdAt     DateTime @default(now())
+
+  clicks        LeadTrackedLinkClick[]
+
+  @@index([leadId])
+  @@index([salesId])
+  @@index([leadMessageId])
+  @@index([slug])
+  @@map("lead_tracked_links")
+}
+
+model LeadTrackedLinkClick {
+  id        Int      @id @default(autoincrement())
+
+  linkId    Int
+  link      LeadTrackedLink @relation(fields: [linkId], references: [id])
+
+  leadId    Int
+  lead      Lead     @relation("LeadTrackedLinkClicks_Lead", fields: [leadId], references: [id])
+
+  salesId   Int
+  sales     User     @relation("LeadTrackedLinkClicks_Sales", fields: [salesId], references: [id])
+
+  clickedAt DateTime @default(now())
+
+  ip        String?
+  userAgent String?
+  isPreview Boolean @default(false)
+
+  @@unique([linkId, leadId])
+  @@index([linkId])
+  @@index([leadId])
+  @@index([salesId])
+  @@map("lead_tracked_link_clicks")
 }

@@ -13,6 +13,7 @@ import {
   sendWaMessage,
   sendWaDocument,
 } from "@/lib/whatsapp-service";
+import { buildGoUrl, createTrackedLink } from "@/lib/tracked-links";
 
 const CRON_KEY = process.env.NURTURING_CRON_KEY || "";
 const INBOUND_RECENT_HOURS = Number(
@@ -76,6 +77,46 @@ function buildLinkBlock(raw: any): string {
 
   if (!clean.length) return "";
   return clean.map((item) => `• ${item.label}\n${item.url}`).join("\n\n");
+}
+
+async function buildTrackedLinkBlock(params: {
+  raw: any;
+  leadId: number;
+  salesId: number;
+  leadMessageId: number;
+  kind: "DEMO" | "TESTIMONIAL" | "EDUCATION";
+  baseUrl: string;
+  productId?: number | null;
+  planId?: number | null;
+  stepOrder?: number | null;
+}) {
+  const { raw, leadId, salesId, leadMessageId, kind, baseUrl } = params;
+  if (!Array.isArray(raw)) return "";
+
+  const rows: string[] = [];
+
+  for (const item of raw as ProductLinkItem[]) {
+    const url = (item?.url ?? "").toString().trim();
+    if (!url) continue;
+
+    const label = (item?.label ?? "Link").toString().trim();
+
+    const row = await createTrackedLink({
+      leadId,
+      salesId,
+      leadMessageId,
+      kind,
+      label,
+      targetUrl: url,
+      productId: params.productId ?? null,
+      planId: params.planId ?? null,
+      stepOrder: params.stepOrder ?? null,
+    });
+
+    rows.push(`• ${label}\n${buildGoUrl(baseUrl, row.slug, row.code)}`);
+  }
+
+  return rows.join("\n\n");
 }
 
 export async function POST(req: NextRequest) {
@@ -258,16 +299,65 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const demoBlock = buildLinkBlock(lead.product?.demoLinks);
-    const testiBlock = buildLinkBlock(lead.product?.testimonialLinks);
-    const edukasiBlock = buildLinkBlock(lead.product?.educationLinks);
+    const baseUrl = process.env.APP_PUBLIC_BASE_URL || "http://localhost:3015";
 
+    // 1) create message dulu (placeholder content sementara)
+    const msg = await prisma.leadMessage.create({
+      data: {
+        leadId,
+        salesId: lead.salesId ?? null,
+        channel: LeadMessageChannel.WHATSAPP,
+        direction: MessageDirection.OUTBOUND,
+        content: "", // nanti diupdate setelah link block jadi
+        type: LeadMessageType.TEXT,
+        waStatus: WaMessageStatus.PENDING,
+        toNumber: lead.phone,
+      } as any,
+    });
+
+    // 2) buat link block tracked (butuh msg.id)
+    const demoBlock = await buildTrackedLinkBlock({
+      raw: lead.product?.demoLinks,
+      leadId,
+      salesId: lead.salesId!,
+      leadMessageId: msg.id,
+      kind: "DEMO",
+      baseUrl,
+      productId: lead.productId ?? null,
+      planId,
+      stepOrder: nextOrder,
+    });
+
+    const testiBlock = await buildTrackedLinkBlock({
+      raw: lead.product?.testimonialLinks,
+      leadId,
+      salesId: lead.salesId!,
+      leadMessageId: msg.id,
+      kind: "TESTIMONIAL",
+      baseUrl,
+      productId: lead.productId ?? null,
+      planId,
+      stepOrder: nextOrder,
+    });
+
+    const edukasiBlock = await buildTrackedLinkBlock({
+      raw: lead.product?.educationLinks,
+      leadId,
+      salesId: lead.salesId!,
+      leadMessageId: msg.id,
+      kind: "EDUCATION",
+      baseUrl,
+      productId: lead.productId ?? null,
+      planId,
+      stepOrder: nextOrder,
+    });
+
+    // 3) baru render template final
     const vars = {
       nama_lead: lead.name,
       nama_sales: lead.sales?.name ?? "",
       produk: lead.product?.name ?? "",
       perusahaan: setting?.companyName ?? "Perusahaan Kami",
-
       video_demo_links: demoBlock,
       testimoni_links: testiBlock,
       edukasi_links: edukasiBlock,
@@ -275,24 +365,16 @@ export async function POST(req: NextRequest) {
 
     const content = renderTemplate(templateBody, vars).trim();
 
-    // simpan DB message dulu
-    const msg = await prisma.leadMessage.create({
-      data: {
-        leadId,
-        salesId: lead.salesId ?? null,
-        channel: LeadMessageChannel.WHATSAPP,
-        direction: MessageDirection.OUTBOUND,
-        content,
-        type: LeadMessageType.TEXT,
-        waStatus: WaMessageStatus.PENDING,
-        toNumber: lead.phone,
-      } as any,
+    // 4) update message content di DB biar isi tersimpan rapih
+    await prisma.leadMessage.update({
+      where: { id: msg.id },
+      data: { content },
     });
 
+    // 5) baru kirim WA
     try {
       await ensureWaClient(lead.salesId);
 
-      // jika ada media & pdf => kirim doc dulu (caption = content), else kirim text
       const mediaUrl = template?.waTemplateMedia ?? null;
 
       if (mediaUrl && isPdfUrl(mediaUrl)) {
@@ -342,7 +424,6 @@ export async function POST(req: NextRequest) {
         });
       }
 
-      // advance state
       const nextSend = new Date(
         Date.now() + (step.delayHours ?? 24) * 60 * 60 * 1000
       );
@@ -362,7 +443,6 @@ export async function POST(req: NextRequest) {
         data: { waStatus: WaMessageStatus.FAILED } as any,
       });
 
-      // clear claim agar retry
       await prisma.leadNurturingState.update({
         where: { leadId },
         data: {

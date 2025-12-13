@@ -72,6 +72,10 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/cron")) {
     return NextResponse.next();
   }
+  
+  if (pathname.startsWith("/go")) {
+    return NextResponse.next();
+  }
 
   // skip static & asset
   if (

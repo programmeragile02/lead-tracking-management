@@ -235,7 +235,7 @@ export default function GeneralSettingPage() {
                   {/* Batas jam diam sales sebelum nurturing resume */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium">
-                      Sales Diam Berapa Jam sebelum Nurturing Jalan Lagi?
+                      Diam Berapa Jam sebelum Nurturing Jalan Lagi?
                     </label>
                     <div className="flex items-center gap-2">
                       <Input
@@ -252,8 +252,8 @@ export default function GeneralSettingPage() {
                     <p className="text-xs text-muted-foreground">
                       Contoh: diisi <b>48</b> berarti ketika sales terakhir
                       follow up / chat, nurturing akan <b>pause</b>, lalu jika
-                      tidak ada aktivitas dari sales selama 48 jam, nurturing
-                      akan <b>resume otomatis</b> dan mengirim step berikutnya.
+                      tidak ada aktivitas selama 48 jam, nurturing
+                      akan <b>resume otomatis</b> dan mengirim step berikutnya
                     </p>
                   </div>
 
