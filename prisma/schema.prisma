@@ -80,6 +80,7 @@ model Product {
   educationLinks   Json?   // [{ label, url }, ...]
   
   leads       Lead[]
+  nurturingPlans   NurturingPlan[] @relation("ProductNurturingPlans")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -233,11 +234,7 @@ model Lead {
 
   activities  LeadActivity[]
 
-  nurturingStatus      NurturingStatus @default(ACTIVE)
-  nurturingCurrentStep Int?            // step ke berapa dlm sequence nurturing (1 = FO1, 2 = FO2, dst)
-  nurturingLastSentAt  DateTime?       // kapan terakhir pesan nurturing dikirim
-  nurturingStartedAt   DateTime?       // kapan nurturing pertama kali dimulai (opsional, bisa dipakai utk hitung 14-30 hari)
-  nurturingPausedAt    DateTime?
+  nurturingState LeadNurturingState?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -305,6 +302,7 @@ model LeadSource {
   isActive    Boolean  @default(true)
 
   leads       Lead[]
+  nurturingPlans NurturingPlan[] @relation("LeadSourceNurturingPlans")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -380,6 +378,9 @@ model LeadFollowUp {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([leadId, doneAt])
+  @@index([leadId, nextActionAt])
 
   @@map("lead_followups")
 }
@@ -491,6 +492,7 @@ model LeadMessage {
   @@index([leadId])
   @@index([salesId])
   @@index([channel, direction])
+  @@index([leadId, direction, createdAt])
   @@map("lead_messages")
 }
 
@@ -532,4 +534,174 @@ model GeneralSetting {
   updatedAt DateTime @updatedAt
 
   @@map("general_settings")
+}
+
+enum NurturingTemplateSlot {
+  A
+  B
+}
+
+model NurturingCategory {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+
+  topics    NurturingTopic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("nurturing_categories")
+}
+
+model NurturingTopic {
+  id          Int      @id @default(autoincrement())
+
+  categoryId  Int
+  category    NurturingCategory @relation(fields: [categoryId], references: [id])
+
+  title       String
+  description String?  @db.Text
+
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  // optional targeting
+  targetStatusCode String?
+  targetStageCode  String?
+
+  templates   NurturingTemplate[]
+
+  // dipakai oleh plan steps
+  planSteps   NurturingPlanStep[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([categoryId])
+  @@map("nurturing_topics")
+}
+
+model NurturingTemplate {
+  id        Int      @id @default(autoincrement())
+
+  topicId   Int
+  topic     NurturingTopic @relation(fields: [topicId], references: [id])
+
+  slot      NurturingTemplateSlot
+  isActive  Boolean  @default(true)
+
+  waTemplateTitle String?
+  waTemplateBody  String? @db.Text   // nullable sesuai request kamu
+  waTemplateMedia String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // max 2 template per judul (A & B)
+  @@unique([topicId, slot])
+  @@index([topicId])
+  @@map("nurturing_templates")
+}
+
+model NurturingPlan {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?  @db.Text
+
+  isActive    Boolean  @default(true)
+
+  // scope opsional (sesuai product lead)
+  productId   Int?
+  product     Product? @relation("ProductNurturingPlans", fields: [productId], references: [id])
+
+  // filter opsional
+  targetStatusCode String?
+
+  sourceId    Int?
+  source      LeadSource? @relation("LeadSourceNurturingPlans", fields: [sourceId], references: [id])
+
+  steps       NurturingPlanStep[]
+  leadStates  LeadNurturingState[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+  @@index([sourceId])
+  @@map("nurturing_plans")
+}
+
+model NurturingPlanStep {
+  id        Int      @id @default(autoincrement())
+
+  planId    Int
+  plan      NurturingPlan @relation(fields: [planId], references: [id])
+
+  topicId   Int
+  topic     NurturingTopic @relation(fields: [topicId], references: [id])
+
+  order     Int      @default(0)
+
+  // jeda dari step sebelumnya
+  delayHours Int     @default(24)
+
+  // pakai template slot mana (A/B)
+  slot      NurturingTemplateSlot @default(A)
+
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([planId, order])
+  @@index([planId])
+  @@index([topicId])
+  @@map("nurturing_plan_steps")
+}
+
+enum NurturingPauseReason {
+  MANUAL_TOGGLE
+  SALES_FOLLOWUP
+  INBOUND_RECENT
+  SYSTEM_RULE
+}
+
+model LeadNurturingState {
+  id        Int      @id @default(autoincrement())
+
+  leadId    Int      @unique
+  lead      Lead     @relation(fields: [leadId], references: [id])
+
+  planId    Int?
+  plan      NurturingPlan? @relation(fields: [planId], references: [id])
+
+  status     NurturingStatus @default(ACTIVE)
+
+  // 0 = belum mulai, 1..n = step berjalan
+  currentStep Int     @default(0)
+
+  startedAt  DateTime?
+  lastSentAt DateTime?
+  nextSendAt DateTime?
+  pausedAt   DateTime?
+
+  // tambahan untuk per-lead toggle & alasan pause
+  pauseReason  NurturingPauseReason?
+  manualPaused Boolean @default(false)
+
+  // idempotency / anti dobel, contoh: "LEAD:12:STEP:5"
+  lastMessageKey String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([nextSendAt])
+  @@index([planId])
+  @@unique([lastMessageKey])
+  @@map("lead_nurturing_states")
 }

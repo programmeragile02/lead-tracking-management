@@ -135,6 +135,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           href: "/master/lead-followup-types",
           icon: FileChartColumn,
         },
+        {
+          id: "master-nurturing",
+          label: "Nurturing",
+          href: "/master/nurturing",
+          icon: FileChartColumn,
+        },
       ],
     },
 

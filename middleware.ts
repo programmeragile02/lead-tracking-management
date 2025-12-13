@@ -69,7 +69,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/api/nurturing")) {
+  if (pathname.startsWith("/api/cron")) {
     return NextResponse.next();
   }
 

@@ -20,6 +20,10 @@ function getDateRanges() {
   return { now, startOfDay, endOfDay, startOfMonth, startOfNextMonth };
 }
 
+function iso(d: Date | null | undefined) {
+  return d ? d.toISOString() : null;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser(req);
@@ -165,7 +169,7 @@ export async function GET(req: NextRequest) {
 
     // 8. Aktivitas terbaru: 5 follow up terakhir milik sales ini
     const recentFollowUps = await prisma.leadFollowUp.findMany({
-      where: { salesId },
+      where: { salesId, doneAt: { not: null } },
       include: {
         lead: {
           select: {
@@ -209,9 +213,7 @@ export async function GET(req: NextRequest) {
         leadName: fu.lead?.name ?? "-",
         productName: fu.lead?.product?.name ?? "-",
         followUpType: fu.type?.code ?? fu.type?.name ?? "Follow Up",
-        time: fu.nextActionAt
-          ? fu.nextActionAt.toISOString()
-          : fu.doneAt.toISOString(),
+        time: iso(fu.nextActionAt) ?? iso(fu.doneAt) ?? null,
         status:
           fu.nextActionAt && fu.nextActionAt < now
             ? ("overdue" as const)
@@ -225,7 +227,7 @@ export async function GET(req: NextRequest) {
       })),
       recentActivities: recentFollowUps.slice(0,5).map((fu) => ({
         id: fu.id,
-        time: fu.doneAt.toISOString(),
+        time: fu.doneAt!.toISOString(),
         type: fu.type?.name ?? "Follow Up",
         leadName: fu.lead?.name ?? "-",
         status: fu.lead?.status?.code ?? "UNKNOWN",

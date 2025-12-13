@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
+import { Switch } from "../ui/switch";
 
 interface LeadListCardProps {
   leadId: number | string;
@@ -16,6 +19,7 @@ interface LeadListCardProps {
   nextFollowUp?: string;
   followUpType?: string;
   indicator: "overdue" | "due-today" | "updated" | "normal";
+  nurturingEnabled?: boolean;
 }
 
 export function LeadListCard({
@@ -29,6 +33,7 @@ export function LeadListCard({
   nextFollowUp,
   followUpType,
   indicator,
+  nurturingEnabled,
 }: LeadListCardProps) {
   const statusColors = {
     new: "bg-amber-500 text-white border-amber-600",
@@ -56,6 +61,46 @@ export function LeadListCard({
   };
 
   const { user } = useCurrentUser();
+  const { toast } = useToast();
+  const [nurturingOn, setNurturingOn] = useState(
+    typeof nurturingEnabled === "boolean" ? nurturingEnabled : true
+  );
+  const [loadingNurturing, setLoadingNurturing] = useState(false);
+
+  async function toggleNurturing(next: boolean) {
+    if (loadingNurturing) return;
+
+    setLoadingNurturing(true);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/nurturing`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next }),
+      });
+      const json = await res.json();
+
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error || "Gagal mengubah nurturing");
+      }
+
+      setNurturingOn(next);
+
+      toast({
+        title: next ? "Nurturing diaktifkan" : "Nurturing dimatikan",
+        description: next
+          ? "Pesan nurturing akan berjalan otomatis."
+          : "Nurturing dihentikan sementara untuk lead ini.",
+      });
+    } catch (e: any) {
+      toast({
+        title: "Gagal",
+        description: e.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingNurturing(false);
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md border-2 border-gray-100 overflow-hidden hover:shadow-lg transition-shadow">
@@ -116,7 +161,30 @@ export function LeadListCard({
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              {/* Toggle nurturing */}
+              {user?.roleCode === "SALES" && (
+                <div
+                  className="flex items-center gap-2 rounded-lg border px-2 py-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium",
+                      nurturingOn ? "text-green-600" : "text-gray-500"
+                    )}
+                  >
+                    Nurturing
+                  </span>
+                  <Switch
+                    checked={nurturingOn}
+                    disabled={loadingNurturing}
+                    onCheckedChange={toggleNurturing}
+                  />
+                </div>
+              )}
+
+              {/* Tombol detail */}
               {user?.roleCode === "SALES" && (
                 <Link href={`/leads/${leadId}`}>
                   <Button

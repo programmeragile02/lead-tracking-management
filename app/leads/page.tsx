@@ -35,6 +35,7 @@ type LeadListItem = {
   nextActionAt: string | null; // ISO
   followUpTypeName: string | null;
   followUpTypeCode: string | null;
+  nurturingEnabled?: boolean;
 };
 
 type LeadListApiResponse = {
@@ -309,6 +310,7 @@ export default function LeadsPage() {
                   nextFollowUp={nextLabel}
                   followUpType={lead.followUpTypeName || undefined}
                   indicator={indicator}
+                  nurturingEnabled={lead.nurturingEnabled}
                 />
               );
             })

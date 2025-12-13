@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `lead_nurturing_states` ADD COLUMN `manualPaused` BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN `pauseReason` ENUM('MANUAL_TOGGLE', 'SALES_FOLLOWUP', 'INBOUND_RECENT', 'SYSTEM_RULE') NULL;
