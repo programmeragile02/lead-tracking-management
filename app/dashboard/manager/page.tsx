@@ -56,7 +56,7 @@ export default function ManagerDashboardPage() {
 
         <section>
           <h3 className="text-lg font-bold text-gray-900 mb-4">
-            Performa berdasarkan Channel
+            Performa berdasarkan Aksi
           </h3>
           <ChannelPerformanceTable />
         </section>

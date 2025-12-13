@@ -8,6 +8,7 @@ type Body = {
   stageId?: number;
   stageCode?: string;
   note?: string;
+  skipIntermediate?: boolean;
 };
 
 export async function POST(
@@ -67,12 +68,19 @@ export async function POST(
   }
 
   const ownerSalesId = lead.salesId ?? user.id;
+  const now = new Date();
 
   const [updatedLead] = await prisma.$transaction([
+    prisma.leadStageHistory.updateMany({
+      where: { leadId, doneAt: null },
+      data: { doneAt: now, note: "Auto close: pindah tahap" },
+    }),
+
     prisma.lead.update({
       where: { id: leadId },
       data: { stageId: stage.id },
     }),
+    
     prisma.leadStageHistory.create({
       data: {
         leadId,
@@ -80,6 +88,8 @@ export async function POST(
         changedById: user.id,
         salesId: ownerSalesId,
         note: body.note || null,
+        mode: "NORMAL",
+        doneAt: null,
       },
     }),
   ]);

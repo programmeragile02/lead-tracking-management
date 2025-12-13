@@ -123,6 +123,11 @@ model LeadStatus {
   updatedAt DateTime @updatedAt
 }
 
+enum StageChangeMode {
+  NORMAL
+  SKIPPED
+}
+
 model LeadStageHistory {
   id          Int       @id @default(autoincrement())
 
@@ -141,6 +146,11 @@ model LeadStageHistory {
   sales       User?     @relation("LeadStageHistorySales", fields: [salesId], references: [id])
 
   note        String?
+
+  doneAt      DateTime?
+
+  mode        StageChangeMode @default(NORMAL)
+  
   createdAt   DateTime  @default(now())
 
   @@index([leadId])
@@ -436,6 +446,14 @@ enum LeadMessageType {
   MEDIA
 }
 
+enum WaMessageStatus {
+  PENDING     // baru dibuat di DB
+  SENT        // ACK 1
+  DELIVERED   // ACK 2
+  READ        // ACK 3
+  FAILED
+}
+
 model LeadMessage {
   id          Int                @id @default(autoincrement())
 
@@ -462,7 +480,10 @@ model LeadMessage {
   mediaName   String?
   mediaMime   String?
 
-  sentAt      DateTime           @default(now())
+  waStatus    WaMessageStatus @default(PENDING)
+  sentAt      DateTime?       // diisi saat ACK 1
+  deliveredAt DateTime?       // ACK 2
+  readAt      DateTime?       // ACK 3
 
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt

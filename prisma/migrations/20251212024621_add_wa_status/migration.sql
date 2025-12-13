@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE `lead_messages` ADD COLUMN `deliveredAt` DATETIME(3) NULL,
+    ADD COLUMN `readAt` DATETIME(3) NULL,
+    ADD COLUMN `waStatus` ENUM('PENDING', 'SENT', 'DELIVERED', 'READ', 'FAILED') NOT NULL DEFAULT 'PENDING',
+    MODIFY `sentAt` DATETIME(3) NULL;

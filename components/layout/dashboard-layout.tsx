@@ -23,6 +23,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { AppRole } from "@/lib/nav-items";
+import { RealtimeListener } from "../realtime/realtime-listener";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -81,6 +82,7 @@ export function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <RealtimeListener />
       {/* Mobile header */}
       {!isDesktop && (
         <TopBar

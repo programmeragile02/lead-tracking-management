@@ -44,6 +44,8 @@ import {
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useToast } from "@/hooks/use-toast";
+import { MessageStatusIcon } from "@/components/leads/message-status-icon";
+import { io as ioClient } from "socket.io-client";
 
 type LeadStatusUi = "new" | "cold" | "warm" | "hot" | "won" | "lost";
 
@@ -54,6 +56,7 @@ interface ChatMessageUi {
   from: ChatFrom;
   text: string;
   time: string;
+  waStatus?: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED" | null;
   type?: "TEXT" | "MEDIA";
   mediaUrl?: string | null;
   mediaName?: string | null;
@@ -64,7 +67,9 @@ interface StageWithMeta {
   id: number;
   code: string;
   label: string;
-  completedAt?: string | null;
+  startedAt?: string | null;
+  doneAt?: string | null;
+  mode?: "NORMAL" | "SKIPPED" | null;
 }
 
 interface LeadDetailResponse {
@@ -78,6 +83,8 @@ interface LeadDetailResponse {
       id: number;
       stageId: number;
       createdAt: string;
+      doneAt: string | null;
+      mode: "NORMAL" | "SKIPPED";
       stage: { id: number; name: string; code: string };
     }[];
     statusHistory: {
@@ -105,6 +112,10 @@ interface LeadMessagesResponse {
     content: string;
     direction: "INBOUND" | "OUTBOUND";
     createdAt: string;
+    waStatus?: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED" | null;
+    sentAt?: string | null;
+    deliveredAt?: string | null;
+    readAt?: string | null;
     type?: "TEXT" | "MEDIA";
     mediaUrl?: string | null;
     mediaName?: string | null;
@@ -266,7 +277,7 @@ export default function LeadDetailPage() {
     isLoading: messagesLoading,
     mutate: mutateMessages,
   } = useSWR<LeadMessagesResponse>(`/api/leads/${leadId}/messages`, fetcher, {
-    refreshInterval: 4000,
+    refreshInterval: 10000,
   });
 
   const {
@@ -283,6 +294,29 @@ export default function LeadDetailPage() {
     `/api/leads/${leadId}/activities`,
     fetcher
   );
+
+  const SOCKET_URL =
+    process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3016";
+
+  useEffect(() => {
+    if (!leadId) return;
+
+    const s = ioClient(SOCKET_URL, { transports: ["websocket"] });
+    s.emit("join", { leadId: Number(leadId) });
+
+    s.on("wa_inbound", () => mutateMessages());
+    s.on("wa_receipt", () => mutateMessages());
+    s.on("wa_outbound_created", () => {
+      mutateMessages();
+      mutateActivities();
+      mutateDetail();
+    });
+
+    return () => {
+      s.emit("leave", { leadId: Number(leadId) });
+      s.disconnect();
+    };
+  }, [leadId, mutateMessages]);
 
   const lead = detailRes?.data?.lead;
   const products = detailRes?.data?.products ?? [];
@@ -370,18 +404,38 @@ export default function LeadDetailPage() {
   // ==== STAGE / TAHAPAN ====
 
   const stages: StageWithMeta[] = useMemo(() => {
-    const firstCompletedAt = new Map<number, string>();
-    for (const h of stageHistory) {
-      if (!firstCompletedAt.has(h.stageId)) {
-        firstCompletedAt.set(h.stageId, h.createdAt);
+    // ambil history TERAKHIR per stage (berdasarkan createdAt desc)
+    const lastByStage = new Map<
+      number,
+      { createdAt: string; doneAt: string | null; mode: any }
+    >();
+
+    const sorted = [...stageHistory].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    for (const h of sorted) {
+      if (!lastByStage.has(h.stageId)) {
+        lastByStage.set(h.stageId, {
+          createdAt: h.createdAt,
+          doneAt: (h as any).doneAt ?? null,
+          mode: (h as any).mode ?? "NORMAL",
+        });
       }
     }
-    return stagesRaw.map((s) => ({
-      id: s.id,
-      code: s.code,
-      label: s.name,
-      completedAt: firstCompletedAt.get(s.id) ?? null,
-    }));
+
+    return stagesRaw.map((s) => {
+      const meta = lastByStage.get(s.id);
+      return {
+        id: s.id,
+        code: s.code,
+        label: s.name,
+        startedAt: meta?.createdAt ?? null,
+        doneAt: meta?.doneAt ?? null,
+        mode: meta?.mode ?? null,
+      };
+    });
   }, [stagesRaw, stageHistory]);
 
   const currentStageId: number | undefined =
@@ -426,8 +480,14 @@ export default function LeadDetailPage() {
     void moveToStage(next.id);
   }
 
-  // tombol "Tandai selesai" → anggap juga lanjut ke tahap berikutnya
-  function handleStageDone() {
+  // tombol "Tandai selesai"
+  async function handleStageDone() {
+    if (!currentStageId) return;
+
+    // 1) checklist selesai tahap aktif
+    await markStageDone(currentStageId, "NORMAL");
+
+    // 2) lanjut ke tahap berikutnya
     handleGoToNextStage();
   }
 
@@ -541,7 +601,11 @@ export default function LeadDetailPage() {
 
       setScheduleModalOpen(false);
       setFollowUpNote("");
-      await mutateFollowUps();
+      await Promise.all([
+        mutateFollowUps(),
+        mutateActivities(),
+        mutateDetail(),
+      ]);
     } catch (err: any) {
       console.error(err);
       toast({
@@ -560,17 +624,48 @@ export default function LeadDetailPage() {
 
   const chatMessages: ChatMessageUi[] = useMemo(() => {
     if (!messagesRes?.ok || !messagesRes.data) return [];
-    return messagesRes.data.map((m) => ({
-      id: m.id,
-      from: m.direction === "OUTBOUND" ? "sales" : "client",
-      text: m.content,
-      time: formatTime(m.createdAt ?? new Date().toISOString()),
-      type: m.type ?? "TEXT",
-      mediaUrl: m.mediaUrl,
-      mediaName: m.mediaName,
-      mediaMime: m.mediaMime,
-    }));
+
+    return messagesRes.data.map((m) => {
+      const timeBase =
+        m.readAt ||
+        m.deliveredAt ||
+        m.sentAt ||
+        m.createdAt ||
+        new Date().toISOString();
+
+      return {
+        id: m.id,
+        from: m.direction === "OUTBOUND" ? "sales" : "client",
+        text: m.content,
+        time: formatTime(timeBase),
+        waStatus: m.waStatus ?? "PENDING",
+        type: m.type ?? "TEXT",
+        mediaUrl: m.mediaUrl,
+        mediaName: m.mediaName,
+        mediaMime: m.mediaMime,
+      };
+    });
   }, [messagesRes]);
+
+  const chatWrapRef = useRef<HTMLDivElement | null>(null);
+
+  function scrollChatToBottom(behavior: ScrollBehavior = "smooth") {
+    const el = chatWrapRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }
+
+  // scroll saat pertama load & saat ada pesan baru
+  useEffect(() => {
+    scrollChatToBottom("auto");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messagesLoading]);
+
+  useEffect(() => {
+    // kalau realtime nambah pesan → scroll smooth
+    scrollChatToBottom("smooth");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatMessages.length]);
 
   const handleSend = async () => {
     if (!chatInput.trim()) return;
@@ -691,7 +786,7 @@ export default function LeadDetailPage() {
         title:
           fu.typeName || getFollowUpTypeLabel(fu.typeCode) || "Tindak lanjut",
         description: [
-          fu.channel ? `Channel: ${fu.channel}` : "",
+          fu.channel ? `Aksi: ${fu.channel}` : "",
           waktuText,
           fu.note ? `Catatan: ${fu.note}` : "",
         ]
@@ -849,8 +944,12 @@ export default function LeadDetailPage() {
         proposalFileInputRef.current.value = "";
       }
 
-      await mutateMessages();
-      await mutateActivities(); // kalau server juga mencatat aktivitas "kirim proposal"
+      await Promise.all([
+        mutateMessages(),
+        mutateActivities(),
+        mutateDetail(),
+        // mutateFollowUps(),
+      ]);
     } catch (err: any) {
       console.error(err);
       toast({
@@ -1016,7 +1115,6 @@ export default function LeadDetailPage() {
   }
 
   // ==== MODAL PREVIEW FOTO AKTIVITAS ====
-
   const [activityPreviewOpen, setActivityPreviewOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(
     null
@@ -1273,6 +1371,40 @@ export default function LeadDetailPage() {
     }
   }
 
+  const [stageChecklistSaving, setStageChecklistSaving] = useState<
+    number | null
+  >(null);
+
+  async function markStageDone(
+    stageId: number,
+    mode: "NORMAL" | "SKIPPED" = "NORMAL"
+  ) {
+    try {
+      setStageChecklistSaving(stageId);
+      const res = await fetch(`/api/leads/${leadId}/stage/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stageId,
+          mode,
+          note: mode === "SKIPPED" ? "Checklist: diskip" : "Checklist: selesai",
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok)
+        throw new Error(json.error || "Gagal checklist tahap");
+      await mutateDetail();
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err?.message || "Error",
+      });
+    } finally {
+      setStageChecklistSaving(null);
+    }
+  }
+
   return (
     <DashboardLayout title="Detail Leads">
       <div className="flex min-h-screen flex-col bg-background">
@@ -1406,7 +1538,7 @@ export default function LeadDetailPage() {
                       </p>
                       {lastFollowUp.channel && (
                         <p className="text-[11px] md:text-sm text-muted-foreground">
-                          Channel:{" "}
+                          Aksi:{" "}
                           {followUpChannelLabel(
                             lastFollowUp.channel.toLowerCase()
                           )}
@@ -2091,7 +2223,6 @@ export default function LeadDetailPage() {
                           {lastFollowUp && !lastFollowUp.doneAt && (
                             <Button
                               size="sm"
-                              variant=""
                               className="h-8 px-3 text-xs"
                               onClick={() =>
                                 handleMarkFollowUpDone(lastFollowUp.id)
@@ -2173,122 +2304,180 @@ export default function LeadDetailPage() {
                     {/* Chat + Quick Tahapan di kanan */}
                     <div className="flex flex-col gap-3 lg:flex-row">
                       {/* CHAT PANEL */}
-                      <div className="flex-1 space-y-2">
-                        <div className="h-[320px] rounded-md border bg-background/90 p-2 shadow-inner sm:h-[380px]">
-                          <div className="flex h-full flex-col gap-2 overflow-y-auto pr-1 text-sm">
-                            {messagesLoading && (
-                              <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Memuat percakapan...
-                              </div>
-                            )}
-                            {!messagesLoading && chatMessages.length === 0 && (
-                              <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-                                Belum ada percakapan WhatsApp untuk lead ini.
-                              </div>
-                            )}
-                            {chatMessages.map((m) => {
-                              const isSales = m.from === "sales";
-                              return (
-                                <div
-                                  key={m.id}
-                                  className={`flex ${
-                                    isSales ? "justify-end" : "justify-start"
-                                  }`}
-                                >
-                                  <div
-                                    className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs md:text-sm shadow-sm ${
-                                      isSales
-                                        ? "rounded-br-sm bg-emerald-500 text-white"
-                                        : "rounded-bl-sm bg-muted text-foreground"
-                                    }`}
-                                  >
-                                    {/* kalau ada media (PDF, dsb) */}
-                                    {m.type === "MEDIA" && m.mediaUrl ? (
-                                      <a
-                                        href={m.mediaUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className={`mb-1 flex items-center gap-2 rounded-md border border-white/20 bg-white/10 px-2 py-1 ${
-                                          isSales
-                                            ? "text-white"
-                                            : "text-foreground"
-                                        }`}
-                                      >
-                                        <div className="flex h-6 w-6 items-center justify-center rounded bg-black/10">
-                                          📄
-                                        </div>
-                                        <div className="flex-1">
-                                          <p className="text-[11px] font-semibold line-clamp-1">
-                                            {m.mediaName || "Lampiran proposal"}
-                                          </p>
-                                          <p className="text-[10px] opacity-75">
-                                            klik untuk buka
-                                          </p>
-                                        </div>
-                                      </a>
-                                    ) : null}
-
-                                    {/* caption / text utama */}
-                                    {m.text && (
-                                      <p className="whitespace-pre-line">
-                                        {m.text}
-                                      </p>
-                                    )}
-
-                                    <div className="mt-1 flex justify-between text-[10px] opacity-70">
-                                      <span>{m.time}</span>
-                                    </div>
-                                  </div>
+                      <div className="flex-1">
+                        <Card className="overflow-hidden">
+                          {/* Header sticky */}
+                          <CardHeader className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-700">
+                                  WA
                                 </div>
-                              );
-                            })}
-                          </div>
-                        </div>
+                                <div className="space-y-0.5">
+                                  <p className="text-sm md:text-base font-semibold">
+                                    Chat dengan {displayName}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {displayPhone !== "-"
+                                      ? displayPhone
+                                      : "Nomor WA belum diisi"}
+                                  </p>
+                                </div>
+                              </div>
 
-                        {/* Input chat + shortcut kirim penawaran */}
-                        <div className="mt-1 flex flex-col gap-2">
-                          <Textarea
-                            rows={2}
-                            className="text-sm"
-                            placeholder="Ketik pesan untuk lead ini..."
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                          />
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-[11px] md:text-sm"
-                                onClick={() => setProposalModalOpen(true)}
-                              >
-                                <FileText className="mr-1 h-3 w-3" />
-                                Kirim penawaran (PDF)
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-[11px] md:text-sm"
-                                onClick={() => setScheduleModalOpen(true)}
-                              >
-                                Follow up
-                              </Button>
+                              <Badge variant="outline" className="text-sm">
+                                Realtime
+                              </Badge>
                             </div>
-                            <Button
-                              size="sm"
-                              onClick={handleSend}
-                              disabled={!chatInput.trim() || sending}
-                            >
-                              {sending ? (
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                              ) : (
-                                <Send className="mr-1 h-4 w-4" />
-                              )}
-                              Kirim ke WhatsApp
-                            </Button>
+                          </CardHeader>
+
+                          {/* Body chat (scroll) */}
+                          <CardContent className="p-0">
+                            <div className="h-[420px] bg-background/90 sm:h-[520px]">
+                              <div
+                                ref={chatWrapRef}
+                                className="flex h-full flex-col gap-2 overflow-y-auto px-3 py-3"
+                              >
+                                {messagesLoading && (
+                                  <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Memuat percakapan...
+                                  </div>
+                                )}
+
+                                {!messagesLoading &&
+                                  chatMessages.length === 0 && (
+                                    <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                                      Belum ada percakapan WhatsApp.
+                                    </div>
+                                  )}
+
+                                {chatMessages.map((m) => {
+                                  const isSales = m.from === "sales";
+
+                                  return (
+                                    <div
+                                      key={m.id}
+                                      className={`flex ${
+                                        isSales
+                                          ? "justify-end"
+                                          : "justify-start"
+                                      }`}
+                                    >
+                                      <div
+                                        className={[
+                                          "max-w-[85%] rounded-2xl px-3 py-2 shadow-sm",
+                                          "text-sm leading-relaxed",
+                                          isSales
+                                            ? "rounded-br-sm bg-emerald-800 text-white"
+                                            : "rounded-bl-sm bg-muted text-foreground",
+                                        ].join(" ")}
+                                      >
+                                        {m.type === "MEDIA" && m.mediaUrl ? (
+                                          <a
+                                            href={m.mediaUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className={[
+                                              "mb-2 flex items-center gap-2 rounded-lg border px-2 py-2",
+                                              isSales
+                                                ? "border-white/20 bg-white/10 text-white"
+                                                : "border-border bg-background text-foreground",
+                                            ].join(" ")}
+                                          >
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-black/10">
+                                              📄
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                              <p className="truncate text-sm font-semibold">
+                                                {m.mediaName || "Lampiran"}
+                                              </p>
+                                              <p className="text-xs opacity-80">
+                                                Klik untuk buka
+                                              </p>
+                                            </div>
+                                          </a>
+                                        ) : null}
+
+                                        {m.text ? (
+                                          <p className="whitespace-pre-line">
+                                            {m.text}
+                                          </p>
+                                        ) : null}
+
+                                        <div className="mt-2 flex items-center justify-end gap-2 text-xs opacity-80">
+                                          <span>{m.time}</span>
+                                          {isSales ? (
+                                            <MessageStatusIcon
+                                              status={m.waStatus}
+                                              className={
+                                                m.waStatus === "READ"
+                                                  ? "text-blue-400"
+                                                  : m.waStatus === "FAILED"
+                                                  ? "text-rose-400"
+                                                  : "text-white/90"
+                                              }
+                                            />
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </CardContent>
+
+                          {/* Composer sticky */}
+                          <div className="sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur">
+                            <div className="space-y-2 p-3">
+                              <Textarea
+                                rows={2}
+                                className="text-sm"
+                                placeholder="Ketik pesan untuk lead ini..."
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                              />
+
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-3 text-sm"
+                                    onClick={() => setProposalModalOpen(true)}
+                                  >
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Kirim PDF
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-3 text-sm"
+                                    onClick={() => setScheduleModalOpen(true)}
+                                  >
+                                    Follow up
+                                  </Button>
+                                </div>
+
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-4 text-sm"
+                                  onClick={handleSend}
+                                  disabled={!chatInput.trim() || sending}
+                                >
+                                  {sending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Send className="mr-2 h-4 w-4" />
+                                  )}
+                                  Kirim
+                                </Button>
+                              </div>
+                            </div>
                           </div>
-                        </div>
+                        </Card>
                       </div>
 
                       {/* QUICK TAHAPAN DI KANAN */}
@@ -2323,7 +2512,7 @@ export default function LeadDetailPage() {
                                   <CheckCircle2 className="mr-1 h-3 w-3" />
                                   Tandai selesai & lanjut
                                 </Button>
-                                <Button
+                                {/* <Button
                                   size="sm"
                                   variant="outline"
                                   className="h-7 px-2 text-[11px] md:text-sm"
@@ -2331,7 +2520,7 @@ export default function LeadDetailPage() {
                                   disabled={stageUpdating || !currentStage}
                                 >
                                   Tahap berikutnya
-                                </Button>
+                                </Button> */}
                               </div>
                             </div>
 
@@ -2359,6 +2548,8 @@ export default function LeadDetailPage() {
                                 <StageTimeline
                                   stages={stages}
                                   currentStageId={currentStageId}
+                                  onMarkDone={markStageDone}
+                                  savingStageId={stageChecklistSaving}
                                 />
                               </div>
                             )}
@@ -2376,8 +2567,8 @@ export default function LeadDetailPage() {
                         <DialogHeader>
                           <DialogTitle>Atur tindak lanjut</DialogTitle>
                           <DialogDescription>
-                            Tentukan jenis tindak lanjut, jadwal, dan channel
-                            untuk lead ini.
+                            Tentukan jenis tindak lanjut, jadwal, dan Aksi untuk
+                            lead ini.
                           </DialogDescription>
                         </DialogHeader>
                         <div className="mt-3 space-y-3 text-sm">
@@ -2433,7 +2624,7 @@ export default function LeadDetailPage() {
 
                           <div>
                             <p className="text-xs text-muted-foreground">
-                              Channel
+                              Aksi
                             </p>
                             <Select
                               value={followUpChannel}
@@ -2444,7 +2635,7 @@ export default function LeadDetailPage() {
                               }
                             >
                               <SelectTrigger className="mt-1 h-9">
-                                <SelectValue placeholder="Pilih channel" />
+                                <SelectValue placeholder="Pilih Aksi" />
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="wa">WhatsApp</SelectItem>
@@ -3066,9 +3257,13 @@ function formatFileSize(bytes: number) {
 function StageTimeline({
   stages,
   currentStageId,
+  onMarkDone,
+  savingStageId,
 }: {
   stages: StageWithMeta[];
   currentStageId?: number;
+  onMarkDone: (stageId: number, mode?: "NORMAL" | "SKIPPED") => void;
+  savingStageId: number | null;
 }) {
   if (!stages.length) {
     return (
@@ -3078,70 +3273,62 @@ function StageTimeline({
     );
   }
 
-  const currentId = currentStageId ?? stages[0]?.id;
-
   return (
-    <div className="space-y-3">
-      {stages.map((stage, index) => {
-        const isCurrent = stage.id === currentId;
-        const isDone = !!stage.completedAt && !isCurrent;
-        const isFuture = !isDone && !isCurrent;
+    <div className="space-y-2">
+      {stages.map((s) => {
+        const isDone = !!s.doneAt;
+        const isSkipped = isDone && s.mode === "SKIPPED";
+        const isActive = s.id === currentStageId;
 
         return (
-          <div key={stage.id} className="flex gap-2">
-            <div className="flex flex-col items-center">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full">
-                {isDone ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                ) : isCurrent ? (
-                  <Clock3 className="h-4 w-4 text-amber-500" />
-                ) : (
-                  <Circle className="h-3 w-3 text-muted-foreground" />
-                )}
-              </div>
-              {index < stages.length - 1 && (
-                <div className="mt-1 h-full w-px flex-1 bg-border" />
-              )}
-            </div>
-
-            <div className="pb-3 text-xs md:text-sm">
-              <div className="flex items-center gap-2">
-                <p
-                  className={`font-medium ${
-                    isDone
-                      ? "text-emerald-600"
-                      : isCurrent
-                      ? "text-foreground"
-                      : "text-muted-foreground"
+          <button
+            key={s.id}
+            type="button"
+            className="flex w-full items-center justify-between rounded-md border bg-background px-2 py-2 hover:bg-muted/60"
+            onClick={() => {
+              if (isDone) return;
+              onMarkDone(s.id, "NORMAL");
+            }}
+            disabled={savingStageId === s.id}
+          >
+            <div className="flex items-center gap-2">
+              {isDone ? (
+                <CheckCircle2
+                  className={`h-4 w-4 ${
+                    isSkipped ? "text-slate-400" : "text-emerald-500"
                   }`}
-                >
-                  {index + 1}. {stage.label}
+                />
+              ) : (
+                <Circle
+                  className={`h-4 w-4 ${
+                    isActive ? "text-blue-500" : "text-muted-foreground"
+                  }`}
+                />
+              )}
+
+              <div className="text-left">
+                <p className="text-sm font-medium">
+                  {s.label}{" "}
+                  {isActive ? (
+                    <span className="text-xs text-blue-500">(aktif)</span>
+                  ) : null}
                 </p>
-                {isCurrent && (
-                  <Badge className="h-5 px-2 text-[10px]" variant="outline">
-                    Sedang berjalan
-                  </Badge>
-                )}
-                {isDone && (
-                  <Badge className="h-5 px-2 text-[10px]" variant="outline">
-                    Selesai
-                  </Badge>
-                )}
+
+                <p className="text-[11px] text-muted-foreground">
+                  {isDone
+                    ? `Selesai: ${formatDateTime(s.doneAt!)}`
+                    : s.startedAt
+                    ? `Mulai: ${formatDateTime(s.startedAt)}`
+                    : "Belum dimulai"}
+                  {isSkipped ? " • SKIPPED" : ""}
+                </p>
               </div>
-
-              {stage.completedAt && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Selesai: {formatDateTime(stage.completedAt)}
-                </p>
-              )}
-
-              {isFuture && !stage.completedAt && (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Belum dimulai.
-                </p>
-              )}
             </div>
-          </div>
+
+            {savingStageId === s.id ? (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            ) : null}
+          </button>
         );
       })}
     </div>

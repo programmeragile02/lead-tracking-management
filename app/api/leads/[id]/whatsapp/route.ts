@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
 import { sendWaMessage } from "@/lib/whatsapp-service";
+import { emitRealtime } from "@/lib/realtime";
 
 export async function POST(
   req: NextRequest,
@@ -62,7 +63,17 @@ export async function POST(
       fromNumber: user.phone || null,
       toNumber: lead.phone,
       content: message.trim(),
-      sentAt: new Date(),
+      waStatus: "PENDING",
+      sentAt: null,
+    },
+  });
+
+  await emitRealtime({
+    room: `lead:${lead.id}`,
+    event: "wa_outbound_created",
+    payload: {
+      leadId: lead.id,
+      message: leadMessage,
     },
   });
 
@@ -81,16 +92,19 @@ export async function POST(
     });
 
     // 3. update waMessageId
-    await prisma.leadMessage.update({
+    const updated = await prisma.leadMessage.update({
       where: { id: leadMessage.id },
-      data: {
-        waMessageId: sendResult.waMessageId,
-      },
+      data: { waMessageId: sendResult.waMessageId },
     });
 
-    return NextResponse.json({ ok: true, data: leadMessage });
+    return NextResponse.json({ ok: true, data: updated });
   } catch (err) {
     console.error("[lead-whatsapp] send error:", err);
+
+    await prisma.leadMessage.update({
+      where: { id: leadMessage.id },
+      data: { waStatus: "FAILED" },
+    });
 
     // optional: tandai error
     return NextResponse.json(
