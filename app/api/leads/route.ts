@@ -542,6 +542,7 @@ export async function GET(req: NextRequest) {
         followUpTypeName: latestFU?.type?.name ?? null,
         followUpTypeCode: latestFU?.type?.code ?? null,
         nurturingEnabled,
+        importedFromExcel: lead.importedFromExcel ?? false,
       };
     });
 

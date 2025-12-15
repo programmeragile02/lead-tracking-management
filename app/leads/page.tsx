@@ -8,6 +8,7 @@ import { Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ImportLeadsDialog } from "@/components/leads/import-leads-dialog";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -36,6 +37,7 @@ type LeadListItem = {
   followUpTypeName: string | null;
   followUpTypeCode: string | null;
   nurturingEnabled?: boolean;
+  importedFromExcel?: boolean;
 };
 
 type LeadListApiResponse = {
@@ -182,10 +184,11 @@ export default function LeadsPage() {
 
   const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${searchQuery}`;
 
-  const { data: leadsResp, isLoading } = useSWR<LeadListApiResponse>(
-    leadsUrl,
-    fetcher
-  );
+  const {
+    data: leadsResp,
+    isLoading,
+    mutate: mutateLeads,
+  } = useSWR<LeadListApiResponse>(leadsUrl, fetcher);
 
   const leads = leadsResp?.data ?? [];
   const counts = leadsResp?.countsByStatusCode ?? {};
@@ -200,7 +203,7 @@ export default function LeadsPage() {
         {/* Search + Filter Bar */}
         <div className="top-0 z-10 bg-background pb-4 space-y-3 pt-1">
           {/* Search */}
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -213,6 +216,14 @@ export default function LeadsPage() {
                 }}
               />
             </div>
+            <ImportLeadsDialog
+              onImported={async () => {
+                // reset ke page 1 biar user lihat data terbaru di atas
+                setPage(1);
+                // refresh list sesuai filter yg sedang aktif
+                await mutateLeads();
+              }}
+            />
           </div>
 
           {/* Filter status (pill) */}
@@ -311,6 +322,7 @@ export default function LeadsPage() {
                   followUpType={lead.followUpTypeName || undefined}
                   indicator={indicator}
                   nurturingEnabled={lead.nurturingEnabled}
+                  importedFromExcel={!!lead.importedFromExcel}
                 />
               );
             })

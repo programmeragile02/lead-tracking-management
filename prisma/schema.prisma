@@ -62,6 +62,8 @@ model User {
   trackedLinks       LeadTrackedLink[]      @relation("LeadTrackedLinks_Sales")
   trackedLinkClicks  LeadTrackedLinkClick[] @relation("LeadTrackedLinkClicks_Sales")
 
+  importedLeads Lead[] @relation("LeadImportedBy")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -222,6 +224,14 @@ model Lead {
   // SUMBER LEAD
   sourceId Int?
   source   LeadSource? @relation(fields: [sourceId], references: [id])
+
+  // FLAG IMPORT EXCEL
+  importedFromExcel Boolean @default(false)
+  importedAt        DateTime?
+
+  // siapa yang import (sales yg upload)
+  importedById Int?
+  importedBy   User? @relation("LeadImportedBy", fields: [importedById], references: [id])
 
   // FIELD DINAMIS
   customValues LeadCustomFieldValue[]

@@ -20,6 +20,7 @@ interface LeadListCardProps {
   followUpType?: string;
   indicator: "overdue" | "due-today" | "updated" | "normal";
   nurturingEnabled?: boolean;
+  importedFromExcel?: boolean;
 }
 
 export function LeadListCard({
@@ -34,6 +35,7 @@ export function LeadListCard({
   followUpType,
   indicator,
   nurturingEnabled,
+  importedFromExcel
 }: LeadListCardProps) {
   const statusColors = {
     new: "bg-amber-500 text-white border-amber-600",
@@ -137,6 +139,11 @@ export function LeadListCard({
                   {leadAge}
                 </span>
               </div>
+              {importedFromExcel ? (
+                <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-emerald-100 mb-3">
+                  Dari Excel
+                </span>
+              ) : null}
             </div>
           </div>
 
