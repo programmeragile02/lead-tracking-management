@@ -8,7 +8,6 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
-  // 1. Cek user login
   const user = await getCurrentUser(req);
   if (!user) {
     return NextResponse.json(
@@ -17,7 +16,6 @@ export async function GET(
     );
   }
 
-  // 2. Ambil dan validasi leadId dari URL
   const { id } = await context.params;
   const leadId = Number(id);
   if (!leadId || Number.isNaN(leadId)) {
@@ -27,7 +25,6 @@ export async function GET(
     );
   }
 
-  // 3. Ambil data lead + relasi penting
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
     include: {
@@ -35,12 +32,8 @@ export async function GET(
       source: true,
       status: true,
       stage: true,
-      sales: {
-        select: { id: true, name: true, email: true },
-      },
-      customValues: {
-        include: { field: { include: { options: true } } },
-      },
+      sales: { select: { id: true, name: true, email: true } },
+      customValues: { include: { field: { include: { options: true } } } },
     },
   });
 
@@ -51,7 +44,6 @@ export async function GET(
     );
   }
 
-  // 4. Proteksi: kalau role SALES hanya boleh lihat lead miliknya
   if (user.roleSlug === "sales" && lead.salesId !== user.id) {
     return NextResponse.json(
       { ok: false, error: "Forbidden" },
@@ -59,7 +51,7 @@ export async function GET(
     );
   }
 
-  // 5. Ambil master & histori secara paralel:
+  // === Ambil master + history + fielddefs + settings secara paralel ===
   const [
     products,
     statuses,
@@ -68,6 +60,7 @@ export async function GET(
     statusHistory,
     followUpTypes,
     fieldDefs,
+    settings, // <-- NEW
   ] = await Promise.all([
     prisma.product.findMany({
       where: { isAvailable: true, deletedAt: null },
@@ -95,40 +88,51 @@ export async function GET(
       where: { isActive: true },
       orderBy: { order: "asc" },
     }),
-    // ambil semua definisi field dinamis aktif (supaya field yang belum ada nilai juga muncul)
     prisma.leadCustomFieldDef.findMany({
       where: { isActive: true },
       orderBy: { sortOrder: "asc" },
-      include: {
-        options: { orderBy: { sortOrder: "asc" } },
+      include: { options: { orderBy: { sortOrder: "asc" } } },
+    }),
+
+    // ====== SETTINGS ======
+    prisma.generalSetting.findFirst({
+      where: { id: 1 },
+      select: {
+        companyName: true,
       },
     }),
   ]);
 
-  // 6. Bangun map nilai custom untuk lead ini: fieldId -> value
   const valueMap = new Map<number, string>();
   for (const cv of lead.customValues ?? []) {
     valueMap.set(cv.fieldId, cv.value);
   }
 
-  // 7. Bentuk dynamicFields ramah UI
   const dynamicFields = fieldDefs.map((f) => ({
-    id: f.id, // ID definisi field
+    id: f.id,
     key: f.key,
     label: f.label,
-    type: f.type, // enum LeadFieldType -> di frontend pakai string yang sama
+    type: f.type,
     isRequired: f.isRequired,
-    options: f.options.map((opt) => ({
-      value: opt.value,
-      label: opt.label,
-    })),
+    options: f.options.map((opt) => ({ value: opt.value, label: opt.label })),
     value: valueMap.get(f.id) ?? "",
   }));
 
-  // 8. Hitung persentase kelengkapan profil untuk progress bar di UI
   const profileCompletion = computeProfileCompletion(lead);
 
-  // 9. Response ke frontend
+  // === Current user yang aman untuk client ===
+  const currentUser = {
+    id: user.id,
+    name: user.name,
+    roleCode: user.roleCode ?? null,
+    roleSlug: user.roleSlug ?? null,
+  };
+
+  // === Settings default fallback ===
+  const safeSettings = {
+    companyName: settings?.companyName || "Perusahaan Kami",
+  };
+
   return NextResponse.json({
     ok: true,
     data: {
@@ -141,11 +145,12 @@ export async function GET(
       profileCompletion,
       dynamicFields,
       followUpTypes,
+      currentUser,
+      settings: safeSettings,
     },
   });
 }
 
-// Helper: hitung kelengkapan profil lead
 function computeProfileCompletion(lead: any): number {
   let total = 0;
   let filled = 0;
@@ -155,7 +160,6 @@ function computeProfileCompletion(lead: any): number {
     if (v !== null && v !== undefined && String(v).trim() !== "") filled++;
   };
 
-  // field utama
   check(lead.name);
   check(lead.phone);
   check(lead.address);
@@ -164,10 +168,7 @@ function computeProfileCompletion(lead: any): number {
   check(lead.statusId);
   check(lead.stageId);
 
-  // field dinamis → masih pakai customValues, ini nggak masalah
-  for (const cv of lead.customValues ?? []) {
-    check(cv.value);
-  }
+  for (const cv of lead.customValues ?? []) check(cv.value);
 
   if (!total) return 0;
   return Math.round((filled / total) * 100);

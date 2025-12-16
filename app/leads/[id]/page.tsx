@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useParams } from "next/navigation";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,10 @@ import {
   PopoverTrigger,
   PopoverContent,
 } from "@/components/ui/popover";
+import { WhatsAppChatCard } from "@/components/leads/detail/whatsapp/whatsapp-chat-card";
+import { QuickMessageDialog } from "@/components/leads/detail/whatsapp/quick-message-dialog";
+import { EditTemplateDialog } from "@/components/leads/detail/whatsapp/edit-template-dialog";
+import { SaveToTemplateDialog } from "@/components/leads/detail/whatsapp/save-to-template-dialog";
 
 type LeadStatusUi = "new" | "cold" | "warm" | "hot" | "won" | "lost";
 
@@ -1588,6 +1592,60 @@ export default function LeadDetailPage() {
     requestAnimationFrame(() => chatInputRef.current?.focus());
   }
 
+  const TPL_PICKER_KEY = "/api/whatsapp/templates?mode=picker";
+
+  const { mutate } = useSWRConfig();
+
+  const [quickMsgOpen, setQuickMsgOpen] = useState(false);
+  const [editTplOpen, setEditTplOpen] = useState(false);
+  const [selectedTpl, setSelectedTpl] = useState<any>(null);
+
+  const [saveTplOpen, setSaveTplOpen] = useState(false);
+  const [saveTplPayload, setSaveTplPayload] = useState<{
+    text: string;
+    type?: "TEXT" | "MEDIA";
+    mediaUrl?: string | null;
+    mediaName?: string | null;
+  } | null>(null);
+
+  function closeEditTpl() {
+    setEditTplOpen(false);
+    setSelectedTpl(null);
+  }
+
+  function closeSaveTpl() {
+    setSaveTplOpen(false);
+    setSaveTplPayload(null);
+  }
+
+  // pakai ini untuk refresh template (global + user) setelah create/edit/override
+  async function refreshTemplates() {
+    await mutate(TPL_PICKER_KEY); // refresh cache
+    // kalau QuickMessageDialog sedang open, dia akan rerender pakai cache baru
+  }
+
+  function handleUseQuickMessage(text: string) {
+    setChatInput(text);
+    setQuickMsgOpen(false);
+    requestAnimationFrame(() => chatInputRef.current?.focus());
+  }
+
+  function handleEditTemplate(tpl: any) {
+    setSelectedTpl(tpl);
+    setEditTplOpen(true);
+  }
+
+  // dari bubble chat
+  function handleSaveBubbleToTemplate(m: any) {
+    setSaveTplPayload({
+      text: m.text || "",
+      type: m.type ?? "TEXT",
+      mediaUrl: m.mediaUrl ?? null,
+      mediaName: m.mediaName ?? null,
+    });
+    setSaveTplOpen(true);
+  }
+
   return (
     <DashboardLayout title="Detail Leads">
       <div className="flex min-h-screen flex-col bg-background">
@@ -2488,268 +2546,27 @@ export default function LeadDetailPage() {
                     <div className="flex flex-col gap-3 lg:flex-row">
                       {/* CHAT PANEL */}
                       <div className="flex-1">
-                        <Card className="overflow-hidden py-0 gap-0 border-[#202C33] bg-[#111B21]">
-                          {/* Header sticky */}
-                          <CardHeader className="sticky top-0 z-10 border-b border-[#202C33] bg-[#202C33] p-3">
-                            <div className="flex items-center justify-between gap-3 mt-3">
-                              {/* Left: avatar + name */}
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-[#005C4B] flex items-center justify-center text-white font-bold">
-                                  WA
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-sm md:text-base font-semibold text-[#E9EDEF]">
-                                    Chat dengan {displayName}
-                                  </p>
-                                  <p className="text-xs md:text-sm text-[#8696A0]">
-                                    {displayPhone !== "-"
-                                      ? displayPhone
-                                      : "Nomor WA belum diisi"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Right: sync button */}
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
-                                onClick={handleSyncChat}
-                                disabled={syncingChat || !lead?.phone}
-                                title={
-                                  !lead?.phone
-                                    ? "Lead belum punya nomor WA"
-                                    : "Ambil histori chat dari WhatsApp"
-                                }
-                              >
-                                {syncingChat ? (
-                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                  <Sparkles className="mr-2 h-4 w-4" />
-                                )}
-                                {syncingChat ? "Sync..." : "Sync Chat"}
-                              </Button>
-                            </div>
-                          </CardHeader>
-
-                          {/* Body chat (scroll) */}
-                          <CardContent className="p-0">
-                            <div
-                              className="h-[420px] sm:h-[520px]"
-                              style={{
-                                backgroundColor: "#0B141A",
-                                backgroundImage:
-                                  `url("data:image/svg+xml,` +
-                                  encodeURIComponent(`
-              <svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'>
-                <g fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='1.5'>
-                  <path d='M28 44c16-10 28-10 44 0' />
-                  <path d='M168 44c16-10 28-10 44 0' />
-                  <path d='M40 132c18-12 30-12 48 0' />
-                  <path d='M150 140c18-12 30-12 48 0' />
-                  <circle cx='70' cy='86' r='9' />
-                  <circle cx='184' cy='94' r='9' />
-                  <path d='M112 76l14 14-14 14-14-14z' />
-                  <path d='M120 170c10-8 22-8 32 0' />
-                  <path d='M20 200c14-10 26-10 40 0' />
-                </g>
-              </svg>
-            `) +
-                                  `")`,
-                                backgroundRepeat: "repeat",
-                              }}
-                            >
-                              <div
-                                ref={chatWrapRef}
-                                className="flex h-full flex-col gap-2 overflow-y-auto px-3 py-3"
-                              >
-                                {messagesLoading && (
-                                  <div className="flex flex-1 items-center justify-center text-sm text-[#8696A0]">
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Memuat percakapan...
-                                  </div>
-                                )}
-
-                                {!messagesLoading &&
-                                  chatMessages.length === 0 && (
-                                    <div className="flex flex-1 items-center justify-center text-sm text-[#8696A0]">
-                                      Belum ada percakapan WhatsApp.
-                                    </div>
-                                  )}
-
-                                {chatMessages.map((m) => {
-                                  const isSales = m.from === "sales";
-
-                                  return (
-                                    <div
-                                      key={m.id}
-                                      className={`flex ${
-                                        isSales
-                                          ? "justify-end"
-                                          : "justify-start"
-                                      }`}
-                                    >
-                                      <div
-                                        className={[
-                                          "relative max-w-[85%] px-3 py-2 shadow-sm",
-                                          "text-sm leading-relaxed",
-
-                                          // bubble color
-                                          isSales
-                                            ? "bg-[#005C4B] text-[#E9EDEF] rounded-2xl rounded-br-sm"
-                                            : "bg-[#202C33] text-[#E9EDEF] rounded-2xl rounded-bl-sm",
-
-                                          // tail
-                                          isSales
-                                            ? "after:content-[''] after:absolute after:-right-1 after:bottom-2 after:border-y-[7px] after:border-y-transparent after:border-l-[9px] after:border-l-[#005C4B]"
-                                            : "after:content-[''] after:absolute after:-left-1 after:bottom-2 after:border-y-[7px] after:border-y-transparent after:border-r-[9px] after:border-r-[#202C33]",
-                                        ].join(" ")}
-                                      >
-                                        {m.type === "MEDIA" && m.mediaUrl ? (
-                                          <a
-                                            href={m.mediaUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={[
-                                              "mb-2 flex items-center gap-2 rounded-lg border px-2 py-2",
-                                              isSales
-                                                ? "border-white/15 bg-white/10 text-[#E9EDEF]"
-                                                : "border-[#2A3942] bg-[#111B21] text-[#E9EDEF]",
-                                            ].join(" ")}
-                                          >
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-black/10">
-                                              📄
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                              <p className="truncate text-sm font-semibold">
-                                                {m.mediaName || "Lampiran"}
-                                              </p>
-                                              <p className="text-xs text-[#8696A0]">
-                                                Klik untuk buka
-                                              </p>
-                                            </div>
-                                          </a>
-                                        ) : null}
-
-                                        {m.text ? (
-                                          <p className="whitespace-pre-line">
-                                            {m.text}
-                                          </p>
-                                        ) : null}
-
-                                        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#8696A0]">
-                                          <span>{m.time}</span>
-                                          {isSales ? (
-                                            <MessageStatusIcon
-                                              status={m.waStatus}
-                                              className={
-                                                m.waStatus === "READ"
-                                                  ? "text-[#53BDEB]"
-                                                  : "text-[#8696A0]"
-                                              }
-                                            />
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          </CardContent>
-
-                          {/* Composer sticky */}
-                          <div className="sticky bottom-0 border-t border-[#202C33] bg-[#202C33]">
-                            <div className="p-3 space-y-2">
-                              {/* Row 1: emoji + input + send */}
-                              <div className="flex items-end gap-2">
-                                <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      type="button"
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-11 w-11 shrink-0 text-[#8696A0] hover:bg-[#1F2C33]"
-                                      title="Emoji"
-                                    >
-                                      <Smile className="h-5 w-5" />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent
-                                    align="start"
-                                    className="w-64 p-2"
-                                  >
-                                    <div className="grid grid-cols-8 gap-1">
-                                      {EMOJIS.map((e) => (
-                                        <button
-                                          key={e}
-                                          type="button"
-                                          className="rounded-md p-1 text-lg hover:bg-muted"
-                                          onClick={() => insertAtCursor(e)}
-                                        >
-                                          {e}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </PopoverContent>
-                                </Popover>
-
-                                <Textarea
-                                  ref={chatInputRef}
-                                  rows={1}
-                                  className="min-h-[44px] resize-none bg-[#2A3942] text-[#E9EDEF] placeholder:text-[#8696A0] border-none focus:ring-0 text-sm rounded-2xl"
-                                  placeholder="Ketik pesan"
-                                  value={chatInput}
-                                  onChange={(e) => setChatInput(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                      e.preventDefault();
-                                      if (!sending && chatInput.trim())
-                                        void handleSend();
-                                    }
-                                  }}
-                                />
-
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  className="h-11 w-11 rounded-full bg-[#005C4B] hover:bg-[#006D5B]"
-                                  onClick={handleSend}
-                                  disabled={!chatInput.trim() || sending}
-                                  title="Kirim"
-                                >
-                                  {sending ? (
-                                    <Loader2 className="h-5 w-5 animate-spin text-white" />
-                                  ) : (
-                                    <SendHorizonal className="h-5 w-5 text-white" />
-                                  )}
-                                </Button>
-                              </div>
-
-                              {/* Row 2: actions (optional) */}
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
-                                  onClick={() => setProposalModalOpen(true)}
-                                >
-                                  <FileText className="mr-2 h-4 w-4" />
-                                  Kirim PDF
-                                </Button>
-
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
-                                  onClick={() => setScheduleModalOpen(true)}
-                                >
-                                  Follow up
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
+                        <WhatsAppChatCard
+                          displayName={displayName}
+                          displayPhone={displayPhone}
+                          leadHasPhone={Boolean(lead?.phone)}
+                          syncingChat={syncingChat}
+                          onSyncChat={handleSyncChat}
+                          messagesLoading={messagesLoading}
+                          chatMessages={chatMessages}
+                          chatWrapRef={chatWrapRef}
+                          chatInput={chatInput}
+                          setChatInput={setChatInput}
+                          sending={sending}
+                          onSend={handleSend}
+                          onOpenProposal={() => setProposalModalOpen(true)}
+                          onOpenFollowUp={() => setScheduleModalOpen(true)}
+                          onOpenQuickMessage={() => setQuickMsgOpen(true)}
+                          EMOJIS={EMOJIS}
+                          insertAtCursor={insertAtCursor}
+                          chatInputRef={chatInputRef}
+                          onSaveMessageToTemplate={handleSaveBubbleToTemplate}
+                        />
 
                         {/* ===== AI INSIGHT + REPLIES ===== */}
                         <div className="mt-3 rounded-md border bg-muted/30 p-3">
@@ -3355,6 +3172,52 @@ export default function LeadDetailPage() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+
+                    <QuickMessageDialog
+                      open={quickMsgOpen}
+                      onOpenChange={(v) => {
+                        setQuickMsgOpen(v);
+                        // kalau nutup quick message, juga tutup edit/save
+                        if (!v) {
+                          closeEditTpl();
+                          closeSaveTpl();
+                        }
+                      }}
+                      lead={lead}
+                      onUse={handleUseQuickMessage}
+                      onEditRequest={handleEditTemplate}
+                      currentUser={detailRes?.data?.currentUser}
+                      settings={detailRes?.data?.settings}
+                    />
+
+                    <EditTemplateDialog
+                      open={editTplOpen}
+                      onOpenChange={(v) => {
+                        setEditTplOpen(v);
+                        if (!v) setSelectedTpl(null);
+                      }}
+                      template={selectedTpl}
+                      onSaved={async () => {
+                        await refreshTemplates();
+                        closeEditTpl();
+                      }}
+                    />
+
+                    <SaveToTemplateDialog
+                      open={saveTplOpen}
+                      onOpenChange={(v) => {
+                        setSaveTplOpen(v);
+                        if (!v) setSaveTplPayload(null);
+                      }}
+                      messageText={saveTplPayload?.text || ""}
+                      messageType={saveTplPayload?.type}
+                      mediaUrl={saveTplPayload?.mediaUrl}
+                      mediaName={saveTplPayload?.mediaName}
+                      onSaved={async () => {
+                        await refreshTemplates();
+                        closeSaveTpl();
+                      }}
+                    />
                   </TabsContent>
 
                   {/* MODAL TAMBAH AKTIVITAS MANUAL */}

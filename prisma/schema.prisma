@@ -66,6 +66,8 @@ model User {
 
   requestedAIInsights LeadAIInsight[] @relation("LeadAIInsightRequestedBy")
 
+  whatsappTemplates WhatsAppMessageTemplate[]
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -824,4 +826,41 @@ model LeadAIInsight {
 
   @@index([leadId, createdAt])
   @@map("lead_ai_insights")
+}
+
+enum WhatsAppTemplateScope {
+  GLOBAL
+  USER
+}
+
+model WhatsAppMessageTemplate {
+  id        Int      @id @default(autoincrement())
+
+  scope     WhatsAppTemplateScope @default(GLOBAL)
+
+  ownerId   Int?
+  owner     User?    @relation(fields: [ownerId], references: [id])
+
+  parentId  Int?
+  parent    WhatsAppMessageTemplate? @relation("TemplateParent", fields: [parentId], references: [id])
+  children  WhatsAppMessageTemplate[] @relation("TemplateParent")
+
+  code      String?  // optional (misal: "WELCOME_01")
+  title     String
+  body      String   @db.Text
+  mediaUrl  String?
+  category  String?
+  tags      Json?
+
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  @@index([scope, isActive])
+  @@index([ownerId, isActive])
+  @@index([parentId])
+  @@unique([ownerId, parentId])
+  @@map("whatsapp_message_templates")
 }

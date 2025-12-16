@@ -196,6 +196,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           href: "/settings/lead-fields",
           icon: Settings,
         },
+        {
+          id: "settings-quick-messages",
+          label: "Konfigurasi Pesan Cepat",
+          href: "/settings/template-quick-messages",
+          icon: Settings,
+        },
       ],
     },
   ],
