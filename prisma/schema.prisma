@@ -64,6 +64,8 @@ model User {
 
   importedLeads Lead[] @relation("LeadImportedBy")
 
+  requestedAIInsights LeadAIInsight[] @relation("LeadAIInsightRequestedBy")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -251,6 +253,8 @@ model Lead {
 
   trackedLinks       LeadTrackedLink[]      @relation("LeadTrackedLinks_Lead")
   trackedLinkClicks  LeadTrackedLinkClick[] @relation("LeadTrackedLinkClicks_Lead")
+
+  aiInsights LeadAIInsight[] @relation("LeadAIInsightLead")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -790,4 +794,34 @@ model LeadTrackedLinkClick {
   @@index([leadId])
   @@index([salesId])
   @@map("lead_tracked_link_clicks")
+}
+
+enum AIInsightType {
+  WHATSAPP_ANALYSIS
+}
+
+model LeadAIInsight {
+  id        Int      @id @default(autoincrement())
+
+  leadId    Int
+  lead Lead @relation("LeadAIInsightLead", fields: [leadId], references: [id])
+
+  // optional: siapa yang minta analisis (sales yg buka)
+  requestedById Int?
+  requestedBy   User? @relation("LeadAIInsightRequestedBy", fields: [requestedById], references: [id])
+
+  type      AIInsightType @default(WHATSAPP_ANALYSIS)
+
+  // caching fingerprint: sampai pesan mana yang dianalisis
+  lastMessageId Int?
+  messageCount  Int @default(0)
+
+  model     String?
+  payload   Json
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId, createdAt])
+  @@map("lead_ai_insights")
 }

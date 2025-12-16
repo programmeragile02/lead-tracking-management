@@ -478,7 +478,7 @@ export async function GET(req: NextRequest) {
           include: { type: true },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
       skip,
       take: pageSize + 1,
     });

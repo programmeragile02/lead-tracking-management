@@ -84,3 +84,40 @@ export async function logoutWaClient(userId: number) {
   }
   return json;
 }
+
+// sync chat
+export async function fetchWaHistory(params: {
+  userId: number;
+  peer: string; // "628xxxx" atau "@c.us"
+  limit?: number;
+}) {
+  const resp = await fetch(`${WA_SERVICE_BASE}/messages/history`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-wa-webhook-key": process.env.WA_WEBHOOK_KEY || "",
+    },
+    body: JSON.stringify(params),
+    cache: "no-store",
+  });
+
+  const json = await resp.json();
+  if (!resp.ok || !json.ok)
+    throw new Error(json.error || "Failed to fetch WA history");
+  return json as {
+    ok: boolean;
+    data: {
+      peerJid: string;
+      messages: Array<{
+        waMessageId: string;
+        waChatId: string;
+        fromMe: boolean;
+        body: string;
+        timestamp: number; // unix seconds
+        from?: string | null;
+        to?: string | null;
+      }>;
+      note?: string;
+    };
+  };
+}
