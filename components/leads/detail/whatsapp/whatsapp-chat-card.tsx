@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/popover";
 import {
   Loader2,
-  Sparkles,
   Smile,
   SendHorizonal,
   FileText,
@@ -59,9 +58,6 @@ export function WhatsAppChatCard(props: {
   const {
     displayName,
     displayPhone,
-    leadHasPhone,
-    syncingChat,
-    onSyncChat,
     messagesLoading,
     chatMessages,
     chatWrapRef,
@@ -70,7 +66,6 @@ export function WhatsAppChatCard(props: {
     sending,
     onSend,
     onOpenProposal,
-    onOpenFollowUp,
     onOpenQuickMessage,
     onSaveMessageToTemplate,
     EMOJIS,
@@ -78,7 +73,7 @@ export function WhatsAppChatCard(props: {
     chatInputRef,
   } = props;
 
-  // ✅ Controlled dropdown per message id
+  // Controlled dropdown per message id
   const [menuOpenById, setMenuOpenById] = useState<Record<string, boolean>>({});
 
   function setMenuOpen(id: string | number, open: boolean) {
@@ -97,7 +92,7 @@ export function WhatsAppChatCard(props: {
             </div>
             <div className="space-y-0.5">
               <p className="text-sm md:text-base font-semibold text-[#E9EDEF]">
-                Chat dengan {displayName}
+                {displayName}
               </p>
               <p className="text-xs md:text-sm text-[#8696A0]">
                 {displayPhone !== "-" ? displayPhone : "Nomor WA belum diisi"}
@@ -106,7 +101,7 @@ export function WhatsAppChatCard(props: {
           </div>
 
           {/* Right */}
-          <Button
+          {/* <Button
             size="sm"
             variant="outline"
             className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
@@ -124,7 +119,7 @@ export function WhatsAppChatCard(props: {
               <Sparkles className="mr-2 h-4 w-4" />
             )}
             {syncingChat ? "Sync..." : "Sync Chat"}
-          </Button>
+          </Button> */}
         </div>
       </CardHeader>
 
@@ -228,7 +223,7 @@ export function WhatsAppChatCard(props: {
                       <p className="whitespace-pre-line">{m.text}</p>
                     ) : null}
 
-                    {/* ✅ Aksi bubble untuk pesan dari sales */}
+                    {/* aksi bubble untuk pesan dari sales */}
                     {isSales ? (
                       <div className="absolute -top-2 -right-2">
                         <DropdownMenu
@@ -347,7 +342,7 @@ export function WhatsAppChatCard(props: {
           </div>
 
           {/* Row 2 */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 mt-4">
             <Button
               size="sm"
               variant="outline"
@@ -356,15 +351,6 @@ export function WhatsAppChatCard(props: {
             >
               <FileText className="mr-2 h-4 w-4" />
               Kirim Penawaran
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
-              onClick={onOpenFollowUp}
-            >
-              Follow up
             </Button>
 
             <Button

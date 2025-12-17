@@ -9,54 +9,39 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 
 import {
-  Phone,
-  Send,
   Sparkles,
   CheckCircle2,
-  Circle,
   Clock3,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   FileText,
-  Pencil,
-  X,
-  SendHorizonal,
+  GitBranch,
+  Activity,
+  CalendarClock,
+  Package,
+  Wallet,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { useToast } from "@/hooks/use-toast";
-import { MessageStatusIcon } from "@/components/leads/detail/message-status-icon";
 import { io as ioClient } from "socket.io-client";
-import { Smile } from "lucide-react";
-import {
-  Popover,
-  PopoverTrigger,
-  PopoverContent,
-} from "@/components/ui/popover";
 import { WhatsAppChatCard } from "@/components/leads/detail/whatsapp/whatsapp-chat-card";
 import { QuickMessageDialog } from "@/components/leads/detail/whatsapp/quick-message-dialog";
 import { EditTemplateDialog } from "@/components/leads/detail/whatsapp/edit-template-dialog";
 import { SaveToTemplateDialog } from "@/components/leads/detail/whatsapp/save-to-template-dialog";
+import { OverviewTab } from "@/components/leads/detail/overview/overview-tab";
+import { FollowUpScheduleDialog } from "@/components/leads/detail/modals/FollowUpScheduleDialog";
+import { ProposalDialog } from "@/components/leads/detail/modals/ProposalDialog";
+import { ActivityDialog } from "@/components/leads/detail/modals/ActivityDialog";
+import { ActivityPreviewDialog } from "@/components/leads/detail/modals/ActivityPreviewDialog";
+import { PriceDialog } from "@/components/leads/detail/modals/PriceDialog";
+import { AiInsightPanel } from "@/components/leads/detail/ai/AiInsightPanel";
+import { InfoItem } from "@/components/leads/detail/info-item";
+import { LeadActionFab } from "@/components/leads/detail/lead-action-fab";
+import { StatusModal } from "@/components/leads/detail/status-modal";
+import { StageModal } from "@/components/leads/detail/stage-modal";
+import { QuickStagePanel } from "@/components/leads/detail/QuickStagePanel";
+import { PriceItem } from "@/components/leads/detail/price-item";
 
 type LeadStatusUi = "new" | "cold" | "warm" | "hot" | "won" | "lost";
 
@@ -1646,720 +1631,153 @@ export default function LeadDetailPage() {
     setSaveTplOpen(true);
   }
 
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [stageModalOpen, setStageModalOpen] = useState(false);
+
   return (
     <DashboardLayout title="Detail Leads">
-      <div className="flex min-h-screen flex-col bg-background">
+      <div className="flex min-h-screen flex-col">
         <main className="mx-auto flex w-full flex-1 flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 md:pb-8">
           {/* RINGKASAN LEAD */}
-          <section className="flex flex-col gap-3 rounded-xl border bg-card p-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-base font-semibold">
+          <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 md:flex-row md:items-center md:justify-between">
+            {/* ===== IDENTITAS LEAD ===== */}
+            <div className="flex items-start gap-4">
+              {/* Avatar */}
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-semibold text-primary">
                 {displayName?.charAt(0) || "L"}
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-semibold sm:text-base">
+
+              <div className="space-y-1.5">
+                {/* Nama */}
+                <p className="text-base font-semibold leading-tight sm:text-lg">
                   {displayName}
                 </p>
-                <p className="text-md text-muted-foreground sm:text-sm">
-                  {displayProductName} • {displayCity}
-                </p>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  <Badge variant="outline" className="text-[12px]">
-                    {displaySource}
+
+                {/* Produk & Lokasi */}
+                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground sm:text-base">
+                  <span className="flex items-center gap-1.5">
+                    📦 {displayProductName}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    📍 {displayCity}
+                  </span>
+                </div>
+
+                {/* Badges */}
+                <div className="mt-1.5 flex flex-wrap gap-2">
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1.5 text-xs sm:text-sm"
+                  >
+                    🧭 {displaySource}
                   </Badge>
-                  <Badge variant="outline" className="text-[12px]">
-                    WA: {displayPhone}
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1.5 text-xs sm:text-sm"
+                  >
+                    📱 {displayPhone}
                   </Badge>
                 </div>
               </div>
             </div>
 
-            <div className="flex w-full flex-col gap-2 md:w-72">
-              <div className="flex items-center justify-between text-md font-medium text-muted-foreground">
-                <span>Kelengkapan profil</span>
-                <span>{profileCompletion}%</span>
+            {/* ===== KELENGKAPAN PROFIL ===== */}
+            <div className="flex w-full flex-col gap-3 md:w-80">
+              {/* Header */}
+              <div className="flex items-center justify-between text-sm font-medium text-muted-foreground sm:text-base">
+                <span className="flex items-center gap-2">
+                  📊 Kelengkapan profil
+                </span>
+                <span className="text-base font-semibold text-foreground">
+                  {profileCompletion}%
+                </span>
               </div>
-              <Progress value={profileCompletion} className="h-2" />
-              <div className="flex flex-wrap gap-1 text-[11px]">
-                <Badge variant={lead?.phone ? "secondary" : "outline"}>
-                  {lead?.phone ? "✔ WA" : "✖ WA"}
+
+              {/* Progress */}
+              <Progress value={profileCompletion} className="h-2.5" />
+
+              {/* Checklist */}
+              <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
+                <Badge
+                  variant={lead?.phone ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.phone ? "✔" : "○"} WhatsApp
                 </Badge>
-                <Badge variant={lead?.address ? "secondary" : "outline"}>
-                  {lead?.address ? "✔ Alamat" : "✖ Alamat"}
+
+                <Badge
+                  variant={lead?.address ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.address ? "✔" : "○"} Alamat
                 </Badge>
-                <Badge variant={lead?.productId ? "secondary" : "outline"}>
-                  {lead?.productId ? "✔ Produk" : "✖ Produk"}
+
+                <Badge
+                  variant={lead?.productId ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.productId ? "✔" : "○"} Produk
                 </Badge>
-                <Badge variant={lead?.statusId ? "secondary" : "outline"}>
-                  {lead?.statusId ? "✔ Status" : "✖ Status"}
+
+                <Badge
+                  variant={lead?.statusId ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.statusId ? "✔" : "○"} Status
                 </Badge>
               </div>
             </div>
           </section>
 
           {/* 4 CARD ATAS */}
-          <section className="grid gap-3 md:grid-cols-4">
-            {/* Tahap ringkas */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm md:text-lg">
-                  Tahap Penjualan Aktif
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-md sm:text-sm">
-                <div className="space-y-1">
-                  <p className="text-xl font-medium">
-                    <Badge className="text-sm md:text-xl">
-                      {currentStage?.label || "-"}
-                    </Badge>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+          {/* ===== INFO STRIP ===== */}
+          <section className="rounded-xl border bg-muted/30 p-3">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <InfoItem
+                icon={GitBranch}
+                label="Tahap"
+                value={currentStage?.label || "-"}
+                highlight
+              />
 
-            {/* Status lead */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm md:text-lg">
-                  Status Lead Saat Ini
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-xs sm:text-sm flex justify-around flex-wrap items-center">
-                <div className="flex items-center gap-2">
-                  {statusBadge}
-                  {statusUpdating && (
-                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                  )}
-                </div>
-                <Select
-                  value={status}
-                  onValueChange={(v) => updateStatus(v as LeadStatusUi)}
-                  disabled={statusUpdating}
-                >
-                  <SelectTrigger className="mt-1 h-9 text-sm md:text-lg">
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="new">New</SelectItem>
-                    <SelectItem value="cold">Cold</SelectItem>
-                    <SelectItem value="warm">Warm</SelectItem>
-                    <SelectItem value="hot">Hot</SelectItem>
-                    <SelectItem value="won">Close Won</SelectItem>
-                    <SelectItem value="lost">Close Lost</SelectItem>
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
+              <InfoItem
+                icon={Activity}
+                label="Status"
+                value={statusLabelMap[status]}
+                highlight
+              />
 
-            {/* Tindak lanjut ringkas (REAL) */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm md:text-lg">
-                  Tindak Lanjut Saat Ini
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-xs sm:text-sm">
-                <div className="space-y-0.5">
-                  {lastFollowUp ? (
-                    <>
-                      <p className="font-medium">
-                        <Badge className="text-sm md:text-lg bg-blue-500">
-                          {lastFollowUp.typeName ||
-                            getFollowUpTypeLabel(lastFollowUp.typeCode)}
-                        </Badge>
-                      </p>
-                      <p className="text-[11px] md:text-sm text-muted-foreground mt-2">
-                        {lastFollowUp.doneAt
-                          ? `Terakhir: ${formatDateTime(lastFollowUp.doneAt)}`
-                          : lastFollowUp.nextActionAt
-                          ? `Jadwal: ${formatDateTime(
-                              lastFollowUp.nextActionAt
-                            )}`
-                          : "Belum ada tindak lanjut"}
-                      </p>
-                      {lastFollowUp.channel && (
-                        <p className="text-[11px] md:text-sm text-muted-foreground">
-                          Aksi:{" "}
-                          {followUpChannelLabel(
-                            lastFollowUp.channel.toLowerCase()
-                          )}
-                        </p>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Belum ada tindak lanjut tercatat untuk lead ini
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              <InfoItem
+                icon={CalendarClock}
+                label="Follow Up"
+                value={
+                  lastFollowUp
+                    ? lastFollowUp.doneAt
+                      ? "Selesai"
+                      : lastFollowUp.nextActionAt
+                      ? formatDateTime(lastFollowUp.nextActionAt)
+                      : lastFollowUp.typeName || "-"
+                    : "Belum ada"
+                }
+                highlight
+              />
 
-            {/* Produk */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm md:text-lg">
-                  Produk yang Diminati
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-xs sm:text-sm">
-                <Select
-                  value={lead?.productId ? String(lead.productId) : ""}
-                  onValueChange={handleChangeProduct}
-                  disabled={updatingProduct || detailLoading}
-                >
-                  <SelectTrigger className="mt-1 h-9 text-sm md:text-lg">
-                    <SelectValue placeholder="Pilih produk" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {products.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {updatingProduct && (
-                  <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Menyimpan perubahan...
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+              <InfoItem
+                icon={Package}
+                label="Produk"
+                value={displayProductName}
+                highlight
+              />
+            </div>
           </section>
 
           {/* DETAIL & INTERAKSI */}
           <section>
-            <Card className="overflow-hidden">
-              <CardHeader className="pb-0">
-                <CardTitle className="text-base md:text-xl">
-                  Detail & Interaksi Lead
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-3">
-                <Tabs defaultValue="whatsapp">
-                  <TabsList className="mb-3 w-full justify-start overflow-x-auto">
-                    <TabsTrigger
-                      value="overview"
-                      className="text-xs sm:text-sm"
-                    >
-                      Overview
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="activity"
-                      className="text-xs sm:text-sm"
-                    >
-                      Aktivitas
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="whatsapp"
-                      className="text-xs sm:text-sm"
-                    >
-                      WhatsApp
-                    </TabsTrigger>
-                  </TabsList>
-
-                  {/* OVERVIEW */}
-                  <TabsContent value="overview" className="space-y-4 text-sm">
-                    <div className="mb-2 flex items-center justify-end">
-                      {!overviewEditing ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2 text-xs"
-                          onClick={() => setOverviewEditing(true)}
-                          disabled={detailLoading}
-                        >
-                          <Pencil className="mr-1 h-3 w-3" />
-                          Edit
-                        </Button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-xs"
-                            onClick={handleCancelOverview}
-                            disabled={savingOverview}
-                          >
-                            <X className="mr-1 h-3 w-3" />
-                            Batal
-                          </Button>
-                          <Button
-                            size="sm"
-                            className="h-8 px-3 text-xs"
-                            onClick={handleSaveOverview}
-                            disabled={savingOverview}
-                          >
-                            {savingOverview ? (
-                              <>
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                Menyimpan...
-                              </>
-                            ) : (
-                              "Simpan perubahan"
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* INFORMASI KONTAK */}
-                    <div>
-                      <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
-                        Informasi Kontak
-                      </p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {/* Nama PIC */}
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Nama
-                          </p>
-                          {overviewEditing ? (
-                            <Input
-                              className="mt-1 h-9 text-xs sm:text-sm"
-                              value={overviewName}
-                              onChange={(e) => setOverviewName(e.target.value)}
-                            />
-                          ) : (
-                            <p className="text-xs sm:text-sm">{displayName}</p>
-                          )}
-                        </div>
-
-                        {/* WhatsApp */}
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            WhatsApp
-                          </p>
-                          {overviewEditing ? (
-                            <Input
-                              className="mt-1 h-9 text-xs sm:text-sm"
-                              value={overviewPhone}
-                              onChange={(e) => setOverviewPhone(e.target.value)}
-                              placeholder="62xxxxxxxxxxx"
-                            />
-                          ) : (
-                            <p className="text-xs sm:text-sm">{displayPhone}</p>
-                          )}
-                        </div>
-
-                        {/* Sumber Lead (hanya view, karena master-nya sendiri) */}
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Sumber Lead
-                          </p>
-                          <p className="text-xs sm:text-sm">{displaySource}</p>
-                        </div>
-
-                        {/* Alamat */}
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Alamat
-                          </p>
-                          {overviewEditing ? (
-                            <Textarea
-                              rows={2}
-                              className="mt-1 text-xs sm:text-sm"
-                              value={overviewAddress}
-                              onChange={(e) =>
-                                setOverviewAddress(e.target.value)
-                              }
-                            />
-                          ) : (
-                            <p className="text-xs sm:text-sm">{displayCity}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* INFORMASI PRODUK & STATUS */}
-                    <div>
-                      <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
-                        Informasi Produk
-                      </p>
-                      <div className="grid gap-2 sm:grid-cols-2">
-                        {/* Produk */}
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Produk
-                          </p>
-                          {overviewEditing ? (
-                            <Select
-                              value={overviewProductId}
-                              onValueChange={(v) => setOverviewProductId(v)}
-                              disabled={updatingProduct || detailLoading}
-                            >
-                              <SelectTrigger className="mt-1 h-9 text-xs sm:text-sm">
-                                <SelectValue placeholder="Pilih produk" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {products.map((p) => (
-                                  <SelectItem key={p.id} value={String(p.id)}>
-                                    {p.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <p className="text-xs sm:text-sm">
-                              {displayProductName}
-                            </p>
-                          )}
-                        </div>
-
-                        {/* Status */}
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Status
-                          </p>
-                          <p className="text-xs sm:text-sm font-medium">
-                            {lead?.status?.name || "-"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* INFORMASI HARGA */}
-                    <div>
-                      <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
-                        Informasi Harga
-                      </p>
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Harga Penawaran
-                          </p>
-                          <p className="text-xs sm:text-sm font-medium">
-                            {formatCurrencyIDR(lead?.priceOffering)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Harga Negosiasi
-                          </p>
-                          <p className="text-xs sm:text-sm font-medium">
-                            {formatCurrencyIDR(lead?.priceNegotiation)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            Harga Closing
-                          </p>
-                          <p className="text-xs sm:text-sm font-medium">
-                            {formatCurrencyIDR(lead?.priceClosing)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* FIELD DINAMIS */}
-                    {dynamicFields.length > 0 && (
-                      <div>
-                        <p className="mb-1 text-sm md:text-lg font-medium text-muted-foreground">
-                          Informasi Tambahan
-                        </p>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {dynamicFields.map((f) => {
-                            const value = overviewCustomValues[f.id] ?? "";
-                            const requiredMark = f.isRequired ? " *" : "";
-
-                            if (!overviewEditing) {
-                              return (
-                                <div key={f.id}>
-                                  <p className="text-[11px] md:text-sm text-muted-foreground">
-                                    {f.label}
-                                  </p>
-                                  <p className="text-xs sm:text-sm">
-                                    {value || "-"}
-                                  </p>
-                                </div>
-                              );
-                            }
-
-                            // mode edit
-                            switch (f.type) {
-                              case "TEXTAREA":
-                                return (
-                                  <div key={f.id}>
-                                    <p className="text-[11px] md:text-sm text-muted-foreground">
-                                      {f.label}
-                                      {requiredMark}
-                                    </p>
-                                    <Textarea
-                                      rows={3}
-                                      className="mt-1 text-xs sm:text-sm"
-                                      value={value}
-                                      onChange={(e) =>
-                                        setCustomValue(f.id, e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                );
-                              case "NUMBER":
-                                return (
-                                  <div key={f.id}>
-                                    <p className="text-[11px] md:text-sm text-muted-foreground">
-                                      {f.label}
-                                      {requiredMark}
-                                    </p>
-                                    <Input
-                                      type="number"
-                                      className="mt-1 h-9 text-xs sm:text-sm"
-                                      value={value}
-                                      onChange={(e) =>
-                                        setCustomValue(f.id, e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                );
-                              case "DATE":
-                                return (
-                                  <div key={f.id}>
-                                    <p className="text-[11px] md:text-sm text-muted-foreground">
-                                      {f.label}
-                                      {requiredMark}
-                                    </p>
-                                    <Input
-                                      type="date"
-                                      className="mt-1 h-9 text-xs sm:text-sm"
-                                      value={value}
-                                      onChange={(e) =>
-                                        setCustomValue(f.id, e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                );
-                              case "SINGLE_SELECT":
-                                return (
-                                  <div key={f.id}>
-                                    <p className="text-[11px] md:text-sm text-muted-foreground">
-                                      {f.label}
-                                      {requiredMark}
-                                    </p>
-                                    <Select
-                                      value={value}
-                                      onValueChange={(v) =>
-                                        setCustomValue(f.id, v)
-                                      }
-                                    >
-                                      <SelectTrigger className="mt-1 h-9 text-xs sm:text-sm">
-                                        <SelectValue placeholder="Pilih" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        {f.options?.map((opt) => (
-                                          <SelectItem
-                                            key={opt.value}
-                                            value={opt.value}
-                                          >
-                                            {opt.label}
-                                          </SelectItem>
-                                        ))}
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                );
-                              case "MULTI_SELECT": {
-                                let selected: string[] = [];
-                                try {
-                                  selected = value ? JSON.parse(value) : [];
-                                } catch {
-                                  selected = [];
-                                }
-                                return (
-                                  <div key={f.id} className="space-y-1">
-                                    <p className="text-[11px] md:text-sm text-muted-foreground">
-                                      {f.label}
-                                      {requiredMark}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2 rounded-md border bg-background/60 p-2">
-                                      {f.options?.map((opt) => {
-                                        const active = selected.includes(
-                                          opt.value
-                                        );
-                                        return (
-                                          <Button
-                                            key={opt.value}
-                                            type="button"
-                                            size="sm"
-                                            variant={
-                                              active ? "default" : "outline"
-                                            }
-                                            className="h-7 px-2 text-[11px]"
-                                            onClick={() => {
-                                              const next = active
-                                                ? selected.filter(
-                                                    (s) => s !== opt.value
-                                                  )
-                                                : [...selected, opt.value];
-                                              setCustomValue(
-                                                f.id,
-                                                JSON.stringify(next)
-                                              );
-                                            }}
-                                          >
-                                            {opt.label}
-                                          </Button>
-                                        );
-                                      })}
-                                      {!f.options?.length && (
-                                        <p className="text-[11px] md:text-sm text-muted-foreground">
-                                          Belum ada pilihan.
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
-                                );
-                              }
-                              case "TEXT":
-                              default:
-                                return (
-                                  <div key={f.id}>
-                                    <p className="text-[11px] md:text-sm text-muted-foreground">
-                                      {f.label}
-                                      {requiredMark}
-                                    </p>
-                                    <Input
-                                      className="mt-1 h-9 text-xs sm:text-sm"
-                                      value={value}
-                                      onChange={(e) =>
-                                        setCustomValue(f.id, e.target.value)
-                                      }
-                                    />
-                                  </div>
-                                );
-                            }
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  {/* AKTIVITAS */}
-                  <TabsContent value="activity" className="space-y-3 text-sm">
-                    <div className="flex items-center justify-end">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setActivityModalOpen(true)}
-                      >
-                        Tambah Aktivitas
-                      </Button>
-                    </div>
-
-                    {activitiesLoading ? (
-                      <p className="text-sm text-muted-foreground">
-                        Memuat aktivitas...
-                      </p>
-                    ) : activities.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        Belum ada aktivitas tercatat untuk lead ini.
-                      </p>
-                    ) : (
-                      <div className="max-h-80 space-y-2 overflow-y-auto rounded-md border bg-background/80 p-2">
-                        {activities.map((a) => (
-                          <div
-                            key={a.id}
-                            className="flex gap-3 rounded-md border bg-background/80 p-2"
-                          >
-                            <div className="mt-0.5">
-                              {a.kind === "FOLLOW_UP" && (
-                                <Clock3 className="h-4 w-4 text-amber-500" />
-                              )}
-                              {a.kind === "STAGE" && (
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                              )}
-                              {a.kind === "STATUS" && (
-                                <Sparkles className="h-4 w-4 text-blue-500" />
-                              )}
-                              {a.kind === "ACTIVITY" && (
-                                <FileText className="h-4 w-4 text-violet-500" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs md:text-sm font-medium">
-                                  {a.title}
-                                </p>
-                                <span className="text-[11px] md:text-sm text-muted-foreground">
-                                  {formatDateTime(a.at)}
-                                </span>
-                              </div>
-                              {/* preview foto kecil untuk aktivitas yang punya foto */}
-                              {a.kind === "ACTIVITY" && a.photoUrl && (
-                                <button
-                                  type="button"
-                                  className="shrink-0 overflow-hidden rounded-md border bg-muted/40"
-                                  onClick={() => handleOpenActivityPreview(a)}
-                                >
-                                  {/* @ts-ignore */}
-                                  <img
-                                    src={a.photoUrl}
-                                    alt={a.title}
-                                    className="h-12 w-12 object-cover"
-                                  />
-                                </button>
-                              )}
-                              {a.description && (
-                                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                  {a.description}
-                                </p>
-                              )}
-                              {a.createdByName && (
-                                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                  Dibuat oleh {a.createdByName}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  {/* WHATSAPP */}
-                  <TabsContent value="whatsapp" className="space-y-3 text-sm">
-                    {/* Info WA header */}
-                    <div className="flex flex-col gap-2 rounded-md bg-muted/60 p-3 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-sm font-semibold text-emerald-700">
-                          WA
-                        </div>
-                        <div className="space-y-0.5">
-                          <p className="text-sm md:text-lg font-medium">
-                            Chat dengan {displayName}
-                          </p>
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            {displayPhone !== "-"
-                              ? displayPhone
-                              : "Nomor WA belum diisi"}{" "}
-                          </p>
-                        </div>
-                      </div>
-                      {/* <div className="flex flex-wrap gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2 text-xs"
-                        >
-                          <Phone className="mr-1 h-3 w-3" />
-                          Telepon
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-2 text-xs"
-                        >
-                          <Sparkles className="mr-1 h-3 w-3" />
-                          Template
-                        </Button>
-                      </div> */}
-                    </div>
-
-                    {/* QUICK ACTIONS DI ATAS CHAT */}
-                    <div className="space-y-2 rounded-md border bg-muted/40 p-2">
-                      {/* Quick Status */}
-                      <div className="flex flex-wrap items-center gap-2">
+            <CardContent className="px-0">
+              {/* QUICK ACTIONS DI ATAS CHAT */}
+              <div className="space-y-2 rounded-md border bg-muted/40 p-2 mb-4">
+                {/* Quick Status */}
+                {/* <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] md:text-sm text-muted-foreground">
                           Status lead:
                         </span>
@@ -2414,406 +1832,346 @@ export default function LeadDetailPage() {
                             Close Lost
                           </Button>
                         </div>
+                      </div> */}
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {/* Quick Tindak Lanjut */}
+                  <div className="flex flex-col justify-between rounded-lg border bg-background p-3">
+                    <div className="space-y-2">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                        <CalendarClock className="h-4 w-4" />
+                        <span>Tindak lanjut</span>
                       </div>
 
-                      {/* Quick Tindak Lanjut (buka modal + tandai selesai) */}
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-[11px] md:text-sm text-muted-foreground">
-                          <div>
-                            Tindak lanjut:{" "}
-                            <span className="font-medium text-foreground">
-                              {lastFollowUp
-                                ? lastFollowUp.typeName ||
-                                  getFollowUpTypeLabel(lastFollowUp.typeCode)
-                                : "Belum ada"}
-                            </span>
-                          </div>
+                      {/* Main info */}
+                      <p className="text-sm font-semibold leading-tight">
+                        {lastFollowUp
+                          ? lastFollowUp.typeName ||
+                            getFollowUpTypeLabel(lastFollowUp.typeCode)
+                          : "Belum ada tindak lanjut"}
+                      </p>
 
-                          {lastFollowUp ? (
-                            lastFollowUp.doneAt ? (
-                              <div>
-                                Terakhir: {formatDateTime(lastFollowUp.doneAt)}{" "}
-                                (
-                                {followUpChannelLabel(
-                                  lastFollowUp.channel.toLowerCase()
-                                )}
-                                )
-                              </div>
-                            ) : lastFollowUp.nextActionAt ? (
-                              <div>
-                                Jadwal:{" "}
-                                {formatDateTime(lastFollowUp.nextActionAt)} (
-                                {followUpChannelLabel(
-                                  lastFollowUp.channel.toLowerCase()
-                                )}
-                                )
-                              </div>
-                            ) : (
-                              <div>
-                                Sudah ada tindak lanjut, tanpa jadwal
-                                berikutnya.
-                              </div>
-                            )
-                          ) : (
-                            <div>Belum ada jadwal tersimpan.</div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          {/* Tombol Tandai selesai → hanya muncul kalau sudah ada follow up & belum done */}
-                          {lastFollowUp && !lastFollowUp.doneAt && (
-                            <Button
-                              size="sm"
-                              className="h-8 px-3 text-xs"
-                              onClick={() =>
-                                handleMarkFollowUpDone(lastFollowUp.id)
-                              }
-                              disabled={markingFollowUpDone}
-                            >
-                              {markingFollowUpDone ? (
-                                <>
-                                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                  Menyimpan...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle2 className="mr-1 h-3 w-3" />
-                                  Tandai selesai
-                                </>
+                      {/* Meta */}
+                      <p className="text-[11px] text-muted-foreground leading-snug">
+                        {lastFollowUp ? (
+                          lastFollowUp.doneAt ? (
+                            <>
+                              Terakhir{" "}
+                              <span className="font-medium text-foreground">
+                                {formatDateTime(lastFollowUp.doneAt)}
+                              </span>{" "}
+                              ·{" "}
+                              {followUpChannelLabel(
+                                lastFollowUp.channel.toLowerCase()
                               )}
-                            </Button>
-                          )}
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 px-3 text-xs"
-                            onClick={() => setScheduleModalOpen(true)}
-                          >
-                            Atur tindak lanjut
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Quick Harga */}
-                      <div className="flex flex-col gap-2 rounded-md bg-background/60 p-2 border-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="space-y-1">
-                            <p className="text-[11px] md:text-sm text-muted-foreground font-semibold">
-                              Harga saat ini
-                            </p>
-                            <div className="grid gap-2 md:gap-4 text-[11px] md:text-sm sm:grid-cols-3">
-                              <div>
-                                <p className="text-[10px] md:text-xs uppercase tracking-wide text-muted-foreground">
-                                  Penawaran
-                                </p>
-                                <p className="font-medium">
-                                  {formatCurrencyIDR(lead?.priceOffering)}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] md:text-xs uppercase tracking-wide text-muted-foreground">
-                                  Nego
-                                </p>
-                                <p className="font-medium">
-                                  {formatCurrencyIDR(lead?.priceNegotiation)}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-[10px] md:text-xs uppercase tracking-wide text-muted-foreground">
-                                  Closing
-                                </p>
-                                <p className="font-medium">
-                                  {formatCurrencyIDR(lead?.priceClosing)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="h-8 whitespace-nowrap px-3 text-xs"
-                            onClick={handleOpenPriceModal}
-                          >
-                            Input / update harga
-                          </Button>
-                        </div>
-                      </div>
+                            </>
+                          ) : lastFollowUp.nextActionAt ? (
+                            <>
+                              Dijadwalkan{" "}
+                              <span className="font-medium text-foreground">
+                                {formatDateTime(lastFollowUp.nextActionAt)}
+                              </span>{" "}
+                              ·{" "}
+                              {followUpChannelLabel(
+                                lastFollowUp.channel.toLowerCase()
+                              )}
+                            </>
+                          ) : (
+                            "Sudah ada tindak lanjut, tanpa jadwal berikutnya"
+                          )
+                        ) : (
+                          "Belum ada jadwal tersimpan"
+                        )}
+                      </p>
                     </div>
 
-                    {/* Chat + Quick Tahapan di kanan */}
-                    <div className="flex flex-col gap-3 lg:flex-row">
-                      {/* CHAT PANEL */}
-                      <div className="flex-1">
-                        <WhatsAppChatCard
-                          displayName={displayName}
-                          displayPhone={displayPhone}
-                          leadHasPhone={Boolean(lead?.phone)}
-                          syncingChat={syncingChat}
-                          onSyncChat={handleSyncChat}
-                          messagesLoading={messagesLoading}
-                          chatMessages={chatMessages}
-                          chatWrapRef={chatWrapRef}
-                          chatInput={chatInput}
-                          setChatInput={setChatInput}
-                          sending={sending}
-                          onSend={handleSend}
-                          onOpenProposal={() => setProposalModalOpen(true)}
-                          onOpenFollowUp={() => setScheduleModalOpen(true)}
-                          onOpenQuickMessage={() => setQuickMsgOpen(true)}
-                          EMOJIS={EMOJIS}
-                          insertAtCursor={insertAtCursor}
-                          chatInputRef={chatInputRef}
-                          onSaveMessageToTemplate={handleSaveBubbleToTemplate}
-                        />
-
-                        {/* ===== AI INSIGHT + REPLIES ===== */}
-                        <div className="mt-3 rounded-md border bg-muted/30 p-3">
-                          <div className="mb-2 flex items-center justify-between">
-                            <p className="text-sm md:text-base font-semibold flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-violet-500" />
-                              Insight & Balasan AI
-                            </p>
-                          </div>
-
-                          {aiCached && (
-                            <p className="text-[11px] text-muted-foreground">
-                              * Hasil dari cache (chat belum berubah).
-                            </p>
-                          )}
-
-                          {aiError ? (
-                            <div className="rounded-md border bg-rose-50 p-2 text-[11px] text-rose-700">
-                              {aiError}
-                            </div>
-                          ) : null}
-
-                          {!aiData ? (
-                            <div className="rounded-md border bg-muted/40 p-2 text-[11px] text-muted-foreground">
-                              Klik <b>Analisis</b> untuk mendapatkan ringkasan
-                              percakapan + tindakan yang disarankan.
-                            </div>
+                    {/* Action */}
+                    {lastFollowUp && !lastFollowUp.doneAt && (
+                      <div className="mt-3">
+                        <Button
+                          size="sm"
+                          className="h-8 w-full text-xs"
+                          onClick={() =>
+                            handleMarkFollowUpDone(lastFollowUp.id)
+                          }
+                          disabled={markingFollowUpDone}
+                        >
+                          {markingFollowUpDone ? (
+                            <>
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              Menyimpan
+                            </>
                           ) : (
-                            <div className="space-y-3">
-                              {/* Summary */}
-                              <div className="rounded-md border bg-background/70 p-2">
-                                <p className="text-[11px] text-muted-foreground font-semibold mb-1">
-                                  Ringkasan
-                                </p>
-                                <p className="text-[12px] leading-relaxed whitespace-pre-line">
-                                  {aiData.summary}
-                                </p>
-                              </div>
-
-                              {/* Intent */}
-                              <div className="rounded-md border bg-background/70 p-2">
-                                <p className="text-[11px] text-muted-foreground font-semibold mb-1">
-                                  Intent Lead
-                                </p>
-                                <p className="text-[12px]">
-                                  {aiData.leadIntent}
-                                </p>
-                              </div>
-
-                              {/* Next Actions */}
-                              <div className="rounded-md border bg-background/70 p-2">
-                                <div className="flex items-center justify-between mb-1">
-                                  <p className="text-[11px] text-muted-foreground font-semibold">
-                                    Tindakan Disarankan
-                                  </p>
-                                  <Badge
-                                    variant="outline"
-                                    className="text-[10px]"
-                                  >
-                                    {aiData.nextActions?.length ?? 0} items
-                                  </Badge>
-                                </div>
-
-                                <div className="space-y-2">
-                                  {aiData.nextActions
-                                    ?.slice(0, 5)
-                                    .map((a, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="rounded-md border bg-muted/30 p-2"
-                                      >
-                                        <div className="flex items-start justify-between gap-2">
-                                          <p className="text-[12px] font-semibold">
-                                            {a.title}
-                                          </p>
-                                          <Badge
-                                            className={`text-[10px] ${priorityBadgeClass(
-                                              a.priority
-                                            )}`}
-                                          >
-                                            {a.priority}
-                                          </Badge>
-                                        </div>
-                                        <p className="mt-1 text-[11px] text-muted-foreground whitespace-pre-line">
-                                          {a.detail}
-                                        </p>
-                                      </div>
-                                    ))}
-                                </div>
-                              </div>
-
-                              {/* Reply drafts */}
-                              <div className="rounded-md border bg-background/70 p-2">
-                                <p className="text-[11px] text-muted-foreground font-semibold mb-2">
-                                  Draft Balasan WA
-                                </p>
-
-                                <div className="space-y-2">
-                                  {aiData.suggestedReplies
-                                    ?.slice(0, 3)
-                                    .map((r, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="rounded-md border bg-muted/30 p-2"
-                                      >
-                                        <div className="flex items-center justify-between gap-2">
-                                          <Badge
-                                            variant="secondary"
-                                            className="text-[10px]"
-                                          >
-                                            {r.tone}
-                                          </Badge>
-
-                                          <div className="flex gap-1">
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="h-7 px-2 text-[11px]"
-                                              onClick={() =>
-                                                copyToClipboard(r.text)
-                                              }
-                                            >
-                                              Copy
-                                            </Button>
-
-                                            {/* opsional: kalau kamu mau tombol "Gunakan" */}
-                                            {/* <Button
-                    size="sm"
-                    className="h-7 px-2 text-[11px]"
-                    onClick={() => useAiReply(r.text)}
-                  >
-                    Gunakan
-                  </Button> */}
-                                          </div>
-                                        </div>
-
-                                        <p className="mt-2 text-[12px] whitespace-pre-line leading-relaxed">
-                                          {r.text}
-                                        </p>
-                                      </div>
-                                    ))}
-                                </div>
-                              </div>
-
-                              {/* Optional: Objections & Missing Info */}
-                              {aiData.objections?.length ||
-                              aiData.missingInfo?.length ? (
-                                <div className="rounded-md border bg-background/70 p-2 space-y-2">
-                                  {aiData.objections?.length ? (
-                                    <div>
-                                      <p className="text-[11px] text-muted-foreground font-semibold">
-                                        Keberatan
-                                      </p>
-                                      <ul className="mt-1 list-disc pl-4 text-[11px] text-muted-foreground">
-                                        {aiData.objections
-                                          .slice(0, 4)
-                                          .map((x, i) => (
-                                            <li key={i}>{x}</li>
-                                          ))}
-                                      </ul>
-                                    </div>
-                                  ) : null}
-
-                                  {aiData.missingInfo?.length ? (
-                                    <div>
-                                      <p className="text-[11px] text-muted-foreground font-semibold">
-                                        Info yang Perlu Digali
-                                      </p>
-                                      <ul className="mt-1 list-disc pl-4 text-[11px] text-muted-foreground">
-                                        {aiData.missingInfo
-                                          .slice(0, 4)
-                                          .map((x, i) => (
-                                            <li key={i}>{x}</li>
-                                          ))}
-                                      </ul>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              ) : null}
-                            </div>
+                            <>
+                              <CheckCircle2 className="mr-1 h-3 w-3" />
+                              Tandai selesai
+                            </>
                           )}
-                        </div>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Harga */}
+                  <div className="rounded-lg border bg-background p-3">
+                    <div className="space-y-3">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                        <Wallet className="h-4 w-4" />
+                        <span>Harga</span>
                       </div>
 
-                      {/* QUICK PANEL DI KANAN */}
-                      <div className="w-full space-y-3 lg:w-72">
-                        {/* AI ANALYSIS CARD */}
-                        <Card className="overflow-hidden">
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm md:text-lg flex items-center justify-between">
-                              <span className="flex items-center gap-2">
-                                <Sparkles className="h-4 w-4 text-violet-500" />
-                                AI Analisis Chat
-                              </span>
-                              {aiData?.statusHint ? (
-                                <Badge
-                                  className={`rounded-full ${statusHintBadgeClass(
-                                    aiData.statusHint
-                                  )}`}
-                                >
-                                  {aiData.statusHint}
-                                </Badge>
-                              ) : null}
-                            </CardTitle>
-                          </CardHeader>
+                      {/* Price grid */}
+                      <div className="grid grid-cols-3 gap-3 text-xs md:text-sm">
+                        <PriceItem
+                          label="Penawaran"
+                          value={formatCurrencyIDR(lead?.priceOffering)}
+                        />
+                        <PriceItem
+                          label="Nego"
+                          value={formatCurrencyIDR(lead?.priceNegotiation)}
+                        />
+                        <PriceItem
+                          label="Closing"
+                          value={formatCurrencyIDR(lead?.priceClosing)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <Tabs defaultValue="whatsapp">
+                <TabsList className="mb-3 w-full justify-start overflow-x-auto">
+                  <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                    Overview
+                  </TabsTrigger>
+                  <TabsTrigger value="activity" className="text-xs sm:text-sm">
+                    Aktivitas
+                  </TabsTrigger>
+                  <TabsTrigger value="whatsapp" className="text-xs sm:text-sm">
+                    WhatsApp
+                  </TabsTrigger>
+                  <TabsTrigger value="ai" className="text-xs sm:text-sm">
+                    AI Analysis
+                  </TabsTrigger>
+                </TabsList>
 
-                          <CardContent className="space-y-3 text-xs sm:text-sm">
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                className="h-8 px-3 text-xs flex-1"
-                                onClick={() => handleAnalyzeChat(60)}
-                                disabled={aiLoading || !lead?.phone}
-                                title={
-                                  !lead?.phone
-                                    ? "Lead belum punya nomor WA"
-                                    : "Analisis 60 pesan terakhir"
-                                }
-                              >
-                                {aiLoading ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                    Menganalisis...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Sparkles className="mr-2 h-3 w-3" />
-                                    Analisis (60)
-                                  </>
-                                )}
-                              </Button>
+                {/* OVERVIEW */}
+                <TabsContent value="overview" className="space-y-4 text-sm">
+                  <OverviewTab
+                    overviewEditing={overviewEditing}
+                    setOverviewEditing={setOverviewEditing}
+                    savingOverview={savingOverview}
+                    detailLoading={detailLoading}
+                    onCancel={handleCancelOverview}
+                    onSave={handleSaveOverview}
+                    displayName={displayName}
+                    displayPhone={displayPhone}
+                    displaySource={displaySource}
+                    displayCity={displayCity}
+                    displayProductName={displayProductName}
+                    lead={lead}
+                    products={products}
+                    updatingProduct={updatingProduct}
+                    overviewName={overviewName}
+                    setOverviewName={setOverviewName}
+                    overviewPhone={overviewPhone}
+                    setOverviewPhone={setOverviewPhone}
+                    overviewAddress={overviewAddress}
+                    setOverviewAddress={setOverviewAddress}
+                    overviewProductId={overviewProductId}
+                    setOverviewProductId={setOverviewProductId}
+                    formatCurrencyIDR={formatCurrencyIDR}
+                    dynamicFields={dynamicFields}
+                    overviewCustomValues={overviewCustomValues}
+                    setCustomValue={setCustomValue}
+                  />
+                </TabsContent>
 
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-3 text-xs"
-                                onClick={() => handleAnalyzeChat(120)}
-                                disabled={aiLoading || !lead?.phone}
-                                title="Analisis lebih panjang (120 pesan)"
-                              >
-                                120
-                              </Button>
+                {/* AKTIVITAS */}
+                <TabsContent value="activity" className="space-y-3 text-sm">
+                  <div className="flex items-center justify-end">
+                    {/* <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setActivityModalOpen(true)}
+                    >
+                      Tambah Aktivitas
+                    </Button> */}
+                  </div>
+
+                  {activitiesLoading ? (
+                    <p className="text-sm text-muted-foreground">
+                      Memuat aktivitas...
+                    </p>
+                  ) : activities.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Belum ada aktivitas tercatat untuk lead ini
+                    </p>
+                  ) : (
+                    <div className="relative max-h-96 overflow-y-auto rounded-xl border bg-background/80 p-4">
+                      <div className="relative space-y-4">
+                        {/* Vertical line */}
+                        <div className="absolute left-4 top-0 h-full w-px bg-border border" />
+
+                        {activities.map((a, idx) => (
+                          <div key={a.id} className="relative flex gap-4">
+                            {/* Dot + Icon */}
+                            <div className="relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-background border">
+                              {a.kind === "FOLLOW_UP" && (
+                                <Clock3 className="h-4 w-4 text-amber-500" />
+                              )}
+                              {a.kind === "STAGE" && (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                              )}
+                              {a.kind === "STATUS" && (
+                                <Sparkles className="h-4 w-4 text-blue-500" />
+                              )}
+                              {a.kind === "ACTIVITY" && (
+                                <FileText className="h-4 w-4 text-violet-500" />
+                              )}
                             </div>
-                          </CardContent>
-                        </Card>
 
-                        {/* QUICK TAHAPAN DI KANAN */}
+                            {/* Content */}
+                            <div className="flex-1 pb-2">
+                              <div className="rounded-lg border bg-background p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-xs md:text-sm font-medium">
+                                    {a.title}
+                                  </p>
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {formatDateTime(a.at)}
+                                  </span>
+                                </div>
+
+                                {/* Photo preview */}
+                                {a.kind === "ACTIVITY" && a.photoUrl && (
+                                  <button
+                                    type="button"
+                                    className="mt-2 inline-block overflow-hidden rounded-md border cursor-pointer"
+                                    onClick={() => handleOpenActivityPreview(a)}
+                                  >
+                                    <img
+                                      src={a.photoUrl}
+                                      alt={a.title}
+                                      className="h-16 w-16 object-cover"
+                                    />
+                                  </button>
+                                )}
+
+                                {a.description && (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    {a.description}
+                                  </p>
+                                )}
+
+                                {a.createdByName && (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    Dibuat oleh {a.createdByName}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* WHATSAPP */}
+                <TabsContent value="whatsapp" className="space-y-3 text-sm">
+                  {/* Chat*/}
+                  <div className="flex flex-col gap-3 lg:flex-row">
+                    {/* CHAT PANEL */}
+                    <div className="flex-1">
+                      <WhatsAppChatCard
+                        displayName={displayName}
+                        displayPhone={displayPhone}
+                        leadHasPhone={Boolean(lead?.phone)}
+                        syncingChat={syncingChat}
+                        onSyncChat={handleSyncChat}
+                        messagesLoading={messagesLoading}
+                        chatMessages={chatMessages}
+                        chatWrapRef={chatWrapRef}
+                        chatInput={chatInput}
+                        setChatInput={setChatInput}
+                        sending={sending}
+                        onSend={handleSend}
+                        onOpenProposal={() => setProposalModalOpen(true)}
+                        onOpenFollowUp={() => setScheduleModalOpen(true)}
+                        onOpenQuickMessage={() => setQuickMsgOpen(true)}
+                        EMOJIS={EMOJIS}
+                        insertAtCursor={insertAtCursor}
+                        chatInputRef={chatInputRef}
+                        onSaveMessageToTemplate={handleSaveBubbleToTemplate}
+                      />
+                    </div>
+
+                    {/* QUICK PANEL DI KANAN */}
+                    {/* <div className="w-full space-y-3 lg:w-72">
+                        {!USE_FAB_ONLY && (
+                          <Card className="overflow-hidden">
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm md:text-lg flex items-center justify-between">
+                                <span className="flex items-center gap-2">
+                                  <Sparkles className="h-4 w-4 text-violet-500" />
+                                  AI Analisis Chat
+                                </span>
+                                {aiData?.statusHint ? (
+                                  <Badge
+                                    className={`rounded-full ${statusHintBadgeClass(
+                                      aiData.statusHint
+                                    )}`}
+                                  >
+                                    {aiData.statusHint}
+                                  </Badge>
+                                ) : null}
+                              </CardTitle>
+                            </CardHeader>
+
+                            <CardContent className="space-y-3 text-xs sm:text-sm">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  className="h-8 px-3 text-xs flex-1"
+                                  onClick={() => handleAnalyzeChat(60)}
+                                  disabled={aiLoading || !lead?.phone}
+                                  title={
+                                    !lead?.phone
+                                      ? "Lead belum punya nomor WA"
+                                      : "Analisis 60 pesan terakhir"
+                                  }
+                                >
+                                  {aiLoading ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                                      Menganalisis...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Sparkles className="mr-2 h-3 w-3" />
+                                      Analisis (60)
+                                    </>
+                                  )}
+                                </Button>
+
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 px-3 text-xs"
+                                  onClick={() => handleAnalyzeChat(120)}
+                                  disabled={aiLoading || !lead?.phone}
+                                  title="Analisis lebih panjang (120 pesan)"
+                                >
+                                  120
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
                         <Card>
                           <CardHeader>
                             <CardTitle className="text-sm md:text-lg">
@@ -2844,15 +2202,6 @@ export default function LeadDetailPage() {
                                   <CheckCircle2 className="mr-1 h-3 w-3" />
                                   Tandai selesai & lanjut
                                 </Button>
-                                {/* <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2 text-[11px] md:text-sm"
-                                  onClick={handleGoToNextStage}
-                                  disabled={stageUpdating || !currentStage}
-                                >
-                                  Tahap berikutnya
-                                </Button> */}
                               </div>
                             </div>
 
@@ -2887,722 +2236,207 @@ export default function LeadDetailPage() {
                             )}
                           </CardContent>
                         </Card>
-                      </div>
-                    </div>
+                      </div> */}
+                  </div>
 
-                    {/* MODAL TINDAK LANJUT */}
-                    <Dialog
-                      open={scheduleModalOpen}
-                      onOpenChange={setScheduleModalOpen}
-                    >
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Atur tindak lanjut</DialogTitle>
-                          <DialogDescription>
-                            Tentukan jenis tindak lanjut, jadwal, dan Aksi untuk
-                            lead ini.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="mt-3 space-y-3 text-sm">
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Step / jenis tindak lanjut
-                            </p>
-                            <Select
-                              value={followUpTypeCode}
-                              onValueChange={(v) => setFollowUpTypeCode(v)}
-                            >
-                              <SelectTrigger className="mt-1 h-9">
-                                <SelectValue placeholder="Pilih tindak lanjut" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {followUpTypes.map((t) => (
-                                  <SelectItem key={t.id} value={t.code}>
-                                    {t.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                  {/* MODAL TINDAK LANJUT */}
+                  <FollowUpScheduleDialog
+                    open={scheduleModalOpen}
+                    onOpenChange={setScheduleModalOpen}
+                    followUpTypeCode={followUpTypeCode}
+                    setFollowUpTypeCode={setFollowUpTypeCode}
+                    followUpDate={followUpDate}
+                    setFollowUpDate={setFollowUpDate}
+                    followUpTime={followUpTime}
+                    setFollowUpTime={setFollowUpTime}
+                    followUpChannel={followUpChannel}
+                    setFollowUpChannel={setFollowUpChannel}
+                    followUpNote={followUpNote}
+                    setFollowUpNote={setFollowUpNote}
+                    followUpTypes={followUpTypes}
+                    saving={savingFollowUp}
+                    onSave={handleSaveFollowUp}
+                  />
 
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                Tanggal
-                              </p>
-                              <Input
-                                type="date"
-                                className="mt-1 h-9"
-                                value={followUpDate}
-                                onChange={(e) =>
-                                  setFollowUpDate(e.target.value)
-                                }
-                              />
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">
-                                Jam
-                              </p>
-                              <Input
-                                type="time"
-                                className="mt-1 h-9"
-                                value={followUpTime}
-                                onChange={(e) =>
-                                  setFollowUpTime(e.target.value)
-                                }
-                              />
-                            </div>
-                          </div>
+                  {/* MODAL KIRIM PENAWARAN (PDF) */}
+                  <ProposalDialog
+                    open={proposalModalOpen}
+                    onOpenChange={setProposalModalOpen}
+                    proposalFile={proposalFile}
+                    proposalCaption={proposalCaption}
+                    uploading={proposalUploading}
+                    fileInputRef={proposalFileInputRef}
+                    onFileChange={handleProposalFileChange}
+                    onClearFile={handleClearProposalFile}
+                    onDragOver={handleProposalDragOver}
+                    onDrop={handleProposalDrop}
+                    onCaptionChange={setProposalCaption}
+                    onSend={handleSendProposal}
+                    formatFileSize={formatFileSize}
+                  />
 
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Aksi
-                            </p>
-                            <Select
-                              value={followUpChannel}
-                              onValueChange={(v) =>
-                                setFollowUpChannel(
-                                  v as "wa" | "call" | "zoom" | "visit"
-                                )
-                              }
-                            >
-                              <SelectTrigger className="mt-1 h-9">
-                                <SelectValue placeholder="Pilih Aksi" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="wa">WhatsApp</SelectItem>
-                                <SelectItem value="call">Telepon</SelectItem>
-                                <SelectItem value="zoom">Zoom</SelectItem>
-                                <SelectItem value="visit">Kunjungan</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-muted-foreground">
-                              Catatan tindak lanjut
-                            </p>
-                            <Textarea
-                              rows={3}
-                              className="mt-1"
-                              placeholder="Contoh: Follow up final sebelum kirim invoice, pastikan sudah oke dengan paket profesional."
-                              value={followUpNote}
-                              onChange={(e) => setFollowUpNote(e.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <DialogFooter className="mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setScheduleModalOpen(false)}
-                          >
-                            Batal
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleSaveFollowUp}
-                            disabled={savingFollowUp}
-                          >
-                            {savingFollowUp ? (
-                              <>
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                Menyimpan...
-                              </>
-                            ) : (
-                              "Simpan"
-                            )}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
-                    {/* MODAL KIRIM PROPOSAL (PDF) */}
-                    <Dialog
-                      open={proposalModalOpen}
-                      onOpenChange={(open) => {
-                        setProposalModalOpen(open);
-                        if (!open) {
-                          setProposalFile(null);
-                          setProposalCaption("");
-                          if (proposalFileInputRef.current) {
-                            proposalFileInputRef.current.value = "";
-                          }
-                        }
-                      }}
-                    >
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Kirim penawaran (PDF)</DialogTitle>
-                          <DialogDescription>
-                            Upload file proposal dalam bentuk PDF dan kirim
-                            langsung ke WhatsApp lead ini.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="mt-3 space-y-4 text-sm">
-                          <div className="space-y-2">
-                            <Label className="text-xs">
-                              File penawaran (PDF)
-                            </Label>
-
-                            <input
-                              ref={proposalFileInputRef}
-                              type="file"
-                              accept="application/pdf"
-                              className="hidden"
-                              onChange={handleProposalFileChange}
-                            />
-
-                            {proposalFile ? (
-                              <div className="flex items-start gap-3 rounded-xl border border-dashed border-muted bg-muted/40 p-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                                  <FileText className="h-5 w-5 text-primary" />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                  <p className="text-sm font-medium">
-                                    {proposalFile.name}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {formatFileSize(proposalFile.size)} • PDF
-                                  </p>
-                                  <div className="mt-2 flex flex-wrap gap-2">
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        proposalFileInputRef.current?.click()
-                                      }
-                                      disabled={proposalUploading}
-                                    >
-                                      Ganti file
-                                    </Button>
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-red-600 hover:bg-red-50"
-                                      onClick={handleClearProposalFile}
-                                      disabled={proposalUploading}
-                                    >
-                                      Hapus
-                                    </Button>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div
-                                className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-muted bg-muted/30 p-4 text-center hover:border-primary/60 hover:bg-primary/5 md:flex-row md:text-left"
-                                onClick={() =>
-                                  proposalFileInputRef.current?.click()
-                                }
-                                onDragOver={handleProposalDragOver}
-                                onDrop={handleProposalDrop}
-                              >
-                                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                                  <FileText className="h-7 w-7 text-primary" />
-                                </div>
-                                <div className="flex-1 space-y-1">
-                                  <p className="text-sm font-medium">
-                                    {proposalUploading
-                                      ? "Mengupload file..."
-                                      : "Upload file proposal (PDF)"}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Klik atau seret & lepas file ke sini. Format
-                                    PDF, ukuran maksimal 5MB.
-                                  </p>
-                                </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    proposalFileInputRef.current?.click();
-                                  }}
-                                  disabled={proposalUploading}
-                                >
-                                  Pilih file
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            <Label className="text-xs">
-                              Pesan pendamping (opsional)
-                            </Label>
-                            <Textarea
-                              rows={3}
-                              className="mt-1 text-sm"
-                              placeholder="Contoh: Berikut kami lampirkan penawaran paket profesional Agile Store untuk bisnis Anda."
-                              value={proposalCaption}
-                              onChange={(e) =>
-                                setProposalCaption(e.target.value)
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        <DialogFooter className="mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setProposalModalOpen(false)}
-                            disabled={proposalUploading}
-                          >
-                            Batal
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={handleSendProposal}
-                            disabled={proposalUploading || !proposalFile}
-                          >
-                            {proposalUploading ? (
-                              <>
-                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                                Mengirim...
-                              </>
-                            ) : (
-                              "Kirim ke WhatsApp"
-                            )}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
-                    <QuickMessageDialog
-                      open={quickMsgOpen}
-                      onOpenChange={(v) => {
-                        setQuickMsgOpen(v);
-                        // kalau nutup quick message, juga tutup edit/save
-                        if (!v) {
-                          closeEditTpl();
-                          closeSaveTpl();
-                        }
-                      }}
-                      lead={lead}
-                      onUse={handleUseQuickMessage}
-                      onEditRequest={handleEditTemplate}
-                      currentUser={detailRes?.data?.currentUser}
-                      settings={detailRes?.data?.settings}
-                    />
-
-                    <EditTemplateDialog
-                      open={editTplOpen}
-                      onOpenChange={(v) => {
-                        setEditTplOpen(v);
-                        if (!v) setSelectedTpl(null);
-                      }}
-                      template={selectedTpl}
-                      onSaved={async () => {
-                        await refreshTemplates();
+                  <QuickMessageDialog
+                    open={quickMsgOpen}
+                    onOpenChange={(v) => {
+                      setQuickMsgOpen(v);
+                      if (!v) {
                         closeEditTpl();
-                      }}
-                    />
-
-                    <SaveToTemplateDialog
-                      open={saveTplOpen}
-                      onOpenChange={(v) => {
-                        setSaveTplOpen(v);
-                        if (!v) setSaveTplPayload(null);
-                      }}
-                      messageText={saveTplPayload?.text || ""}
-                      messageType={saveTplPayload?.type}
-                      mediaUrl={saveTplPayload?.mediaUrl}
-                      mediaName={saveTplPayload?.mediaName}
-                      onSaved={async () => {
-                        await refreshTemplates();
                         closeSaveTpl();
-                      }}
-                    />
-                  </TabsContent>
-
-                  {/* MODAL TAMBAH AKTIVITAS MANUAL */}
-                  <Dialog
-                    open={activityModalOpen}
-                    onOpenChange={(open) => {
-                      setActivityModalOpen(open);
-                      if (!open) {
-                        setActivityTitle("");
-                        setActivityDate("");
-                        setActivityTime("");
-                        setActivityDescription("");
-                        setActivityPhoto(null);
-                        setActivityPhotoPreview(null);
-                        if (activityFileInputRef.current) {
-                          activityFileInputRef.current.value = "";
-                        }
                       }
                     }}
-                  >
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Tambah Aktivitas Lead</DialogTitle>
-                        <DialogDescription>
-                          Catat aktivitas penting (kunjungan, meeting, demo,
-                          dsb) dan lampirkan foto bila perlu.
-                        </DialogDescription>
-                      </DialogHeader>
+                    lead={lead}
+                    onUse={handleUseQuickMessage}
+                    onEditRequest={handleEditTemplate}
+                    currentUser={detailRes?.data?.currentUser}
+                    settings={detailRes?.data?.settings}
+                  />
 
-                      <div className="mt-3 space-y-3 text-sm">
-                        <div>
-                          <Label className="text-xs">Judul aktivitas</Label>
-                          <Input
-                            className="mt-1 h-9"
-                            placeholder="Contoh: Kunjungan ke toko cabang A"
-                            value={activityTitle}
-                            onChange={(e) => setActivityTitle(e.target.value)}
-                          />
-                        </div>
+                  <EditTemplateDialog
+                    open={editTplOpen}
+                    onOpenChange={(v) => {
+                      setEditTplOpen(v);
+                      if (!v) setSelectedTpl(null);
+                    }}
+                    template={selectedTpl}
+                    onSaved={async () => {
+                      await refreshTemplates();
+                      closeEditTpl();
+                    }}
+                  />
 
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div>
-                            <Label className="text-xs">Tanggal</Label>
-                            <Input
-                              type="date"
-                              className="mt-1 h-9"
-                              value={activityDate}
-                              onChange={(e) => setActivityDate(e.target.value)}
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-xs">Jam</Label>
-                            <Input
-                              type="time"
-                              className="mt-1 h-9"
-                              value={activityTime}
-                              onChange={(e) => setActivityTime(e.target.value)}
-                            />
-                          </div>
-                        </div>
+                  <SaveToTemplateDialog
+                    open={saveTplOpen}
+                    onOpenChange={(v) => {
+                      setSaveTplOpen(v);
+                      if (!v) setSaveTplPayload(null);
+                    }}
+                    messageText={saveTplPayload?.text || ""}
+                    messageType={saveTplPayload?.type}
+                    mediaUrl={saveTplPayload?.mediaUrl}
+                    mediaName={saveTplPayload?.mediaName}
+                    onSaved={async () => {
+                      await refreshTemplates();
+                      closeSaveTpl();
+                    }}
+                  />
+                </TabsContent>
 
-                        <div>
-                          <Label className="text-xs">Deskripsi</Label>
-                          <Textarea
-                            rows={3}
-                            className="mt-1 text-sm"
-                            placeholder="Contoh: Menjelaskan paket profesional, calon pelanggan tertarik untuk trial 7 hari."
-                            value={activityDescription}
-                            onChange={(e) =>
-                              setActivityDescription(e.target.value)
-                            }
-                          />
-                        </div>
+                <TabsContent value="ai" className="space-y-3 text-sm">
+                  {/* ===== AI INSIGHT + REPLIES ===== */}
+                  <AiInsightPanel
+                    aiData={aiData}
+                    aiLoading={aiLoading}
+                    aiCached={aiCached}
+                    aiError={aiError}
+                    onAnalyze={handleAnalyzeChat}
+                    onCopy={copyToClipboard}
+                    priorityBadgeClass={priorityBadgeClass}
+                  />
+                </TabsContent>
 
-                        <div className="space-y-2">
-                          <Label className="text-xs">
-                            Foto aktivitas (opsional)
-                          </Label>
+                {/* MODAL TAMBAH AKTIVITAS MANUAL */}
+                <ActivityDialog
+                  open={activityModalOpen}
+                  onOpenChange={setActivityModalOpen}
+                  title={activityTitle}
+                  date={activityDate}
+                  time={activityTime}
+                  description={activityDescription}
+                  photo={activityPhoto}
+                  photoPreview={activityPhotoPreview}
+                  saving={activitySaving}
+                  fileInputRef={activityFileInputRef}
+                  onTitleChange={setActivityTitle}
+                  onDateChange={setActivityDate}
+                  onTimeChange={setActivityTime}
+                  onDescriptionChange={setActivityDescription}
+                  onPhotoChange={handleActivityPhotoChange}
+                  onPhotoDragOver={handleActivityDragOver}
+                  onPhotoDrop={handleActivityDrop}
+                  onClearPhoto={handleClearActivityPhoto}
+                  onPreview={() => {
+                    setSelectedActivity({
+                      id: "new",
+                      kind: "ACTIVITY",
+                      title: activityTitle || "Preview foto",
+                      description: activityDescription || "Preview foto",
+                      at: new Date().toISOString(),
+                      photoUrl: activityPhotoPreview,
+                    });
+                    setActivityPreviewOpen(true);
+                  }}
+                  onSave={handleSaveActivity}
+                  formatFileSize={formatFileSize}
+                />
 
-                          <input
-                            ref={activityFileInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleActivityPhotoChange}
-                          />
+                {/* MODAL PREVIEW FOTO AKTIVITAS */}
+                <ActivityPreviewDialog
+                  open={activityPreviewOpen}
+                  onOpenChange={setActivityPreviewOpen}
+                  title={selectedActivity?.title}
+                  photoUrl={selectedActivity?.photoUrl}
+                  description={selectedActivity?.description}
+                  createdByName={selectedActivity?.createdByName}
+                  formattedAt={
+                    selectedActivity
+                      ? formatDateTime(selectedActivity.at)
+                      : undefined
+                  }
+                />
 
-                          {activityPhotoPreview ? (
-                            <div className="flex items-start gap-3 rounded-xl border border-dashed border-muted bg-muted/40 p-3">
-                              <button
-                                type="button"
-                                className="overflow-hidden rounded-lg border bg-background"
-                                onClick={() => {
-                                  setSelectedActivity({
-                                    id: "new",
-                                    kind: "ACTIVITY",
-                                    title: activityTitle || "Preview foto",
-                                    description:
-                                      activityDescription || "Preview foto",
-                                    at: new Date().toISOString(),
-                                    photoUrl: activityPhotoPreview,
-                                  });
-                                  setActivityPreviewOpen(true);
-                                }}
-                              >
-                                {/* @ts-ignore */}
-                                <img
-                                  src={activityPhotoPreview}
-                                  alt="Foto aktivitas"
-                                  className="h-20 w-20 object-cover"
-                                />
-                              </button>
-                              <div className="flex-1 space-y-1">
-                                <p className="text-sm font-medium">
-                                  {activityPhoto?.name || "Foto aktivitas"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {activityPhoto
-                                    ? formatFileSize(activityPhoto.size)
-                                    : ""}{" "}
-                                  • Gambar
-                                </p>
-                                <div className="mt-2 flex flex-wrap gap-2">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      activityFileInputRef.current?.click()
-                                    }
-                                    disabled={activitySaving}
-                                  >
-                                    Ganti foto
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-red-600 hover:bg-red-50"
-                                    onClick={handleClearActivityPhoto}
-                                    disabled={activitySaving}
-                                  >
-                                    Hapus
-                                  </Button>
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border border-dashed border-muted bg-muted/30 p-4 text-center hover:border-primary/60 hover:bg-primary/5 md:flex-row md:text-left"
-                              onClick={() =>
-                                activityFileInputRef.current?.click()
-                              }
-                              onDragOver={handleActivityDragOver}
-                              onDrop={handleActivityDrop}
-                            >
-                              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-                                <Sparkles className="h-7 w-7 text-primary" />
-                              </div>
-                              <div className="flex-1 space-y-1">
-                                <p className="text-sm font-medium">
-                                  Upload foto aktivitas (opsional)
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  Klik atau seret & lepas foto ke sini. Format
-                                  JPG/PNG, ukuran maksimal 2MB.
-                                </p>
-                              </div>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  activityFileInputRef.current?.click();
-                                }}
-                                disabled={activitySaving}
-                              >
-                                Pilih foto
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <DialogFooter className="mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setActivityModalOpen(false)}
-                          disabled={activitySaving}
-                        >
-                          Batal
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSaveActivity}
-                          disabled={activitySaving}
-                        >
-                          {activitySaving ? (
-                            <>
-                              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                              Menyimpan...
-                            </>
-                          ) : (
-                            "Simpan Aktivitas"
-                          )}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* MODAL PREVIEW FOTO AKTIVITAS */}
-                  <Dialog
-                    open={activityPreviewOpen}
-                    onOpenChange={setActivityPreviewOpen}
-                  >
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>
-                          {selectedActivity?.title || "Detail Aktivitas"}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {selectedActivity
-                            ? formatDateTime(selectedActivity.at)
-                            : ""}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-3">
-                        {selectedActivity?.photoUrl && (
-                          <div className="overflow-hidden rounded-xl border bg-black/5">
-                            {/* @ts-ignore */}
-                            <img
-                              src={selectedActivity.photoUrl}
-                              alt={selectedActivity.title}
-                              className="max-h-[400px] w-full object-contain"
-                            />
-                          </div>
-                        )}
-                        {selectedActivity?.description && (
-                          <p className="text-sm whitespace-pre-line">
-                            {selectedActivity.description}
-                          </p>
-                        )}
-                        {selectedActivity?.createdByName && (
-                          <p className="text-xs text-muted-foreground">
-                            Dibuat oleh {selectedActivity.createdByName}
-                          </p>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* MODAL ATUR HARGA (STEP BY STEP) */}
-                  <Dialog
-                    open={priceModalOpen}
-                    onOpenChange={setPriceModalOpen}
-                  >
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>Input / Update Harga</DialogTitle>
-                        <DialogDescription>
-                          Pilih jenis harga yang ingin diupdate, lalu isi
-                          nominalnya
-                        </DialogDescription>
-                      </DialogHeader>
-
-                      <div className="space-y-4">
-                        {/* Segmented button: Penawaran / Nego / Closing */}
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={
-                              priceKind === "OFFERING" ? "default" : "outline"
-                            }
-                            className="h-8 px-3 text-xs md:text-sm"
-                            onClick={() => handleChangePriceKind("OFFERING")}
-                          >
-                            Penawaran
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={
-                              priceKind === "NEGOTIATION"
-                                ? "default"
-                                : "outline"
-                            }
-                            className="h-8 px-3 text-xs md:text-sm"
-                            onClick={() => handleChangePriceKind("NEGOTIATION")}
-                          >
-                            Negosiasi
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant={
-                              priceKind === "CLOSING" ? "default" : "outline"
-                            }
-                            className="h-8 px-3 text-xs md:text-sm"
-                            onClick={() => handleChangePriceKind("CLOSING")}
-                          >
-                            Closing
-                          </Button>
-                        </div>
-
-                        <div className="space-y-2">
-                          <p className="text-[11px] md:text-sm text-muted-foreground">
-                            {priceKind === "OFFERING" &&
-                              "Nominal penawaran awal yang kamu ajukan ke lead"}
-                            {priceKind === "NEGOTIATION" &&
-                              "Nominal hasil negosiasi terbaru dengan lead"}
-                            {priceKind === "CLOSING" &&
-                              "Nominal deal akhir saat lead benar-benar closing"}
-                          </p>
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            className="h-9 text-xs md:text-sm"
-                            value={priceInput}
-                            onChange={(e) =>
-                              setPriceInput(formatRupiahInput(e.target.value))
-                            }
-                            placeholder="Masukkan harga disini.."
-                          />
-                        </div>
-                      </div>
-
-                      <DialogFooter className="mt-4 flex items-center justify-between gap-2">
-                        <p className="text-[10px] md:text-xs text-muted-foreground">
-                          Simpan satu per satu: mulai dari penawaran, lalu
-                          negosiasi, kemudian closing
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-3 text-xs md:text-sm"
-                            onClick={() => setPriceModalOpen(false)}
-                            disabled={savingPrice}
-                          >
-                            Batal
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-8 px-3 text-xs md:text-sm"
-                            onClick={handleSavePrice}
-                            disabled={savingPrice}
-                          >
-                            {savingPrice ? (
-                              <>
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                                Menyimpan...
-                              </>
-                            ) : (
-                              "Simpan harga"
-                            )}
-                          </Button>
-                        </div>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </Tabs>
-              </CardContent>
-            </Card>
+                {/* MODAL ATUR HARGA (STEP BY STEP) */}
+                <PriceDialog
+                  open={priceModalOpen}
+                  onOpenChange={setPriceModalOpen}
+                  priceKind={priceKind}
+                  priceInput={priceInput}
+                  saving={savingPrice}
+                  onChangeKind={setPriceKind}
+                  onChangeInput={(v) => setPriceInput(formatRupiahInput(v))}
+                  onSave={handleSavePrice}
+                />
+              </Tabs>
+            </CardContent>
           </section>
         </main>
       </div>
+
+      {/* ===== FLOATING ACTION BUTTON ===== */}
+      <LeadActionFab
+        onFollowUp={() => setScheduleModalOpen(true)}
+        onPrice={handleOpenPriceModal}
+        onActivity={() => setActivityModalOpen(true)}
+        onSyncChat={handleSyncChat}
+        onAnalyzeAi={() => handleAnalyzeChat(60)}
+        onStatus={() => setStatusModalOpen(true)}
+        onStage={() => setStageModalOpen(true)}
+      />
+
+      <StatusModal
+        open={statusModalOpen}
+        onOpenChange={setStatusModalOpen}
+        value={status}
+        loading={statusUpdating}
+        onChange={(next) => {
+          handleQuickStatus(next);
+        }}
+      />
+
+      <StageModal open={stageModalOpen} onOpenChange={setStageModalOpen}>
+        <QuickStagePanel
+          stages={stages}
+          currentStageId={currentStageId}
+          stageUpdating={stageUpdating}
+          stageChecklistSaving={stageChecklistSaving}
+          onStageDone={handleStageDone}
+          onMarkDone={markStageDone}
+        />
+      </StageModal>
     </DashboardLayout>
   );
 }
 
 /* ==== helper components & functions ==== */
-
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="text-xs sm:text-sm">{value}</p>
-    </div>
-  );
-}
 
 function formatTime(iso: string) {
   const d = new Date(iso);
@@ -3632,83 +2466,83 @@ function formatFileSize(bytes: number) {
   return `${value.toFixed(1)} ${sizes[i]}`;
 }
 
-function StageTimeline({
-  stages,
-  currentStageId,
-  onMarkDone,
-  savingStageId,
-}: {
-  stages: StageWithMeta[];
-  currentStageId?: number;
-  onMarkDone: (stageId: number, mode?: "NORMAL" | "SKIPPED") => void;
-  savingStageId: number | null;
-}) {
-  if (!stages.length) {
-    return (
-      <p className="text-[11px] text-muted-foreground">
-        Belum ada definisi tahapan.
-      </p>
-    );
-  }
+// function StageTimeline({
+//   stages,
+//   currentStageId,
+//   onMarkDone,
+//   savingStageId,
+// }: {
+//   stages: StageWithMeta[];
+//   currentStageId?: number;
+//   onMarkDone: (stageId: number, mode?: "NORMAL" | "SKIPPED") => void;
+//   savingStageId: number | null;
+// }) {
+//   if (!stages.length) {
+//     return (
+//       <p className="text-[11px] text-muted-foreground">
+//         Belum ada definisi tahapan.
+//       </p>
+//     );
+//   }
 
-  return (
-    <div className="space-y-2">
-      {stages.map((s) => {
-        const isDone = !!s.doneAt;
-        const isSkipped = isDone && s.mode === "SKIPPED";
-        const isActive = s.id === currentStageId;
+//   return (
+//     <div className="space-y-2">
+//       {stages.map((s) => {
+//         const isDone = !!s.doneAt;
+//         const isSkipped = isDone && s.mode === "SKIPPED";
+//         const isActive = s.id === currentStageId;
 
-        return (
-          <button
-            key={s.id}
-            type="button"
-            className="flex w-full items-center justify-between rounded-md border bg-background px-2 py-2 hover:bg-muted/60"
-            onClick={() => {
-              if (isDone) return;
-              onMarkDone(s.id, "NORMAL");
-            }}
-            disabled={savingStageId === s.id}
-          >
-            <div className="flex items-center gap-2">
-              {isDone ? (
-                <CheckCircle2
-                  className={`h-4 w-4 ${
-                    isSkipped ? "text-slate-400" : "text-emerald-500"
-                  }`}
-                />
-              ) : (
-                <Circle
-                  className={`h-4 w-4 ${
-                    isActive ? "text-blue-500" : "text-muted-foreground"
-                  }`}
-                />
-              )}
+//         return (
+//           <button
+//             key={s.id}
+//             type="button"
+//             className="flex w-full items-center justify-between rounded-md border bg-background px-2 py-2 hover:bg-muted/60"
+//             onClick={() => {
+//               if (isDone) return;
+//               onMarkDone(s.id, "NORMAL");
+//             }}
+//             disabled={savingStageId === s.id}
+//           >
+//             <div className="flex items-center gap-2">
+//               {isDone ? (
+//                 <CheckCircle2
+//                   className={`h-4 w-4 ${
+//                     isSkipped ? "text-slate-400" : "text-emerald-500"
+//                   }`}
+//                 />
+//               ) : (
+//                 <Circle
+//                   className={`h-4 w-4 ${
+//                     isActive ? "text-blue-500" : "text-muted-foreground"
+//                   }`}
+//                 />
+//               )}
 
-              <div className="text-left">
-                <p className="text-sm font-medium">
-                  {s.label}{" "}
-                  {isActive ? (
-                    <span className="text-xs text-blue-500">(aktif)</span>
-                  ) : null}
-                </p>
+//               <div className="text-left">
+//                 <p className="text-sm font-medium">
+//                   {s.label}{" "}
+//                   {isActive ? (
+//                     <span className="text-xs text-blue-500">(aktif)</span>
+//                   ) : null}
+//                 </p>
 
-                <p className="text-[11px] text-muted-foreground">
-                  {isDone
-                    ? `Selesai: ${formatDateTime(s.doneAt!)}`
-                    : s.startedAt
-                    ? `Mulai: ${formatDateTime(s.startedAt)}`
-                    : "Belum dimulai"}
-                  {isSkipped ? " • SKIPPED" : ""}
-                </p>
-              </div>
-            </div>
+//                 <p className="text-[11px] text-muted-foreground">
+//                   {isDone
+//                     ? `Selesai: ${formatDateTime(s.doneAt!)}`
+//                     : s.startedAt
+//                     ? `Mulai: ${formatDateTime(s.startedAt)}`
+//                     : "Belum dimulai"}
+//                   {isSkipped ? " • SKIPPED" : ""}
+//                 </p>
+//               </div>
+//             </div>
 
-            {savingStageId === s.id ? (
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            ) : null}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+//             {savingStageId === s.id ? (
+//               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+//             ) : null}
+//           </button>
+//         );
+//       })}
+//     </div>
+//   );
+// }

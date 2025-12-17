@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { PlaceholderRow } from "./placeholder-row";
 
 const fetcher = (u: string) => fetch(u).then((r) => r.json());
 
@@ -91,6 +92,14 @@ export function TemplatePanel() {
       setSaving(false);
     }
   }
+
+  const productHealth = useSWR("/api/products/link-health", fetcher);
+
+  const missing = productHealth.data?.data?.missing ?? {
+    demo: [],
+    testi: [],
+    edukasi: [],
+  };
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
@@ -172,43 +181,50 @@ export function TemplatePanel() {
               placeholder="Tulis template... contoh: Halo {{nama_lead}}, ..."
               className="min-h-[180px]"
             />
-            <div className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground space-y-2">
               Placeholder yang dapat dipakai:
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{nama_lead}}"}
-                </code>
-              </p>
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{nama_sales}}"}
-                </code>
-              </p>
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{produk}}"}
-                </code>
-              </p>
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{perusahaan}}"}
-                </code>
-              </p>
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{video_demo_links}}"}
-                </code>
-              </p>
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{testimoni_links}}"}
-                </code>
-              </p>
-              <p>
-                <code className="font-bold bg-gray-100 px-1 rounded">
-                  {"{{edukasi_links}}"}
-                </code>
-              </p>
+              <PlaceholderRow
+                code={"{{nama_lead}}"}
+                label="Nama lead"
+                emptyText="Nama lead"
+                missingProducts={[]}
+              />
+              <PlaceholderRow
+                code={"{{nama_sales}}"}
+                label="Nama sales"
+                emptyText="Nama sales"
+                missingProducts={[]}
+              />
+              <PlaceholderRow
+                code={"{{produk}}"}
+                label="Nama produk"
+                emptyText="Nama produk belum diisi"
+                missingProducts={[]}
+              />
+              <PlaceholderRow
+                code={"{{perusahaan}}"}
+                label="Nama perusahaan"
+                emptyText="Konfigurasi di pengaturan umum"
+                missingProducts={[]}
+              />
+              <PlaceholderRow
+                code={"{{video_demo_links}}"}
+                label="Link Video Demo"
+                emptyText="Isi di halaman produk (url demo wajib diisi)."
+                missingProducts={missing.demo}
+              />
+              <PlaceholderRow
+                code={"{{testimoni_links}}"}
+                label="Link Testimoni"
+                emptyText="Isi di halaman produk (url testimoni wajib diisi)."
+                missingProducts={missing.testi}
+              />
+              <PlaceholderRow
+                code={"{{edukasi_links}}"}
+                label="Link Edukasi"
+                emptyText="Isi di halaman produk (url edukasi wajib diisi)."
+                missingProducts={missing.edukasi}
+              />
             </div>
           </div>
 

@@ -4,9 +4,16 @@ import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
+import { usePathname } from "next/navigation";
 
 export function FAB() {
   const { user } = useCurrentUser();
+  const pathname = usePathname();
+
+  const isLeadDetailPage =
+    pathname.startsWith("/leads/");
+
+  if (isLeadDetailPage) return null;
   return (
     <>
       {user?.roleCode === "SALES" && (
