@@ -55,26 +55,26 @@ export function EmployeeTable({
   onDelete?: (emp: Employee) => void;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+    <div className="rounded-xl border border-border overflow-hidden bg-secondary shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gradient-subtle hover:bg-gradient-subtle">
-            <TableHead className="font-semibold text-gray-900">
+          <TableRow className="bg-primary hover:bg-primary">
+            <TableHead className="font-semibold text-foreground">
               Nama Pegawai
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Jabatan
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Atasan
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Kontak
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Status
             </TableHead>
-            <TableHead className="font-semibold text-gray-900 text-right">
+            <TableHead className="font-semibold text-foreground text-right">
               Aksi
             </TableHead>
           </TableRow>
@@ -83,12 +83,12 @@ export function EmployeeTable({
           {employees.map((employee) => (
             <TableRow
               key={employee.id}
-              className="hover:bg-gray-50 transition-colors"
+              className="hover:bg-muted-foreground/5 transition-colors"
             >
               <TableCell>
                 <div>
-                  <p className="font-semibold text-gray-900">{employee.name}</p>
-                  <p className="text-xs text-gray-500">{employee.email}</p>
+                  <p className="font-semibold text-foreground">{employee.name}</p>
+                  <p className="text-xs text-muted-foreground">{employee.email}</p>
                 </div>
               </TableCell>
               <TableCell>
@@ -102,34 +102,34 @@ export function EmployeeTable({
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="text-xs text-gray-700 space-y-0.5">
+                <div className="text-xs text-foreground space-y-0.5">
                   {employee.managerName && (
                     <p>
-                      <span className="text-gray-500">Manager: </span>
+                      <span className="text-muted-foreground">Manager: </span>
                       {employee.managerName}
                     </p>
                   )}
                   {employee.teamLeaderName && (
                     <p>
-                      <span className="text-gray-500">Team Leader: </span>
+                      <span className="text-muted-foreground">Team Leader: </span>
                       {employee.teamLeaderName}
                     </p>
                   )}
                   {!employee.managerName && !employee.teamLeaderName && (
-                    <p className="text-gray-400 italic text-xs">-</p>
+                    <p className="text-muted-foreground italic text-xs">-</p>
                   )}
                 </div>
               </TableCell>
               <TableCell>
-                <div className="text-xs text-gray-700 space-y-0.5">
+                <div className="text-xs text-foreground space-y-0.5">
                   {employee.phone && (
                     <p className="flex items-center gap-1">
-                      <Phone className="h-3 w-3 text-gray-400" />
+                      <Phone className="h-3 w-3 text-muted-foreground" />
                       <span>{employee.phone}</span>
                     </p>
                   )}
                   <p className="flex items-center gap-1">
-                    <Mail className="h-3 w-3 text-gray-400" />
+                    <Mail className="h-3 w-3 text-muted-foreground" />
                     <span className="truncate">{employee.email}</span>
                   </p>
                 </div>
@@ -144,7 +144,7 @@ export function EmployeeTable({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-black hover:bg-black/10"
+                    className="text-muted-foreground hover:bg-muted-foretext-muted-foreground/10"
                     onClick={() => onEdit?.(employee)}
                   >
                     <Edit className="h-4 w-4" />
@@ -152,7 +152,7 @@ export function EmployeeTable({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:bg-red-50"
+                    className="text-primary hover:bg-primary/50"
                     onClick={() => onDelete?.(employee)}
                   >
                     <Trash2 className="h-4 w-4" />

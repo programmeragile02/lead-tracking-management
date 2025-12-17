@@ -44,24 +44,24 @@ export function ProfileSettings({ onSecurityClick }: ProfileSettingsProps) {
   ];
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Pengaturan</h3>
+    <div className="bg-secondary rounded-2xl p-6 shadow-md border-2 border-border">
+      <h3 className="text-lg font-bold text-foreground mb-4">Pengaturan</h3>
       <div className="space-y-2">
         {settings.map((setting) => (
           <button
             key={setting.key}
             type="button"
             onClick={setting.onClick}
-            className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-red-50 hover:from-violet-50 hover:to-purple-50 transition-all group"
+            className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-muted-foreground/10 transition-all group"
           >
-            <div className="w-10 h-10 rounded-lg bg-red-50 from-violet-100 to-purple-100 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <setting.icon className="w-5 h-5 text-red-600" />
+            <div className="w-10 h-10 rounded-lg bg-primary/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <setting.icon className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-semibold text-gray-900">{setting.label}</p>
-              <p className="text-sm text-gray-600">{setting.description}</p>
+              <p className="font-semibold text-foreground">{setting.label}</p>
+              <p className="text-sm text-muted-foreground">{setting.description}</p>
             </div>
-            <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-red-600 transition-colors" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </button>
         ))}
       </div>

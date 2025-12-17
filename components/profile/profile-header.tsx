@@ -148,11 +148,11 @@ export function ProfileHeader({
 
   return (
     <>
-      <div className="gradient-primary rounded-2xl p-6 shadow-lg">
+      <div className="bg-primary rounded-2xl p-6 shadow-lg">
         <div className="flex flex-col sm:flex-row items-center gap-6">
           <div className="relative">
             {user.photo ? (
-              <div className="w-24 h-24 rounded-full bg-white overflow-hidden shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-primary overflow-hidden shadow-lg">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={user.photo}
@@ -161,7 +161,7 @@ export function ProfileHeader({
                 />
               </div>
             ) : (
-              <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-3xl font-bold text-red-600 shadow-lg">
+              <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center text-3xl font-bold text-primary shadow-lg">
                 {initials}
               </div>
             )}
@@ -169,10 +169,10 @@ export function ProfileHeader({
             {/* tombol kamera buka modal */}
             <button
               type="button"
-              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-gray-100 transition-colors"
+              className="absolute bottom-0 right-0 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-muted-foreground transition-colors"
               onClick={handleOpenDialog}
             >
-              <Camera className="w-4 h-4 text-red-600" />
+              <Camera className="w-4 h-4 text-primary" />
             </button>
           </div>
 
@@ -184,7 +184,7 @@ export function ProfileHeader({
 
           <Button
             variant="secondary"
-            className="bg-white text-red-600 hover:bg-gray-100 font-semibold shadow-md"
+            className="bg-white text-primary hover:bg-muted-foreground cursor-pointer font-semibold shadow-md"
             onClick={onEditClick}
           >
             {isEditing ? "Selesai" : "Edit Profil"}
@@ -217,7 +217,7 @@ export function ProfileHeader({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-3xl font-bold text-red-500">
+                <span className="text-3xl font-bold text-primary">
                   {initials}
                 </span>
               )}

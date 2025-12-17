@@ -109,28 +109,28 @@ export function TeamLeaderTeamContent() {
   );
 
   if (error) {
-    return <div className="text-sm text-red-600">Gagal memuat data tim.</div>;
+    return <div className="text-sm text-primary">Gagal memuat data tim.</div>;
   }
 
   if (isLoading || !data) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-8 w-40 rounded-xl" />
+          <Skeleton className="h-6 w-40 bg-secondary" />
+          <Skeleton className="h-8 w-40 rounded-xl bg-secondary" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
-          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl bg-secondary" />
+          <Skeleton className="h-32 rounded-2xl bg-secondary" />
+          <Skeleton className="h-32 rounded-2xl bg-secondary" />
         </div>
-        <Skeleton className="h-64 rounded-2xl" />
+        <Skeleton className="h-64 rounded-2xl bg-secondary" />
       </div>
     );
   }
 
   if (!data.ok || !data.data) {
-    return <div className="text-sm text-red-600">Gagal memuat data tim.</div>;
+    return <div className="text-sm text-primary">Gagal memuat data tim</div>;
   }
 
   const { summary, members } = data.data;
@@ -144,26 +144,25 @@ export function TeamLeaderTeamContent() {
       {/* Header + filter periode */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">
+          <h2 className="text-lg font-semibold text-foreground">
             Tim Penjualan Saya
           </h2>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-muted-foreground">
             Team Leader:{" "}
-            <span className="font-medium text-gray-700">
+            <span className="font-medium text-foreground">
               {summary.teamLeaderName}
-            </span>{" "}
-            • <span className="font-medium">{summary.teamSize} sales</span> di
-            dalam tim
+            </span>
           </p>
+          <p className="font-medium">{summary.teamSize} sales di dalam tim</p>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500">Periode:</span>
+          <span className="text-xs text-muted-foreground">Periode:</span>
           <Select
             value={selectedMonth}
             onValueChange={(v) => setSelectedMonth(v)}
           >
-            <SelectTrigger className="w-[170px] h-9 rounded-xl text-xs sm:text-sm shadow-sm bg-white border">
+            <SelectTrigger className="w-[170px] h-9 rounded-xl text-xs sm:text-sm shadow-sm bg-secondary border">
               <SelectValue placeholder="Pilih Periode" />
             </SelectTrigger>
             <SelectContent side="bottom" className="rounded-xl">
@@ -211,10 +210,12 @@ export function TeamLeaderTeamContent() {
       {/* Tabel anggota tim */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">
+          <h3 className="text-lg font-bold text-foreground">
             Anggota Tim & Performa
           </h3>
-          <p className="text-xs text-gray-500">Periode: {currentPeriodLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            Periode: {currentPeriodLabel}
+          </p>
         </div>
 
         <TeamSalesTable members={members} periodLabel={currentPeriodLabel} />

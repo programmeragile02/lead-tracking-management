@@ -21,20 +21,20 @@ interface Props {
 
 export function ProductTable({ products, onEdit, onDelete }: Props) {
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+    <div className="rounded-xl border border-border overflow-hidden bg-secondary shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gradient-subtle hover:bg-gradient-subtle">
-            <TableHead className="font-semibold text-gray-900">
+          <TableRow className="bg-primary hover:bg-primary">
+            <TableHead className="font-semibold text-foreground">
               Nama Produk
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Kategori
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Status
             </TableHead>
-            <TableHead className="font-semibold text-gray-900 text-right">
+            <TableHead className="font-semibold text-foreground text-right">
               Aksi
             </TableHead>
           </TableRow>
@@ -43,12 +43,12 @@ export function ProductTable({ products, onEdit, onDelete }: Props) {
           {products.map((product) => (
             <TableRow
               key={product.id}
-              className="hover:bg-gray-50 transition-colors"
+              className="hover:bg-muted-foreground/5 transition-colors"
             >
               <TableCell>
                 <div>
-                  <p className="font-semibold text-gray-900">{product.name}</p>
-                  <p className="text-sm text-gray-500 line-clamp-1">
+                  <p className="font-semibold text-foreground">{product.name}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-1">
                     {product.description || "Tidak ada deskripsi"}
                   </p>
                 </div>
@@ -66,7 +66,7 @@ export function ProductTable({ products, onEdit, onDelete }: Props) {
                   className={
                     product.isAvailable
                       ? "bg-green-500 text-white"
-                      : "bg-gray-400 text-white"
+                      : "bg-muted-foreground text-white"
                   }
                 >
                   {product.isAvailable ? "Tersedia" : "Tidak tersedia"}
@@ -77,7 +77,7 @@ export function ProductTable({ products, onEdit, onDelete }: Props) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-black hover:bg-black/10"
+                    className="text-muted-foreground hover:bg-muted-fortext-muted-foreground/10"
                     onClick={() => onEdit(product)}
                   >
                     <Edit className="h-4 w-4" />
@@ -85,7 +85,7 @@ export function ProductTable({ products, onEdit, onDelete }: Props) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:bg-red-50"
+                    className="text-primary hover:bg-primary/50"
                     onClick={() => onDelete(product)}
                   >
                     <Trash2 className="h-4 w-4" />

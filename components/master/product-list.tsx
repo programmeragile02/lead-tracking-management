@@ -93,7 +93,7 @@ export function ProductList({
             variant={viewMode === "card" ? "default" : "outline"}
             size="sm"
             onClick={() => setViewMode("card")}
-            className={viewMode === "card" ? "gradient-primary text-white" : ""}
+            className={viewMode === "card" ? "bg-primary text-white" : ""}
           >
             <LayoutGrid className="h-4 w-4 mr-2" />
             Kartu
@@ -103,7 +103,7 @@ export function ProductList({
             size="sm"
             onClick={() => setViewMode("table")}
             className={
-              viewMode === "table" ? "gradient-primary text-white" : ""
+              viewMode === "table" ? "bg-primary text-white" : ""
             }
           >
             <List className="h-4 w-4 mr-2" />
@@ -113,9 +113,9 @@ export function ProductList({
       )}
 
       {isLoading ? (
-        <div className="text-sm text-gray-500">Memuat data produk...</div>
+        <div className="text-sm text-muted-foreground">Memuat data produk...</div>
       ) : products.length === 0 ? (
-        <div className="border border-dashed rounded-xl p-8 text-center text-gray-500">
+        <div className="border border-dashed rounded-xl p-8 text-center text-muted-foreground">
           Belum ada produk. Tambahkan produk baru terlebih dahulu.
         </div>
       ) : (
@@ -141,7 +141,7 @@ export function ProductList({
 
           {/* Pagination */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-6 text-sm">
-            <div className="text-gray-500">
+            <div className="text-muted-foreground">
               {total > 0 && (
                 <>
                   Menampilkan{" "}
@@ -167,7 +167,7 @@ export function ProductList({
                 Sebelumnya
               </Button>
 
-              <span className="text-gray-600">
+              <span className="text-muted-foreground">
                 Halaman <span className="font-semibold">{currentPage}</span> /{" "}
                 {totalPages}
               </span>

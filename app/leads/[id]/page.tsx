@@ -1639,7 +1639,7 @@ export default function LeadDetailPage() {
       <div className="flex min-h-screen flex-col">
         <main className="mx-auto flex w-full flex-1 flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 md:pb-8">
           {/* RINGKASAN LEAD */}
-          <section className="flex flex-col gap-5 rounded-xl border bg-card p-5 md:flex-row md:items-center md:justify-between">
+          <section className="flex flex-col gap-5 rounded-xl border p-5 md:flex-row md:items-center md:justify-between bg-secondary">
             {/* ===== IDENTITAS LEAD ===== */}
             <div className="flex items-start gap-4">
               {/* Avatar */}
@@ -1731,7 +1731,7 @@ export default function LeadDetailPage() {
 
           {/* 4 CARD ATAS */}
           {/* ===== INFO STRIP ===== */}
-          <section className="rounded-xl border bg-muted/30 p-3">
+          <section className="rounded-xl border p-3 bg-secondary">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <InfoItem
                 icon={GitBranch}
@@ -1775,7 +1775,7 @@ export default function LeadDetailPage() {
           <section>
             <CardContent className="px-0">
               {/* QUICK ACTIONS DI ATAS CHAT */}
-              <div className="space-y-2 rounded-md border bg-muted/40 p-2 mb-4">
+              <div className="space-y-2 rounded-md border bg-secondary p-2 mb-4">
                 {/* Quick Status */}
                 {/* <div className="flex flex-wrap items-center gap-2">
                         <span className="text-[11px] md:text-sm text-muted-foreground">
@@ -2010,7 +2010,7 @@ export default function LeadDetailPage() {
                       Belum ada aktivitas tercatat untuk lead ini
                     </p>
                   ) : (
-                    <div className="relative max-h-96 overflow-y-auto rounded-xl border bg-background/80 p-4">
+                    <div className="relative max-h-96 overflow-y-auto rounded-xl border bg-secondary p-4">
                       <div className="relative space-y-4">
                         {/* Vertical line */}
                         <div className="absolute left-4 top-0 h-full w-px bg-border border" />

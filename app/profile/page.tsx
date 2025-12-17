@@ -68,7 +68,7 @@ export default function ProfilePage() {
     return (
       <DashboardLayout title="Profil Saya">
         <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
-          <AlertCircle className="w-10 h-10 text-red-500" />
+          <AlertCircle className="w-10 h-10 text-primary" />
           <p className="font-semibold">Gagal memuat profil</p>
           <p className="text-sm text-muted-foreground">
             {data?.error || "Terjadi kesalahan. Coba muat ulang halaman."}

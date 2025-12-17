@@ -38,7 +38,7 @@ export function AiInsightPanel({
   priorityBadgeClass,
 }: Props) {
   return (
-    <div className="mt-3 rounded-md border bg-muted/30 p-3">
+    <div className="mt-3 rounded-md border bg-secondary p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="text-sm md:text-base font-semibold flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-500" />

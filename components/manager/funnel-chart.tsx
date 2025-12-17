@@ -8,16 +8,16 @@ export function FunnelChart() {
   ]
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
+    <div className="bg-secondary rounded-2xl p-6 shadow-md border-2 border-border">
       <div className="space-y-4">
         {stages.map((stage, index) => (
           <div key={stage.name} className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-bold text-gray-900">{stage.name}</span>
-              <span className="text-gray-600 font-semibold">{stage.count} lead</span>
+              <span className="font-bold text-foreground">{stage.name}</span>
+              <span className="text-muted-foreground font-semibold">{stage.count} lead</span>
             </div>
             <div
-              className="h-12 gradient-primary rounded-lg flex items-center justify-center text-white font-bold shadow-md"
+              className="h-12 bg-primary rounded-lg flex items-center justify-center text-foreground font-bold shadow-md"
               style={{ width: `${stage.width}%` }}
             >
               {stage.count}

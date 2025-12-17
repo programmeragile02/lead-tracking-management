@@ -382,13 +382,13 @@ export default function ProductMasterPage() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Daftar Produk</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-2xl font-bold text-foreground">Daftar Produk</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               Kelola semua produk yang tersedia untuk lead
             </p>
           </div>
           <Button
-            className="gradient-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
+            className="bg-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -398,10 +398,10 @@ export default function ProductMasterPage() {
 
         {/* Search Bar (belum di-wire ke API, nanti bisa dipakai buat query ?q=) */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Cari nama produk atau kategori..."
-            className="pl-10 h-12 border-gray-300 focus:border-primary"
+            className="pl-10 h-12 border-muted-foreground focus:border-primary"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -470,7 +470,7 @@ export default function ProductMasterPage() {
 
                 {form.photo ? (
                   <div className="flex flex-col md:flex-col gap-4 items-start">
-                    <div className="relative w-full md:w-40 h-40 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                    <div className="relative w-full md:w-40 h-40 rounded-xl overflow-hidden border border-border bg-muted-foreground">
                       {/* preview foto */}
                       {/* kalau kamu pakai next/image */}
                       {/* @ts-ignore */}
@@ -481,7 +481,7 @@ export default function ProductMasterPage() {
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <p className="text-sm text-gray-600">
+                      <p className="text-sm text-muted-foreground">
                         Foto sudah terupload. Kamu bisa mengganti atau menghapus
                         foto ini.
                       </p>
@@ -499,7 +499,7 @@ export default function ProductMasterPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="text-red-600 hover:bg-red-50"
+                          className="text-primary hover:bg-primary/50"
                           onClick={() => handleChange("photo", "")}
                           disabled={uploadingPhoto}
                         >
@@ -510,7 +510,7 @@ export default function ProductMasterPage() {
                   </div>
                 ) : (
                   <div
-                    className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                    className="w-full border border-dashed border-muted-foreground rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <div className="flex items-center justify-center w-14 h-14 rounded-full bg-primary/10">
@@ -530,12 +530,12 @@ export default function ProductMasterPage() {
                       </svg>
                     </div>
                     <div className="flex-1 text-center md:text-left space-y-1">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-sm font-medium text-foreground">
                         {uploadingPhoto
                           ? "Mengupload foto..."
                           : "Upload foto produk"}
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         Klik di sini untuk memilih file gambar. Format JPG/PNG,
                         ukuran maksimal 2MB.
                       </p>
@@ -591,7 +591,7 @@ export default function ProductMasterPage() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-red-500"
+                        className="text-primary"
                         onClick={() => removeLinkItem("demoLinks", index)}
                         disabled={form.demoLinks.length <= 1}
                       >
@@ -608,7 +608,7 @@ export default function ProductMasterPage() {
                 >
                   + Tambah link demo
                 </Button>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs textprimary">
                   Bisa beberapa video: short version, full demo, webinar replay,
                   dll.
                 </p>
@@ -649,7 +649,7 @@ export default function ProductMasterPage() {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="text-red-500"
+                        className="text-primary"
                         onClick={() =>
                           removeLinkItem("testimonialLinks", index)
                         }
@@ -668,7 +668,7 @@ export default function ProductMasterPage() {
                 >
                   + Tambah link testimoni
                 </Button>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Bisa highlight IG, halaman testimoni, studi kasus, dsb.
                 </p>
               </div>
@@ -716,7 +716,7 @@ export default function ProductMasterPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            className="text-red-500"
+                            className="text-primary"
                             onClick={() =>
                               removeLinkItem("educationLinks", index)
                             }
@@ -735,7 +735,7 @@ export default function ProductMasterPage() {
                     >
                       + Tambah link edukasi
                     </Button>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Artikel blog, dokumentasi, playlist video, dsb.
                     </p>
                   </TabsContent>
@@ -752,16 +752,16 @@ export default function ProductMasterPage() {
                     />
 
                     <div
-                      className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                      className="w-full border border-dashed border-muted-foreground rounded-xl p-4 md:p-6 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
                       onClick={() => educationFileInputRef.current?.click()}
                     >
                       <div className="flex-1 text-center md:text-left space-y-1">
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-foreground">
                           {uploadingEducationPdf
                             ? "Mengupload file PDF..."
                             : "Upload file edukasi (PDF)"}
                         </p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           Format PDF, ukuran maksimal 5MB. File yang berhasil
                           diupload akan otomatis ditambahkan ke daftar link
                           edukasi di tab &quot;Via Link&quot;.
@@ -795,7 +795,7 @@ export default function ProductMasterPage() {
                     checked={form.isAvailable}
                     onCheckedChange={(v) => handleChange("isAvailable", v)}
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-foreground">
                     {form.isAvailable ? "Tersedia" : "Tidak tersedia"}
                   </span>
                 </div>
@@ -810,7 +810,7 @@ export default function ProductMasterPage() {
                   Batal
                 </Button>
                 <Button
-                  className="gradient-primary text-white"
+                  className="bg-primary text-white"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >
@@ -846,7 +846,7 @@ export default function ProductMasterPage() {
               <AlertDialogAction
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-primary hover:bg-primary/50 text-white"
               >
                 {isDeleting ? "Menghapus..." : "Ya, hapus"}
               </AlertDialogAction>

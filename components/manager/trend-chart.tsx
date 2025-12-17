@@ -25,7 +25,7 @@ export function TrendChart({ type }: { type: "leads" | "revenue" }) {
   const data = type === "leads" ? leadsData : revenueData
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
+    <div className="bg-secondary rounded-2xl p-6 shadow-md border-2 border-border">
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -33,7 +33,7 @@ export function TrendChart({ type }: { type: "leads" | "revenue" }) {
           <YAxis stroke="#6b7280" style={{ fontSize: "12px" }} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "white",
+              backgroundColor: "#09122C",
               border: "2px solid #e5e7eb",
               borderRadius: "8px",
               padding: "8px 12px",
@@ -42,9 +42,9 @@ export function TrendChart({ type }: { type: "leads" | "revenue" }) {
           <Line
             type="monotone"
             dataKey="value"
-            stroke={type === "leads" ? "#ef4444" : "#ff6900"}
+            stroke={type === "leads" ? "#BE3144" : "#ff6900"}
             strokeWidth={3}
-            dot={{ fill: type === "leads" ? "#ef4444" : "#ff6900", r: 5 }}
+            dot={{ fill: type === "leads" ? "#BE3144" : "#ff6900", r: 5 }}
           />
         </LineChart>
       </ResponsiveContainer>

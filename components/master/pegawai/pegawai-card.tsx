@@ -57,9 +57,9 @@ export function EmployeeCard({
   onDelete?: (emp: Employee) => void;
 }) {
   return (
-    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-gray-200 bg-white group">
+    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-border bg-secondary group">
       <div className="relative h-40 flex items-center justify-center">
-        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-primary/20 to-secondary/20">
+        <div className="relative w-48 h-48 rounded-full overflow-hidden border-4 border-border shadow-lg bg-primary/50">
           <Image
             src={employee.photo || "/avatar-placeholder.png"}
             alt={employee.name}
@@ -78,7 +78,7 @@ export function EmployeeCard({
       <div className="p-5 space-y-3">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <h3 className="font-bold text-lg text-gray-900 leading-tight">
+            <h3 className="font-bold text-lg text-foreground leading-tight">
               {employee.name}
             </h3>
             <Badge
@@ -93,49 +93,49 @@ export function EmployeeCard({
           </div>
         </div>
 
-        <div className="space-y-1 text-xs text-gray-600">
+        <div className="space-y-1 text-xs text-muted-foreground">
           {employee.managerName && (
             <p className="flex items-center gap-1">
-              <Users className="h-3 w-3 text-gray-400" />
-              <span className="font-medium text-gray-700">Manager:</span>{" "}
-              <span>{employee.managerName}</span>
+              <Users className="h-3 w-3 text-muted-foreground" />
+              <span className="font-medium text-muted-foreground">Manager:</span>{" "}
+              <span className="text-foreground">{employee.managerName}</span>
             </p>
           )}
           {employee.teamLeaderName && (
             <p className="flex items-center gap-1">
-              <Users className="h-3 w-3 text-gray-400" />
-              <span className="font-medium text-gray-700">
+              <Users className="h-3 w-3 text-muted-foreground" />
+              <span className="font-medium text-muted-foreground">
                 Team Leader:
               </span>{" "}
-              <span>{employee.teamLeaderName}</span>
+              <span className="text-foreground">{employee.teamLeaderName}</span>
             </p>
           )}
         </div>
 
-        <div className="space-y-1 text-xs text-gray-600">
+        <div className="space-y-1 text-xs text-muted-foreground">
           <p className="flex items-center gap-1">
-            <Mail className="h-3 w-3 text-gray-400" />
+            <Mail className="h-3 w-3 text-muted-foreground" />
             <span className="truncate">{employee.email}</span>
           </p>
           {employee.phone && (
             <p className="flex items-center gap-1">
-              <Phone className="h-3 w-3 text-gray-400" />
+              <Phone className="h-3 w-3 text-muted-foreground" />
               <span>{employee.phone}</span>
             </p>
           )}
           {employee.address && (
             <p className="flex items-center gap-1">
-              <MapPin className="h-3 w-3 text-gray-400" />
+              <MapPin className="h-3 w-3 text-muted-foreground" />
               <span className="truncate">{employee.address}</span>
             </p>
           )}
         </div>
 
-        <div className="flex gap-2 pt-3 border-t border-gray-100">
+        <div className="flex gap-2 pt-3 border-t border-border">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-black text-black hover:bg-black/5 bg-transparent"
+            className="flex-1 border-muted-foreground text-foreground hover:bg-black/5 bg-transparent"
             onClick={() => onEdit?.(employee)}
           >
             <Edit className="h-4 w-4 mr-1" />
@@ -144,7 +144,7 @@ export function EmployeeCard({
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 bg-transparent"
+            className="flex-1 bg-primary text-foreground hover:bg-primary/50"
             onClick={() => onDelete?.(employee)}
           >
             <Trash2 className="h-4 w-4 mr-1" />

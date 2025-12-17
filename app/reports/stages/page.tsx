@@ -146,9 +146,9 @@ export default function StageReportPage() {
     >
       <div className="space-y-4">
         {/* FILTER */}
-        <Card className="border border-red-100 bg-gradient-to-r from-red-50 to-orange-50">
+        <Card className="border border-border bg-secondary">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-red-700">
+            <CardTitle className="text-base font-semibold text-foreground">
               Filter Laporan
             </CardTitle>
           </CardHeader>
@@ -247,7 +247,7 @@ export default function StageReportPage() {
                 Memuat laporan...
               </div>
             ) : !reportRes?.ok ? (
-              <div className="text-sm text-red-600">
+              <div className="text-sm text-primary">
                 {reportRes?.error ?? "Gagal memuat laporan"}
               </div>
             ) : sales.length === 0 ? (
@@ -257,7 +257,7 @@ export default function StageReportPage() {
             ) : (
               <div className="w-full overflow-x-auto">
                 <table className="min-w-full border text-xs">
-                  <thead className="bg-red-50">
+                  <thead className="bg-primary">
                     <tr>
                       <th className="border px-3 py-2 text-left font-semibold">
                         Tahapan
@@ -280,8 +280,8 @@ export default function StageReportPage() {
                         <tr
                           key={st.id}
                           className={cn(
-                            "hover:bg-red-50/40",
-                            idx % 2 === 1 && "bg-muted/30"
+                            "hover:bg-primary",
+                            idx % 2 === 1 && "bg-muted-foreground/30"
                           )}
                         >
                           <td className="border px-3 py-2 font-medium">
@@ -304,7 +304,7 @@ export default function StageReportPage() {
                     })}
 
                     {/* BARIS TOTAL */}
-                    <tr className="bg-red-50/70">
+                    <tr className="bg-primary">
                       <td className="border px-3 py-2 font-semibold">
                         TOTAL
                       </td>

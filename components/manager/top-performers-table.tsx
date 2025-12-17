@@ -7,20 +7,20 @@ export function TopPerformersTable() {
   const [view, setView] = useState<"sales" | "team">("sales")
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+    <div className="bg-secondary rounded-2xl shadow-sm border border-border overflow-hidden">
       <div className="p-4 border-b flex gap-2">
         <button
           onClick={() => setView("sales")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            view === "sales" ? "bg-primary text-white" : "bg-muted text-foreground"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+            view === "sales" ? "bg-primary text-foreground" : "bg-background text-foreground"
           }`}
         >
           By Sales
         </button>
         <button
           onClick={() => setView("team")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            view === "team" ? "bg-primary text-white" : "bg-muted text-foreground"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+            view === "team" ? "bg-primary text-foreground" : "bg-background text-foreground"
           }`}
         >
           By Team
@@ -38,25 +38,25 @@ export function TopPerformersTable() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            <tr className="bg-yellow-50">
+            <tr className="bg-muted-foreground/10">
               <td className="p-4">
                 <Trophy className="h-5 w-5 text-yellow-500" />
               </td>
-              <td className="p-4 font-semibold">Sari Dewi</td>
-              <td className="p-4 text-right font-semibold">12</td>
-              <td className="p-4 text-right font-semibold">60jt</td>
+              <td className="p-4 font-semibold text-foreground">Sari Dewi</td>
+              <td className="p-4 text-right font-semibold text-foreground">12</td>
+              <td className="p-4 text-right font-semibold text-foreground">60jt</td>
             </tr>
-            <tr>
-              <td className="p-4 text-muted-foreground">2</td>
-              <td className="p-4 font-medium">Andi Wijaya</td>
-              <td className="p-4 text-right">10</td>
-              <td className="p-4 text-right">50jt</td>
+            <tr className="hover:bg-muted-foreground/5">
+              <td className="p-4 text-foreground">2</td>
+              <td className="p-4 font-medium text-foreground">Andi Wijaya</td>
+              <td className="p-4 text-right text-foreground">10</td>
+              <td className="p-4 text-right text-foreground">50jt</td>
             </tr>
-            <tr>
-              <td className="p-4 text-muted-foreground">3</td>
-              <td className="p-4 font-medium">Budi Santoso</td>
-              <td className="p-4 text-right">8</td>
-              <td className="p-4 text-right">40jt</td>
+            <tr className="hover:bg-muted-foreground/5">
+              <td className="p-4 text-foreground">3</td>
+              <td className="p-4 font-medium text-foreground">Budi Santoso</td>
+              <td className="p-4 text-right text-foreground">8</td>
+              <td className="p-4 text-right text-foreground">40jt</td>
             </tr>
           </tbody>
         </table>

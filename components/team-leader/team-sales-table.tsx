@@ -82,34 +82,34 @@ function mapWaStatusLabel(status: string | null) {
 export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
   if (!members || members.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm border p-6 text-sm text-gray-500">
+      <div className="bg-secondary rounded-2xl shadow-sm border p-6 text-sm text-muted-foreground">
         Belum ada anggota tim yang terdaftar di bawah Anda.
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+    <div className="bg-secondary rounded-2xl shadow-sm border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-muted/70">
             <tr>
-              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+              <th className="text-left p-4 text-xs font-semibold text-foreground">
                 Sales
               </th>
-              <th className="text-left p-4 text-xs font-semibold text-gray-600">
-                Lead (periode)
+              <th className="text-left p-4 text-xs font-semibold text-foreground">
+                Lead (1 periode)
               </th>
-              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+              <th className="text-left p-4 text-xs font-semibold text-foreground">
                 Closing & Revenue
               </th>
-              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+              <th className="text-left p-4 text-xs font-semibold text-foreground">
                 Aktivitas Hari Ini
               </th>
-              <th className="text-left p-4 text-xs font-semibold text-gray-600">
+              <th className="text-left p-4 text-xs font-semibold text-foreground">
                 Lead Bermasalah
               </th>
-              <th className="text-right p-4 text-xs font-semibold text-gray-600">
+              <th className="text-right p-4 text-xs font-semibold text-foreground">
                 Aksi
               </th>
             </tr>
@@ -134,14 +134,14 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                           className="rounded-full object-cover"
                         />
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center text-xs font-semibold text-red-700">
+                        <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
                           {m.name.charAt(0).toUpperCase()}
                         </div>
                       )}
                       <div>
-                        <p className="font-medium text-gray-900">{m.name}</p>
-                        <p className="text-[11px] text-gray-500">{m.email}</p>
-                        <p className="text-[11px] text-gray-500">
+                        <p className="font-medium text-foreground">{m.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{m.email}</p>
+                        <p className="text-[11px] text-muted-foreground">
                           Bergabung: {formatDateShort(m.createdAt)}
                         </p>
                         <Badge
@@ -157,21 +157,21 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                   {/* Lead periode */}
                   <td className="p-4 align-top">
                     <div className="space-y-1 text-xs">
-                      <p className="text-gray-700">
+                      <p className="text-foreground">
                         {m.leadsPeriod} / {m.leadTarget} lead
                       </p>
                       <div className="h-2 bg-muted rounded-full w-28">
                         <div
                           className={cn(
                             "h-full rounded-full",
-                            leadPct >= 100 ? "bg-green-500" : "bg-red-500"
+                            leadPct >= 100 ? "bg-green-500" : "bg-primary"
                           )}
                           style={{
                             width: `${Math.min(leadPct, 100)}%`,
                           }}
                         />
                       </div>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-[11px] text-muted-foreground">
                         Total lifetime: {m.leadsLifetime} lead
                       </p>
                     </div>
@@ -180,24 +180,24 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                   {/* Closing & revenue */}
                   <td className="p-4 align-top">
                     <div className="space-y-1 text-xs">
-                      <p className="text-gray-700">
+                      <p className="text-foreground">
                         Closing: {m.closingPeriod} deal
                       </p>
-                      <p className="text-gray-700">
+                      <p className="text-foreground">
                         Revenue: {formatRupiah(m.revenuePeriod)}
                       </p>
                       <div className="h-2 bg-muted rounded-full w-28">
                         <div
                           className={cn(
                             "h-full rounded-full",
-                            revPct >= 100 ? "bg-green-500" : "bg-orange-500"
+                            revPct >= 100 ? "bg-green-500" : "bg-primary"
                           )}
                           style={{
                             width: `${Math.min(revPct, 100)}%`,
                           }}
                         />
                       </div>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="text-[11px] text-muted-foreground">
                         Target monthly: {formatRupiah(m.closingTarget)}
                       </p>
                     </div>
@@ -206,19 +206,19 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                   {/* Aktivitas hari ini */}
                   <td className="p-4 align-top">
                     <div className="space-y-1 text-xs">
-                      <p className="text-gray-700">
+                      <p className="text-muted-foreground">
                         FU selesai:{" "}
                         <span className="font-semibold">{m.fuDoneToday}</span>
                       </p>
-                      <p className="text-gray-700">
+                      <p className="text-muted-foreground">
                         FU terjadwal hari ini:{" "}
                         <span className="font-semibold">
                           {m.fuScheduledToday}
                         </span>
                       </p>
-                      <p className="text-gray-700">
+                      <p className="text-muted-foreground">
                         FU terlambat:{" "}
-                        <span className="font-semibold text-red-600">
+                        <span className="font-semibold text-primary">
                           {m.fuOverdue}
                         </span>
                       </p>
@@ -228,21 +228,21 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                   {/* Problem leads */}
                   <td className="p-4 align-top">
                     <div className="space-y-1 text-xs">
-                      <p className="text-gray-700">
+                      <p className="text-muted-foreground">
                         Overdue:{" "}
-                        <span className="font-semibold text-red-600">
+                        <span className="font-semibold text-primary">
                           {m.overdueLeadCount}
                         </span>
                       </p>
-                      <p className="text-gray-700">
+                      <p className="text-muted-foreground">
                         Hot belum closing:{" "}
                         <span className="font-semibold text-amber-600">
                           {m.hotNotClosedCount}
                         </span>
                       </p>
-                      <p className="text-gray-700">
+                      <p className="text-muted-foreground">
                         Belum di-FU:{" "}
-                        <span className="font-semibold text-gray-700">
+                        <span className="font-semibold text-muted-foreground">
                           {m.untouchedLeadCount}
                         </span>
                       </p>
@@ -261,14 +261,14 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                           Detail
                         </Button>
                       </DialogTrigger>
-                      <DialogContent className="max-w-md p-0 overflow-hidden">
+                      <DialogContent className="max-w-md p-0 overflow-hidden border-border">
                         {/* Header aksesibilitas untuk screen reader */}
                         <DialogHeader className="sr-only">
                           <DialogTitle>Detail Sales — {m.name}</DialogTitle>
                         </DialogHeader>
 
                         {/* HEADER BERWARNA */}
-                        <div className="bg-gradient-to-r from-red-500 to-rose-500 px-5 py-4 text-white">
+                        <div className="bg-primary px-5 py-4 text-white">
                           <div className="flex items-center gap-3">
                             {m.photo ? (
                               <Image
@@ -297,7 +297,7 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                               )}
                             </div>
                             <div className="text-right">
-                              <p className="text-[11px] text-white/70">
+                              <p className="text-[11px] mt-4 text-white/70">
                                 Bergabung
                               </p>
                               <p className="text-xs font-medium">
@@ -330,27 +330,27 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                         </div>
 
                         {/* BODY */}
-                        <div className="px-5 py-4 space-y-4 bg-slate-50 text-sm">
+                        <div className="px-5 py-4 space-y-4 bg-background text-sm">
                           {/* GRID KPI RINGKAS */}
                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             {/* Lead periode */}
-                            <div className="rounded-xl bg-white shadow-sm p-3">
-                              <p className="text-xs font-medium text-gray-500">
+                            <div className="rounded-xl bg-secondary shadow-sm p-3">
+                              <p className="text-xs font-medium text-muted-foreground">
                                 Lead periode
                               </p>
-                              <p className="text-sm font-semibold text-gray-900">
+                              <p className="text-sm font-semibold text-foreground">
                                 {m.leadsPeriod}{" "}
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-muted-foreground">
                                   / {m.leadTarget}
                                 </span>
                               </p>
-                              <div className="mt-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                              <div className="mt-1 h-1.5 rounded-full bg-muted-foreground overflow-hidden">
                                 <div
                                   className={cn(
                                     "h-full rounded-full",
                                     percent(m.leadTarget, m.leadsPeriod) >= 100
                                       ? "bg-green-500"
-                                      : "bg-red-500"
+                                      : "bg-primary"
                                   )}
                                   style={{
                                     width: `${Math.min(
@@ -360,49 +360,49 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                                   }}
                                 />
                               </div>
-                              <p className="mt-1 text-xs text-gray-400">
+                              <p className="mt-1 text-xs text-muted-foreground">
                                 Lifetime: {m.leadsLifetime} lead
                               </p>
                             </div>
 
                             {/* Closing & revenue */}
-                            <div className="rounded-xl bg-white shadow-sm p-3">
-                              <p className="text-xs font-medium text-gray-500">
+                            <div className="rounded-xl bg-secondary shadow-sm p-3">
+                              <p className="text-xs font-medium text-muted-foreground">
                                 Closing & revenue
                               </p>
-                              <p className="text-sm font-semibold text-gray-900">
+                              <p className="text-sm font-semibold text-foreground">
                                 {m.closingPeriod} deal
                               </p>
-                              <p className="text-sm text-gray-700">
+                              <p className="text-sm text-muted-foreground">
                                 {formatRupiah(m.revenuePeriod)}
                               </p>
-                              <p className="mt-1 text-xs text-gray-400">
+                              <p className="mt-1 text-xs text-muted-foreground">
                                 Target: {formatRupiah(m.closingTarget)}
                               </p>
                             </div>
 
                             {/* Aktivitas hari ini */}
-                            <div className="rounded-xl bg-white shadow-sm p-3">
-                              <p className="text-xs font-medium text-gray-500">
+                            <div className="rounded-xl bg-secondary shadow-sm p-3">
+                              <p className="text-xs font-medium text-muted-foreground">
                                 Aktivitas hari ini
                               </p>
-                              <p className="text-sm text-gray-800 flex items-center gap-1">
+                              <p className="text-sm text-foreground flex items-center gap-1">
                                 <MessageCircle className="h-4 w-4" />
                                 FU selesai:{" "}
                                 <span className="font-semibold">
                                   {m.fuDoneToday}
                                 </span>
                               </p>
-                              <p className="text-sm text-gray-800">
+                              <p className="text-sm text-foreground">
                                 Terjadwal:{" "}
                                 <span className="font-semibold">
                                   {m.fuScheduledToday}
                                 </span>
                               </p>
-                              <p className="text-sm text-gray-800 flex items-center gap-1">
-                                <Flame className="h-4 w-4 text-red-500" />
+                              <p className="text-sm text-foreground flex items-center gap-1">
+                                <Flame className="h-4 w-4 text-primary" />
                                 Terlambat:{" "}
-                                <span className="font-semibold text-red-600">
+                                <span className="font-semibold text-primary">
                                   {m.fuOverdue}
                                 </span>
                               </p>
@@ -410,20 +410,20 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                           </div>
 
                           {/* DETAIL LEAD BERMASALAH */}
-                          <div className="rounded-xl bg-white shadow-sm p-3 space-y-2">
+                          <div className="rounded-xl bg-secondary shadow-sm p-3 space-y-2">
                             <p className="text-xs font-semibold text-gray-600">
                               Lead bermasalah
                             </p>
                             <div className="flex flex-wrap gap-2">
-                              <div className="flex-1 min-w-[110px] rounded-lg bg-red-50 px-3 py-2">
-                                <p className="text-xs text-red-700 font-medium">
+                              <div className="flex-1 min-w-[110px] rounded-lg bg-primary/10 px-3 py-2">
+                                <p className="text-xs text-primary font-medium">
                                   Overdue
                                 </p>
-                                <p className="text-sm font-semibold text-red-700">
+                                <p className="text-sm font-semibold text-primary">
                                   {m.overdueLeadCount}
                                 </p>
                               </div>
-                              <div className="flex-1 min-w-[110px] rounded-lg bg-amber-50 px-3 py-2">
+                              <div className="flex-1 min-w-[110px] rounded-lg bg-amber-500/10 px-3 py-2">
                                 <p className="text-xs text-amber-700 font-medium">
                                   Hot belum closing
                                 </p>
@@ -431,11 +431,11 @@ export function TeamSalesTable({ members, periodLabel }: TeamSalesTableProps) {
                                   {m.hotNotClosedCount}
                                 </p>
                               </div>
-                              <div className="flex-1 min-w-[110px] rounded-lg bg-slate-50 px-3 py-2">
-                                <p className="text-xs text-slate-700 font-medium">
+                              <div className="flex-1 min-w-[110px] rounded-lg bg-muted-foreground/10 px-3 py-2">
+                                <p className="text-xs text-foreground font-medium">
                                   Belum di-follow up
                                 </p>
-                                <p className="text-sm font-semibold text-slate-700">
+                                <p className="text-sm font-semibold text-foreground">
                                   {m.untouchedLeadCount}
                                 </p>
                               </div>

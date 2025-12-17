@@ -59,15 +59,19 @@ export function ProfileStats({ user, stats }: ProfileStatsProps) {
       {statsList.map((stat) => (
         <div
           key={stat.label}
-          className="bg-white rounded-xl p-4 shadow-md border-2 border-gray-100"
+          className="bg-secondary rounded-xl p-4 shadow-md border-2 border-border"
         >
           <div
             className={`w-12 h-12 rounded-lg ${stat.color} flex items-center justify-center mb-3`}
           >
             <stat.icon className="w-6 h-6 text-white" />
           </div>
-          <p className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</p>
-          <p className="text-sm text-gray-600 font-medium">{stat.label}</p>
+          <p className="text-2xl font-bold text-foreground mb-1">
+            {stat.value}
+          </p>
+          <p className="text-sm text-muted-foreground font-medium">
+            {stat.label}
+          </p>
         </div>
       ))}
     </div>

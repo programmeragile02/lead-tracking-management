@@ -43,7 +43,7 @@ export function JabatanList() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-10 text-gray-500 gap-2">
+      <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
         <Loader2 className="h-5 w-5 animate-spin" />
         <span>Memuat data jabatan...</span>
       </div>
@@ -52,14 +52,14 @@ export function JabatanList() {
 
   if (error) {
     return (
-      <div className="text-center text-sm text-red-600 py-10">{error}</div>
+      <div className="text-center text-sm text-primary py-10">{error}</div>
     );
   }
 
   if (roles.length === 0) {
     return (
-      <div className="text-center text-sm text-gray-500 py-10">
-        Belum ada data jabatan. Pastikan data jabatan sudah di-seed di database.
+      <div className="text-center text-sm text-muted-foreground py-10">
+        Belum ada data jabatan
       </div>
     );
   }
@@ -67,16 +67,16 @@ export function JabatanList() {
   return (
     <div className="space-y-4">
       {/* Ringkasan kecil di atas */}
-      <Card className="p-4 bg-gradient-to-r from-primary/5 via-white to-secondary/5 border-primary/10 flex flex-wrap items-center justify-between gap-3">
+      <Card className="p-4 bg-primary border-border/10 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-            <BriefcaseBusiness className="h-5 w-5 text-primary" />
+          <div className="w-9 h-9 rounded-full bg-secondary/10 flex items-center justify-center">
+            <BriefcaseBusiness className="h-5 w-5 text-foreground" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-800">
+            <p className="text-sm font-semibold text-foreground">
               Total Jabatan Terdaftar
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {roles.length} jabatan aktif digunakan di sistem
             </p>
           </div>

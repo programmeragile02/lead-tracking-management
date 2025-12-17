@@ -117,7 +117,7 @@ export default function SalesDashboardPage() {
             {greeting}, {userName}
           </h2>
           {error && (
-            <p className="text-sm text-red-500 mt-1">
+            <p className="text-sm text-primary mt-1">
               Gagal memuat data dashboard, coba refresh halaman.
             </p>
           )}
@@ -156,7 +156,7 @@ export default function SalesDashboardPage() {
         </div>
 
         {/* Tabs: Statistik vs Tindak Lanjut */}
-        <div className="rounded-2xl bg-white/70 border shadow-sm">
+        <div className="rounded-2xl bg-secondary/70 border shadow-sm">
           <div className="flex items-center border-b px-4 pt-3">
             <button
               type="button"
@@ -164,8 +164,8 @@ export default function SalesDashboardPage() {
               className={cn(
                 "px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors",
                 activeTab === "stats"
-                  ? "border-red-500 text-red-600"
-                  : "border-transparent text-gray-500 hover:text-gray-800"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
               Statistik
@@ -176,8 +176,8 @@ export default function SalesDashboardPage() {
               className={cn(
                 "px-4 py-2 text-sm font-semibold border-b-2 -mb-px transition-colors",
                 activeTab === "followup"
-                  ? "border-red-500 text-red-600"
-                  : "border-transparent text-gray-500 hover:text-gray-800"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               )}
             >
               Follow Up

@@ -35,19 +35,19 @@ export default function ManagerDashboardPage() {
         </div>
 
         <section>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Funnel Lead</h3>
+          <h3 className="text-lg font-bold text-foreground mb-4">Funnel Lead</h3>
           <FunnelChart />
         </section>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <section>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <h3 className="text-lg font-bold text-foreground mb-4">
               Tren Lead Mingguan
             </h3>
             <TrendChart type="leads" />
           </section>
           <section>
-            <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <h3 className="text-lg font-bold text-foreground mb-4">
               Tren Pendapatan Mingguan
             </h3>
             <TrendChart type="revenue" />
@@ -55,14 +55,14 @@ export default function ManagerDashboardPage() {
         </div>
 
         <section>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+          <h3 className="text-lg font-bold text-foreground mb-4">
             Performa berdasarkan Aksi
           </h3>
           <ChannelPerformanceTable />
         </section>
 
         <section>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">
+          <h3 className="text-lg font-bold text-foreground mb-4">
             Performa Terbaik
           </h3>
           <TopPerformersTable />

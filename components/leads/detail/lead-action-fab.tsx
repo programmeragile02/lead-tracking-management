@@ -161,7 +161,7 @@ export function LeadActionFab({
           "fixed bottom-20 right-4 lg:bottom-6 lg:right-8 w-14 h-14 rounded-full shadow-lg transition-all z-50",
           isOpen
             ? "bg-gray-700 hover:bg-gray-800 rotate-45"
-            : "bg-red-500 hover:bg-red-600"
+            : "bg-primary hover:bg-primary"
         )}
         onClick={() => setIsOpen(!isOpen)}
       >

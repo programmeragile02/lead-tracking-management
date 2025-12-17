@@ -36,7 +36,7 @@ export function BottomNav({ role }: BottomNavProps) {
   const navItems = role === "sales" ? salesNav : role === "team-leader" ? teamLeaderNav : managerNav
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t shadow-[0_-4px_12px_rgba(0,0,0,0.08)] lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t shadow-[0_-4px_12px_rgba(0,0,0,0.03)] lg:hidden">
       <div className="grid grid-cols-4 h-16">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -48,11 +48,11 @@ export function BottomNav({ role }: BottomNavProps) {
               href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 transition-all relative",
-                isActive ? "text-red-500" : "text-gray-500 hover:text-gray-700",
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {isActive && (
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-red-500 rounded-full" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-primary rounded-full" />
               )}
               <Icon className={cn("h-5 w-5", isActive && "scale-110")} />
               <span className={cn("text-xs font-medium", isActive && "font-semibold")}>{item.label}</span>

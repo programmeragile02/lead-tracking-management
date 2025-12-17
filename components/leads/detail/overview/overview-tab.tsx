@@ -88,7 +88,7 @@ export function OverviewTab(props: {
   } = props;
 
   return (
-    <Card>
+    <Card className="bg-secondary">
       <CardContent>
         <div className="space-y-4 text-sm">
           <div className="mb-2 flex items-center justify-end">

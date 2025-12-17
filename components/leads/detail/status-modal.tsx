@@ -35,7 +35,7 @@ export function StatusModal({
 }: StatusModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // ✅ aman SSR
+  // aman SSR
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -122,7 +122,7 @@ export function StatusModal({
     <div
       ref={modalRef}
       className={cn(
-        "fixed z-50 bg-white rounded-xl shadow-2xl",
+        "fixed z-50 bg-secondary rounded-xl shadow-2xl",
         isDragging && "cursor-grabbing"
       )}
       style={{
@@ -135,14 +135,14 @@ export function StatusModal({
       onTouchStart={handleTouchStart}
     >
       {/* HEADER */}
-      <div className="drag-handle flex items-center justify-between p-4 border-b cursor-grab bg-gray-50 rounded-t-xl">
+      <div className="drag-handle flex items-center justify-between p-4 border-b cursor-grab bg-secondary rounded-t-xl">
         <div className="flex items-center gap-2">
-          <GripVertical className="w-5 h-5 text-gray-400" />
-          <h3 className="font-semibold text-gray-900">Ubah Status Lead</h3>
+          <GripVertical className="w-5 h-5 text-muted-foreground" />
+          <h3 className="font-semibold text-foreground">Ubah Status Lead</h3>
         </div>
         <button
           onClick={() => onOpenChange(false)}
-          className="text-gray-400 hover:text-gray-600"
+          className="text-muted-foreground hover:text-muted-foreground"
         >
           <X className="w-5 h-5" />
         </button>
@@ -158,7 +158,7 @@ export function StatusModal({
             className={cn(
               "w-full justify-start text-white",
               s.color,
-              value === s.value && "ring-2 ring-offset-2 ring-gray-900"
+              value === s.value && "ring-2 ring-offset-0.5 ring-foreground"
             )}
           >
             <span className="w-3 h-3 rounded-full bg-white/30 mr-2" />
@@ -171,7 +171,7 @@ export function StatusModal({
       </div>
 
       <div className="px-4 pb-4">
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           Klik & drag header untuk memindahkan
         </p>
       </div>

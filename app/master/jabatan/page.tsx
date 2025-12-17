@@ -6,8 +6,8 @@ export default function JabatanMasterPage() {
     <DashboardLayout title="Master Jabatan">
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Master Jabatan</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-foreground">Master Jabatan</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Informasi hirarki jabatan dalam sistem: Manager, Team Leader, dan
             Sales.
           </p>

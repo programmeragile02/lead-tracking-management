@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { useRouter } from "next/navigation";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
   Select,
@@ -12,29 +11,29 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { useCurrentUser } from "@/hooks/use-current-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+/* =======================
+ * TYPES
+ * ======================= */
 type PeriodResponse = {
   ok: boolean;
   periods: string[];
   defaultPeriod: string;
 };
 
-type Status = { id: number; name: string; code: string };
 type SalesUser = { id: number; name: string };
 
 type ReportResponse = {
   ok: boolean;
   data: {
-    statuses: Status[];
     sales: SalesUser[];
-    matrix: Record<string, Record<string, number>>;
+    matrix: Record<string, number>;
     totalsPerSales: Record<string, number>;
   };
   error?: string;
@@ -46,48 +45,49 @@ type TeamLeaderResponse = {
   data: TeamLeader[];
 };
 
-export default function StatusReportPage() {
-  const router = useRouter();
+/* =======================
+ * PAGE
+ * ======================= */
+export default function LinkClickReportPage() {
   const { user, loading: loadingUser } = useCurrentUser();
 
-  const roleCode = user?.roleCode; // "MANAGER" | "TEAM_LEADER" | "SALES"
+  const roleCode = user?.roleCode;
   const isManager = roleCode === "MANAGER";
   const isTeamLeader = roleCode === "TEAM_LEADER";
 
-  // kalau mau: blokir sales dari halaman ini
-  if (!loadingUser && user && !isManager && !isTeamLeader) {
-    router.replace("/dashboard");
-  }
-
-  // periode: pakai endpoint yg sama dgn tahapan
+  /* ===== PERIOD ===== */
   const { data: periodRes, isLoading: loadingPeriod } = useSWR<PeriodResponse>(
-    "/api/reports/stage-periods",
+    "/api/reports/link-click-periods",
     fetcher
   );
 
   const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
   const [selectedTL, setSelectedTL] = useState<string | undefined>();
 
-  // list TL hanya untuk manager
+  // set default period sekali
+  if (!selectedPeriod && periodRes?.defaultPeriod) {
+    setSelectedPeriod(periodRes.defaultPeriod);
+  }
+
+  /* ===== TEAM LEADER (KHUSUS MANAGER) ===== */
   const { data: tlRes } = useSWR<TeamLeaderResponse>(
     isManager ? "/api/reports/team-leaders" : null,
     fetcher
   );
 
-  // set default periode sekali
-  if (!selectedPeriod && periodRes?.defaultPeriod) {
-    setSelectedPeriod(periodRes.defaultPeriod);
-  }
-
+  /* ===== REPORT URL ===== */
   const reportUrl = useMemo(() => {
     if (!selectedPeriod) return null;
+
     if (isManager) {
       if (!selectedTL) return null;
-      return `/api/reports/status-by-sales?period=${selectedPeriod}&teamLeaderId=${selectedTL}`;
+      return `/api/reports/link-clicks-by-sales?period=${selectedPeriod}&teamLeaderId=${selectedTL}`;
     }
+
     if (isTeamLeader) {
-      return `/api/reports/status-by-sales?period=${selectedPeriod}`;
+      return `/api/reports/link-clicks-by-sales?period=${selectedPeriod}`;
     }
+
     return null;
   }, [selectedPeriod, selectedTL, isManager, isTeamLeader]);
 
@@ -96,72 +96,27 @@ export default function StatusReportPage() {
     fetcher
   );
 
-  const statuses = reportRes?.data?.statuses ?? [];
   const sales = reportRes?.data?.sales ?? [];
   const matrix = reportRes?.data?.matrix ?? {};
   const totalsPerSales = reportRes?.data?.totalsPerSales ?? {};
 
-  const safeTotals = useMemo(() => {
-    const totals: Record<string, number> = { ...totalsPerSales };
-    statuses.forEach((st) => {
-      const row = matrix[String(st.id)] ?? {};
-      sales.forEach((s) => {
-        const sid = String(s.id);
-        if (totals[sid] === undefined) totals[sid] = totals[sid] ?? 0;
-        // server sudah hitung total, jadi di sini kita tidak tambah apa-apa lagi
-      });
-    });
-    return totals;
-  }, [statuses, sales, matrix, totalsPerSales]);
+  const grandTotal = Object.values(totalsPerSales).reduce((a, b) => a + b, 0);
 
-  // ===== Export Excel =====
-  const handleExportExcel = async () => {
-    if (!statuses.length || !sales.length) return;
-    const XLSX = await import("xlsx");
-
-    const headerRow = ["Status Lead", ...sales.map((s) => s.name)];
-    const rows: (string | number)[][] = [headerRow];
-
-    statuses.forEach((st) => {
-      const rowData: (string | number)[] = [`${st.name} (${st.code})`];
-      const row = matrix[String(st.id)] ?? {};
-      sales.forEach((s) => {
-        const val = row[String(s.id)] ?? 0;
-        rowData.push(val);
-      });
-      rows.push(rowData);
-    });
-
-    // baris kosong pemisah
-    rows.push([]);
-
-    // baris TOTAL
-    const totalRow: (string | number)[] = ["TOTAL"];
-    sales.forEach((s) => {
-      totalRow.push(safeTotals[String(s.id)] ?? 0);
-    });
-    rows.push(totalRow);
-
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Laporan Status");
-
-    const label = selectedPeriod?.replace("-", "_") ?? "PERIODE";
-    XLSX.writeFile(wb, `Laporan_Status_Lead_${label}.xlsx`);
-  };
-
+  /* =======================
+   * RENDER
+   * ======================= */
   return (
-    <DashboardLayout title="Laporan Status Lead">
+    <DashboardLayout title="Laporan Klik Link Lead">
       <div className="space-y-4">
-        {/* FILTER */}
+        {/* ================= FILTER ================= */}
         <Card className="border border-border bg-secondary">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-foreground">
+            <CardTitle className="text-base font-semibold">
               Filter Laporan
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-3">
-            {/* Periode */}
+            {/* PERIODE */}
             <div className="space-y-1">
               <div className="text-xs font-medium text-muted-foreground">
                 Periode Bulan
@@ -187,7 +142,7 @@ export default function StatusReportPage() {
               )}
             </div>
 
-            {/* Pilih TL hanya utk manager */}
+            {/* TEAM LEADER (MANAGER ONLY) */}
             {isManager && (
               <div className="space-y-1">
                 <div className="text-xs font-medium text-muted-foreground">
@@ -218,12 +173,13 @@ export default function StatusReportPage() {
           </CardContent>
         </Card>
 
-        {/* TABLE + EXPORT */}
+        {/* ================= TABLE ================= */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base font-semibold">
-              Tabel Report Status Lead
+              Tabel Laporan Klik Link
             </CardTitle>
+
             <Button
               variant="outline"
               size="sm"
@@ -231,7 +187,6 @@ export default function StatusReportPage() {
               disabled={
                 loadingUser || loadingReport || !reportRes?.ok || !sales.length
               }
-              onClick={handleExportExcel}
             >
               <FileDown className="h-4 w-4" />
               Export Excel
@@ -249,78 +204,50 @@ export default function StatusReportPage() {
               </div>
             ) : sales.length === 0 ? (
               <div className="text-sm text-muted-foreground">
-                Belum ada data untuk periode & filter yang dipilih.
+                Belum ada data klik link untuk periode ini.
               </div>
             ) : (
               <div className="w-full overflow-x-auto">
                 <table className="min-w-full border text-xs">
                   <thead className="bg-primary">
                     <tr>
-                      <th className="border px-3 py-2 text-left font-semibold text-foreground">
-                        Status
+                      <th className="border px-3 py-2 text-left font-semibold">
+                        Sales
                       </th>
-                      {sales.map((s) => (
-                        <th
-                          key={s.id}
-                          className="border px-3 py-2 text-center font-semibold"
-                        >
-                          {s.name}
-                        </th>
-                      ))}
+                      <th className="border px-3 py-2 text-center font-semibold">
+                        Total Klik
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {statuses.map((st, idx) => {
-                      const rowKey = String(st.id);
-                      const rowData = matrix[rowKey] ?? {};
+                    {sales.map((s, idx) => {
+                      const val = matrix[String(s.id)] ?? 0;
                       return (
                         <tr
-                          key={st.id}
-                          className={cn(
-                            "hover:bg-primary",
-                            idx % 2 === 1 && "bg-muted-foreground/30"
-                          )}
+                          key={s.id}
+                          className={idx % 2 === 1 ? "bg-muted/40" : ""}
                         >
-                          <td className="border px-3 py-2 font-medium">
-                            {st.name}{" "}
-                            <span className="text-[10px] text-muted-foreground">
-                              ({st.code})
-                            </span>
+                          <td className="border px-3 py-2">{s.name}</td>
+                          <td className="border px-3 py-2 text-center tabular-nums">
+                            {val > 0 ? val : "-"}
                           </td>
-                          {sales.map((s) => {
-                            const colKey = String(s.id);
-                            const value = rowData[colKey] ?? 0;
-                            return (
-                              <td
-                                key={s.id}
-                                className="border px-3 py-2 text-center tabular-nums"
-                              >
-                                {value > 0 ? value : "-"}
-                              </td>
-                            );
-                          })}
                         </tr>
                       );
                     })}
 
-                    {/* TOTAL per sales */}
+                    {/* TOTAL */}
                     <tr className="bg-primary">
                       <td className="border px-3 py-2 font-semibold">TOTAL</td>
-                      {sales.map((s) => (
-                        <td
-                          key={s.id}
-                          className="border px-3 py-2 text-center font-semibold tabular-nums"
-                        >
-                          {safeTotals[String(s.id)] ?? 0}
-                        </td>
-                      ))}
+                      <td className="border px-3 py-2 text-center font-semibold tabular-nums">
+                        {grandTotal}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
+
                 <p className="mt-2 text-[11px] text-muted-foreground">
-                  Angka menunjukkan berapa kali status lead berubah menjadi
-                  status tersebut dalam periode yang dipilih (berdasarkan
-                  riwayat perubahan status).
+                  Angka menunjukkan total klik link yang dilakukan lead pada
+                  periode yang dipilih (berdasarkan waktu klik).
                 </p>
               </div>
             )}
@@ -331,6 +258,9 @@ export default function StatusReportPage() {
   );
 }
 
+/* =======================
+ * HELPERS
+ * ======================= */
 function formatPeriodLabel(p: string) {
   const [y, m] = p.split("-");
   const bulan = [

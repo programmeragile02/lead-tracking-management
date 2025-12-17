@@ -81,7 +81,7 @@ export function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <RealtimeListener />
       {/* Mobile header */}
       {!isDesktop && (
@@ -99,7 +99,7 @@ export function DashboardLayout({
         <main className="flex-1 flex flex-col overflow-hidden">
           {/* Desktop header */}
           {isDesktop && (
-            <header className="sticky top-0 z-40 border-b border-slate-200 bg-red-50/80 backdrop-blur-sm">
+            <header className="sticky top-0 z-40 border-b border-border bg-secondary shadow-lg">
               <div className="flex items-center justify-between gap-4 px-6 py-3">
                 {/* Kiri: judul + tombol collapse */}
                 <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export function DashboardLayout({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="hidden lg:inline-flex h-8 w-8 text-slate-700 hover:bg-slate-100 hover:text-red-600"
+                    className="hidden lg:inline-flex h-8 w-8 text-muted-foreground hover:bg-card hover:text-primary"
                     onClick={() => setSidebarCollapsed((v) => !v)}
                     aria-label={
                       sidebarCollapsed ? "Perbesar sidebar" : "Perkecil sidebar"
@@ -129,10 +129,10 @@ export function DashboardLayout({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="relative text-slate-600 hover:bg-slate-100"
+                    className="relative text-muted-foreground hover:bg-foreground"
                   >
                     <Bell className="h-5 w-5" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full ring-1 ring-foreground" />
                   </Button>
 
                   <DropdownMenu>
@@ -140,10 +140,10 @@ export function DashboardLayout({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="rounded-full hover:bg-slate-100"
+                        className="rounded-full hover:bg-secondary0"
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-red-500/10 text-red-700 text-sm border border-red-100">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm border border-border">
                             {loading ? "…" : initials}
                           </AvatarFallback>
                         </Avatar>
@@ -151,37 +151,37 @@ export function DashboardLayout({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
                       align="end"
-                      className="w-56 bg-white border border-slate-200 shadow-xl"
+                      className="w-56 bg-card border-border shadow-xl"
                     >
-                      <DropdownMenuLabel className="bg-slate-50">
+                      <DropdownMenuLabel className="bg-secondary/50">
                         <div className="flex flex-col space-y-1">
-                          <p className="text-sm font-medium text-slate-900">
+                          <p className="text-sm font-medium text-foreground">
                             {loading ? "Memuat..." : displayName}
                           </p>
                           {displayEmail && (
-                            <p className="text-xs text-slate-500 truncate">
+                            <p className="text-xs text-muted-foreground">
                               {displayEmail}
                             </p>
                           )}
                         </div>
                       </DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-slate-200" />
+                      <DropdownMenuSeparator className="bg-border" />
                       <DropdownMenuItem
                         onClick={() => router.push("/profile")}
-                        className="text-slate-700 hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                        className="text-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
                       >
                         Profil
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => router.push("/settings")}
-                        className="text-slate-700 hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                        className="text-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
                       >
                         Pengaturan
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator className="bg-slate-200" />
+                      <DropdownMenuSeparator className="bg-border" />
                       <DropdownMenuItem
                         onClick={handleLogout}
-                        className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer font-semibold"
+                        className="text-primary hover:bg-primary hover:text-primary cursor-pointer font-semibold"
                       >
                         Keluar
                       </DropdownMenuItem>

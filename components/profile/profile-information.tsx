@@ -118,24 +118,24 @@ export function ProfileInformation({
     ];
 
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">
+      <div className="bg-secondary rounded-2xl p-6 shadow-md border-2 border-border">
+        <h3 className="text-lg font-bold text-foreground mb-4">
           Informasi Pribadi
         </h3>
         <div className="space-y-4">
           {fields.map((field) => (
             <div
               key={field.label}
-              className="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0"
+              className="flex items-start gap-3 pb-4 border-b border-muted-foreground/50 last:border-0"
             >
-              <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-                <field.icon className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 rounded-lg bg-primary/30 flex items-center justify-center flex-shrink-0">
+                <field.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 font-medium mb-1">
+                <p className="text-sm text-muted-foreground font-medium mb-1">
                   {field.label}
                 </p>
-                <p className="text-base font-semibold text-gray-900">
+                <p className="text-base font-semibold text-foreground">
                   {field.value}
                 </p>
               </div>
@@ -148,15 +148,15 @@ export function ProfileInformation({
 
   // MODE EDIT
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">
+    <div className="bg-secondary rounded-2xl p-6 shadow-md border-2 border-border">
+      <h3 className="text-lg font-bold text-foreground mb-4">
         Ubah Informasi Pribadi
       </h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-muted-foreground">
               Nama Lengkap
             </label>
             <Input
@@ -167,7 +167,7 @@ export function ProfileInformation({
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Email</label>
+            <label className="text-sm font-medium text-muted-foreground">Email</label>
             <Input
               type="email"
               value={form.email}
@@ -177,7 +177,7 @@ export function ProfileInformation({
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-muted-foreground">
               Nomor Telepon
             </label>
             <Input
@@ -188,7 +188,7 @@ export function ProfileInformation({
           </div>
 
           <div className="space-y-1 md:col-span-2">
-            <label className="text-sm font-medium text-gray-700">Alamat</label>
+            <label className="text-sm font-medium text-muted-foreground">Alamat</label>
             <Textarea
               rows={3}
               placeholder="Alamat domisili"

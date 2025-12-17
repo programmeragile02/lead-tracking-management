@@ -180,14 +180,13 @@ export default function LeadStageMasterPage() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Daftar Tahapan</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Kelola tahapan lead seperti Baru, FU 1, FU 2, Closing, dan
-              lain-lain.
+            <h2 className="text-2xl font-bold text-foreground">Daftar Tahapan</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Kelola tahapan lead seperti Kontak Awal, Meeting, Dan Lain-lain
             </p>
           </div>
           <Button
-            className="gradient-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
+            className="bg-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -197,10 +196,10 @@ export default function LeadStageMasterPage() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Cari nama atau kode tahap..."
-            className="pl-10 h-12 border-gray-300 focus:border-primary"
+            className="pl-10 h-12 border-muted-foreground focus:border-primary"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -239,7 +238,7 @@ export default function LeadStageMasterPage() {
                   onChange={(e) => handleChange("code", e.target.value)}
                   placeholder="Misal: KONTAK_AWAL"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Kode digunakan untuk laporan & filtering.
                 </p>
               </div>
@@ -251,7 +250,7 @@ export default function LeadStageMasterPage() {
                   value={form.order}
                   onChange={(e) => handleChange("order", e.target.value ?? 0)}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Urutan menentukan posisi tahapan di dropdown dan pipeline.
                 </p>
               </div>
@@ -261,7 +260,7 @@ export default function LeadStageMasterPage() {
                   <Label className="flex items-center gap-1">
                     Status Aktif
                   </Label>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Nonaktifkan jika tahapan sudah tidak digunakan lagi.
                   </p>
                 </div>
@@ -270,7 +269,7 @@ export default function LeadStageMasterPage() {
                     checked={form.isActive}
                     onCheckedChange={(v) => handleChange("isActive", v)}
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-foreground">
                     {form.isActive ? "Aktif" : "Nonaktif"}
                   </span>
                 </div>
@@ -285,7 +284,7 @@ export default function LeadStageMasterPage() {
                   Batal
                 </Button>
                 <Button
-                  className="gradient-primary text-white"
+                  className="bg-primary text-white"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >
@@ -322,7 +321,7 @@ export default function LeadStageMasterPage() {
               <AlertDialogAction
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-primary hover:bg-primary/50 text-white"
               >
                 {isDeleting ? "Memproses..." : "Ya, nonaktifkan"}
               </AlertDialogAction>

@@ -181,16 +181,16 @@ export default function LeadStatusMasterPage() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-foreground">
               Daftar Status Lead
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Kelola status lead seperti Cold, Warm, Hot, Lost, Won, dan
               lain-lain.
             </p>
           </div>
           <Button
-            className="gradient-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
+            className="bg-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -242,7 +242,7 @@ export default function LeadStatusMasterPage() {
                   onChange={(e) => handleChange("code", e.target.value)}
                   placeholder="Misal: COLD, WARM, HOT, LOST, WON"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Kode digunakan untuk laporan & filtering (usahakan konsisten).
                 </p>
               </div>
@@ -254,7 +254,7 @@ export default function LeadStatusMasterPage() {
                   value={form.order}
                   onChange={(e) => handleChange("order", e.target.value ?? 0)}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Urutan menentukan posisi status di dropdown dan laporan.
                 </p>
               </div>
@@ -264,7 +264,7 @@ export default function LeadStatusMasterPage() {
                   <Label className="flex items-center gap-1">
                     Status Aktif
                   </Label>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Nonaktifkan jika status sudah tidak digunakan lagi.
                   </p>
                 </div>
@@ -273,7 +273,7 @@ export default function LeadStatusMasterPage() {
                     checked={form.isActive}
                     onCheckedChange={(v) => handleChange("isActive", v)}
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-foreground">
                     {form.isActive ? "Aktif" : "Nonaktif"}
                   </span>
                 </div>
@@ -288,7 +288,7 @@ export default function LeadStatusMasterPage() {
                   Batal
                 </Button>
                 <Button
-                  className="gradient-primary text-white"
+                  className="bg-primary text-white"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >

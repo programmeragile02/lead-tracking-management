@@ -9,8 +9,8 @@ export default function EmployeeMasterPage() {
     <DashboardLayout title="Master Pegawai">
       <div className="space-y-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Master Pegawai</h2>
-          <p className="text-sm text-gray-500 mt-1">
+          <h2 className="text-2xl font-bold text-foreground">Master Pegawai</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Kelola struktur tim mulai dari Manager, Team Leader, hingga Sales
           </p>
         </div>

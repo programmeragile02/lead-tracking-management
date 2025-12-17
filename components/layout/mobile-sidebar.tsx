@@ -47,11 +47,9 @@ export function MobileSidebar({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-72 p-0 bg-white flex flex-col">
-        <SheetHeader className="px-4 py-4 border-b border-slate-200 bg-red-100">
-          <SheetTitle className="text-red-800 text-base">
-            Menu Navigasi
-          </SheetTitle>
+      <SheetContent side="left" className="w-72 p-0 bg-sidebar flex flex-col">
+        <SheetHeader className="px-4 py-4 border-b border-border bg-secondary">
+          <SheetTitle className="text-foreground">Menu Navigasi</SheetTitle>
         </SheetHeader>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
@@ -72,8 +70,8 @@ export function MobileSidebar({
                   className={cn(
                     "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all",
                     active
-                      ? "bg-red-50 text-red-700 font-semibold border border-red-100"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-red-700"
+                      ? "bg-secondary text-white font-semibold border"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:shadow-sm"
                   )}
                 >
                   {Icon && (
@@ -81,8 +79,8 @@ export function MobileSidebar({
                       className={cn(
                         "h-5 w-5",
                         active
-                          ? "text-red-500"
-                          : "text-slate-400 group-hover:text-red-500"
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-primary"
                       )}
                     />
                   )}
@@ -102,8 +100,8 @@ export function MobileSidebar({
                   className={cn(
                     "w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm transition-all",
                     active
-                      ? "bg-red-50 text-red-700 font-semibold border border-red-100"
-                      : "text-slate-600 hover:bg-slate-50 hover:text-red-700"
+                      ? "bg-secondary text-white font-semibold border"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:shadow-sm"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -111,13 +109,13 @@ export function MobileSidebar({
                       <Icon
                         className={cn(
                           "h-5 w-5",
-                          active ? "text-red-500" : "text-slate-400"
+                          active ? "text-primary" : "text-muted-foreground"
                         )}
                       />
                     )}
                     <span className="truncate font-medium">{item.label}</span>
                   </div>
-                  <span className="text-slate-400">
+                  <span className="text-muted-foreground">
                     {isOpen ? (
                       <ChevronDown className="h-4 w-4" />
                     ) : (
@@ -141,8 +139,8 @@ export function MobileSidebar({
                           className={cn(
                             "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-all",
                             childActive
-                              ? "bg-red-50 text-red-700 font-semibold border border-red-100"
-                              : "text-slate-600 hover:bg-slate-50 hover:text-red-700"
+                              ? "bg-secondary text-white font-semibold border"
+                              : "text-muted-foreground hover:bg-secondary hover:text-foreground hover:shadow-sm"
                           )}
                         >
                           {ChildIcon && (
@@ -150,8 +148,8 @@ export function MobileSidebar({
                               className={cn(
                                 "h-4 w-4 flex-shrink-0",
                                 childActive
-                                  ? "text-red-500"
-                                  : "text-slate-300 group-hover:text-red-500"
+                                  ? "text-primary"
+                                  : "text-muted-foreground group-hover:text-primary"
                               )}
                             />
                           )}

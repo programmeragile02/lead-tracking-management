@@ -234,8 +234,8 @@ export default function LeadsPage() {
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium border inline-flex items-center",
                 activeStatusCode === "ALL"
-                  ? "bg-red-500 text-white border-red-500"
-                  : "bg-red-50 text-red-700 border-red-100"
+                  ? "bg-primary text-white border-primary"
+                  : "bg-secondary text-muted-foreground"
               )}
               onClick={() => {
                 setActiveStatusCode("ALL");
@@ -248,7 +248,7 @@ export default function LeadsPage() {
                   "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
                   activeStatusCode === "ALL"
                     ? "bg-white/20 text-white"
-                    : "bg-red-100 text-red-700"
+                    : "bg-muted-foreground text-foreground"
                 )}
               >
                 {allCount}
@@ -267,8 +267,8 @@ export default function LeadsPage() {
                   className={cn(
                     "px-4 py-1.5 rounded-full text-sm font-medium border inline-flex items-center",
                     isActive
-                      ? "bg-red-500 text-white border-red-500"
-                      : "bg-red-50 text-red-700 border-red-100"
+                      ? "bg-primary text-white border-primary"
+                      : "bg-secondary text-muted-foreground"
                   )}
                   onClick={() => {
                     setActiveStatusCode(st.code);
@@ -281,7 +281,7 @@ export default function LeadsPage() {
                       "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
                       isActive
                         ? "bg-white/20 text-white"
-                        : "bg-red-100 text-red-700"
+                    : "bg-muted-foreground text-foreground"
                     )}
                   >
                     {count}

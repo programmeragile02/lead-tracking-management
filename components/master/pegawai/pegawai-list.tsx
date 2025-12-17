@@ -430,12 +430,12 @@ export function EmployeeList() {
           onSubmit={handleSearchSubmit}
           className="w-full md:max-w-md relative"
         >
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nama pegawai, email, atau jabatan..."
-            className="pl-10 h-11 border-gray-300 focus:border-primary"
+            className="pl-10 h-11 border-muted-foreground focus:border-primary"
           />
         </form>
 
@@ -446,7 +446,7 @@ export function EmployeeList() {
               size="sm"
               onClick={() => setViewMode("card")}
               className={
-                viewMode === "card" ? "gradient-primary text-white" : ""
+                viewMode === "card" ? "bg-primary text-white" : ""
               }
             >
               <LayoutGrid className="h-4 w-4 mr-2" />
@@ -457,7 +457,7 @@ export function EmployeeList() {
               size="sm"
               onClick={() => setViewMode("table")}
               className={
-                viewMode === "table" ? "gradient-primary text-white" : ""
+                viewMode === "table" ? "bg-primary text-white" : ""
               }
             >
               <List className="h-4 w-4 mr-2" />
@@ -466,7 +466,7 @@ export function EmployeeList() {
           </div>
 
           <Button
-            className="gradient-primary text-white shadow-lg hover:shadow-xl"
+            className="bg-primary text-white shadow-lg hover:shadow-xl"
             onClick={openCreateForm}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -477,18 +477,18 @@ export function EmployeeList() {
 
       {/* List */}
       {loading && (
-        <div className="flex items-center justify-center py-10 text-gray-500 gap-2">
+        <div className="flex items-center justify-center py-10 text-muted-foreground gap-2">
           <Loader2 className="h-5 w-5 animate-spin" />
           <span>Memuat data pegawai...</span>
         </div>
       )}
 
       {error && !loading && (
-        <div className="text-center text-sm text-red-600 py-4">{error}</div>
+        <div className="text-center text-sm text-primary py-4">{error}</div>
       )}
 
       {!loading && !error && employees.length === 0 && (
-        <div className="text-center text-sm text-gray-500 py-10">
+        <div className="text-center text-sm text-muted-foreground py-10">
           Belum ada data pegawai.
         </div>
       )}
@@ -518,7 +518,7 @@ export function EmployeeList() {
 
           {/* Pagination */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-6 text-sm">
-            <div className="text-gray-500">
+            <div className="text-muted-foreground">
               {total > 0 && (
                 <>
                   Menampilkan{" "}
@@ -544,7 +544,7 @@ export function EmployeeList() {
                 Sebelumnya
               </Button>
 
-              <span className="text-gray-600">
+              <span className="text-muted-foreground">
                 Halaman <span className="font-semibold">{page}</span> /{" "}
                 {totalPages}
               </span>
@@ -707,7 +707,7 @@ export function EmployeeList() {
 
               {photoPreview || formState.photoPath ? (
                 <div className="flex flex-col md:flex-row gap-4 items-start">
-                  <div className="relative w-full md:w-32 h-32 rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                  <div className="relative w-full md:w-32 h-32 rounded-xl overflow-hidden border border-border bg-muted-foreground">
                     <img
                       src={photoPreview || formState.photoPath || ""}
                       alt={formState.name || "Foto pegawai"}
@@ -715,7 +715,7 @@ export function EmployeeList() {
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       {photoPreview
                         ? "Foto baru siap disimpan."
                         : "Foto pegawai saat ini. Kamu bisa mengganti atau menghapus foto."}
@@ -733,7 +733,7 @@ export function EmployeeList() {
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="text-red-600 hover:bg-red-50"
+                        className="text-primary hover:bg-red-50"
                         onClick={() => {
                           setPhotoFile(null);
                           setPhotoPreview(null);
@@ -750,7 +750,7 @@ export function EmployeeList() {
                 </div>
               ) : (
                 <div
-                  className="w-full border border-dashed border-gray-300 rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
+                  className="w-full border border-dashed border-muted-foreground rounded-xl p-4 md:p-5 flex flex-col md:flex-row items-center gap-4 cursor-pointer hover:border-primary/60 hover:bg-primary/5 transition-colors"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/10">
@@ -769,10 +769,10 @@ export function EmployeeList() {
                     </svg>
                   </div>
                   <div className="flex-1 text-center md:text-left space-y-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-foreground">
                       Upload foto pegawai
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Klik di sini untuk memilih file gambar. Format JPG/PNG,
                       ukuran maksimal 2MB.
                     </p>
@@ -796,7 +796,7 @@ export function EmployeeList() {
               <Label htmlFor="password">
                 Password{" "}
                 {formMode === "edit" && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-muted-foreground">
                     (kosongkan jika tidak ingin mengubah)
                   </span>
                 )}
@@ -826,7 +826,7 @@ export function EmployeeList() {
               </Button>
               <Button
                 type="submit"
-                className="gradient-primary text-white"
+                className="bg-primary text-white"
                 disabled={submitting}
               >
                 {submitting && (
@@ -848,7 +848,7 @@ export function EmployeeList() {
               Pegawai akan dihapus tidak permanen dan dipindahkan ke sampah
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 text-sm text-gray-700">
+          <div className="py-4 text-sm text-muted-foreground">
             {deleteTarget ? (
               <>
                 Apakah Anda yakin ingin menghapus pegawai{" "}

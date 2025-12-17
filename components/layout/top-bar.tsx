@@ -62,7 +62,7 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-red-100">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-secondary">
       <div className="flex h-14 items-center justify-between px-4">
         {/* Left */}
         <div className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
               variant="ghost"
               size="icon"
               onClick={() => router.back()}
-              className="lg:hidden text-slate-600 hover:bg-slate-100"
+              className="lg:hidden text-muted-foreground hover:bg-foreground"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
@@ -80,7 +80,7 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
               variant="ghost"
               size="icon"
               onClick={onMenuClick}
-              className="lg:hidden text-slate-600 hover:bg-slate-100"
+              className="lg:hidden text-muted-foreground hover:bg-foreground"
             >
               <Menu className="h-5 w-5" />
             </Button>
@@ -92,7 +92,7 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
         </div>
 
         {/* Center - Mobile title */}
-        <h1 className="absolute left-1/2 -translate-x-1/2 font-semibold text-sm sm:hidden text-red-800">
+        <h1 className="absolute left-1/2 -translate-x-1/2 font-semibold text-sm sm:hidden text-primary">
           {title}
         </h1>
 
@@ -101,10 +101,10 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="relative text-slate-600 hover:bg-slate-100"
+            className="relative text-muted-foreground hover:bg-foreground"
           >
             <Bell className="h-5 w-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white" />
+            <span className="absolute top-1.5 right-2.5 w-2 h-2 bg-primary rounded-full ring-1 ring-foreground" />
           </Button>
 
           <DropdownMenu>
@@ -112,10 +112,10 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="rounded-full hover:bg-slate-100"
+                className="rounded-full hover:bg-secondary"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-red-500/10 text-red-700 text-sm border border-red-100">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm border border-border">
                     {loading ? "…" : initials}
                   </AvatarFallback>
                 </Avatar>
@@ -123,37 +123,37 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-56 bg-white border border-slate-200 shadow-xl"
+              className="w-56 bg-card border border-border shadow-xl"
             >
-              <DropdownMenuLabel className="bg-slate-50">
+              <DropdownMenuLabel className="bg-secondary/50">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-medium text-foreground">
                     {loading ? "Memuat..." : displayName}
                   </p>
                   {displayEmail && (
-                    <p className="text-xs text-slate-500 truncate">
+                    <p className="text-xs text-muted-foreground">
                       {displayEmail}
                     </p>
                   )}
                 </div>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-slate-200" />
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={() => router.push("/profile")}
-                className="text-slate-700 hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                className="text-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
               >
                 Profil
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => router.push("/settings")}
-                className="text-slate-700 hover:bg-slate-100 hover:text-slate-900 cursor-pointer"
+                className="text-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
               >
                 Pengaturan
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-slate-200" />
+              <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={handleLogout}
-                className="text-red-600 hover:bg-red-50 hover:text-red-700 cursor-pointer font-semibold"
+                className="text-primary hover:bg-destructive/10 hover:text-destructive cursor-pointer font-semibold"
               >
                 Keluar
               </DropdownMenuItem>

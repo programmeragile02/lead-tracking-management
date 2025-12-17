@@ -53,9 +53,9 @@ export function JabatanCard({ role }: { role: JabatanItem }) {
   const Icon = getRoleIcon(role.code);
 
   return (
-    <Card className="relative p-5 bg-white border-gray-200 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
+    <Card className="relative p-5 bg-secondary border-border shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden">
       {/* highlight strip */}
-      <div className="absolute inset-x-0 top-0 h-1 gradient-primary" />
+      <div className="absolute inset-x-0 top-0 h-1 bg-primary" />
 
       <div className="flex items-start gap-4">
         <div className="mt-1">
@@ -67,20 +67,20 @@ export function JabatanCard({ role }: { role: JabatanItem }) {
         <div className="flex-1 space-y-2">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-gray-900 text-base">
+              <h3 className="font-semibold text-foreground text-base">
                 {getRoleLabel(role.code)}
               </h3>
               <Badge className={roleBadgeClass(role.code)}>{role.code}</Badge>
             </div>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {role.description || getRoleTagline(role.code)}
             </p>
           </div>
 
           <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs">
             <div className="flex flex-col">
-              <span className="text-gray-500">Jumlah Pegawai</span>
-              <span className="font-semibold text-gray-900">
+              <span className="text-muted-foreground">Jumlah Pegawai</span>
+              <span className="font-semibold text-foreground">
                 {role.totalUsers} pegawai
               </span>
             </div>

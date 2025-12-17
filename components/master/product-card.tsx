@@ -17,7 +17,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
   const imgSrc = product.photo || "/placeholder.svg";
 
   return (
-    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-gray-200 bg-white group">
+    <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 border-border bg-secondary group">
       <div className="relative h-48 overflow-hidden">
         {product.photo ? (
           <Image
@@ -27,7 +27,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
             className="object-cover group-hover:scale-110 transition-transform duration-300"
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-400">
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
             <ImageIcon className="h-10 w-10" />
           </div>
         )}
@@ -37,7 +37,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
             className={
               product.isAvailable
                 ? "bg-green-500 text-white shadow-md"
-                : "bg-gray-400 text-white shadow-md"
+                : "bg-buted-foreground text-white shadow-md"
             }
           >
             {product.isAvailable ? "Tersedia" : "Tidak tersedia"}
@@ -53,12 +53,12 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
           >
             {product.category}
           </Badge>
-          <h3 className="font-bold text-lg text-gray-900 line-clamp-2 leading-tight">
+          <h3 className="font-bold text-lg text-foreground line-clamp-2 leading-tight">
             {product.name}
           </h3>
         </div>
 
-        <p className="text-sm text-gray-600 line-clamp-2">
+        <p className="text-sm text-muted-foreground line-clamp-2">
           {product.description || "Tidak ada deskripsi"}
         </p>
 
@@ -66,7 +66,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-black text-black hover:bg-black/5 bg-transparent"
+            className="flex-1 border-muted-foreground text-muted-foreground hover:bg-black/10 bg-transparent"
             onClick={onEdit}
           >
             <Edit className="h-4 w-4 mr-1" />
@@ -75,7 +75,7 @@ export function ProductCard({ product, onEdit, onDelete }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 border-red-300 text-red-600 hover:bg-red-50 bg-transparent"
+            className="flex-1 border-primary text-foreground hover:bg-primary/50 bg-primary"
             onClick={onDelete}
           >
             <Trash2 className="h-4 w-4 mr-1" />
