@@ -73,13 +73,13 @@ export function StageModal({ open, onOpenChange, children }: StageModalProps) {
     <div
       ref={modalRef}
       className={cn(
-        "fixed z-50 w-[300px] max-h-[80vh] rounded-xl border bg-background shadow-2xl",
+        "fixed z-50 w-[300px] max-h-[90vh] rounded-xl border bg-background shadow-2xl",
         isDragging && "cursor-grabbing"
       )}
       style={{
         left: position.x,
         top: position.y,
-        touchAction: "none", // 🔥 penting untuk mobile
+        touchAction: "none", // penting untuk mobile
       }}
       onMouseDown={(e) => {
         if ((e.target as HTMLElement).closest(".drag-handle")) {

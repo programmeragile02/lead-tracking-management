@@ -12,11 +12,11 @@ interface FollowUpCardProps {
 
 export function FollowUpCard({ leadName, product, followUpType, time, status }: FollowUpCardProps) {
   return (
-    <div className="bg-gradient-to-br from-white to-blue-50/30 rounded-xl p-4 shadow-md border-2 border-white hover:shadow-lg transition-shadow">
+    <div className="bg-secondary rounded-xl p-4 shadow-md border-2 border-border hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h4 className="font-semibold text-gray-900 mb-1">{leadName}</h4>
-          <p className="text-sm text-gray-600 font-medium">
+          <h4 className="font-semibold text-foreground mb-1">{leadName}</h4>
+          <p className="text-sm text-muted-foreground font-medium">
             {product} • <span className="font-semibold text-purple-600">{followUpType}</span>
           </p>
         </div>
@@ -25,8 +25,8 @@ export function FollowUpCard({ leadName, product, followUpType, time, status }: 
         </Badge>
       </div>
 
-      <div className="flex items-center justify-between pt-3 border-t-2 border-gray-100">
-        <span className="text-sm font-bold text-gray-700">{time}</span>
+      <div className="flex items-center justify-between pt-3 border-t-2 border-border">
+        <span className="text-sm font-bold text-foreground">{time}</span>
         <div className="flex gap-2">
           <Button
             size="sm"

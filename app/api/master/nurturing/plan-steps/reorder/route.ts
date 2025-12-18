@@ -29,15 +29,21 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
 
-  // Update order dalam transaction
-  await prisma.$transaction(
-    stepIds.map((id, idx) =>
-      prisma.nurturingPlanStep.update({
-        where: { id },
-        data: { order: idx + 1 },
-      })
-    )
-  );
+  await prisma.$transaction(async (tx) => {
+    // Geser semua order ke range aman (1000+)
+    await tx.nurturingPlanStep.updateMany({
+      where: { planId },
+      data: { order: { increment: 1000 } },
+    });
+
+    // Set order final sesuai urutan baru
+    for (let i = 0; i < stepIds.length; i++) {
+      await tx.nurturingPlanStep.update({
+        where: { id: stepIds[i] },
+        data: { order: i + 1 },
+      });
+    }
+  });
 
   return NextResponse.json({ ok: true });
 }

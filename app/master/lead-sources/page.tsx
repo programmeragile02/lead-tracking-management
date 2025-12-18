@@ -1,4 +1,3 @@
-// app/master/sumber-lead/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -184,16 +183,16 @@ export default function LeadSourceMasterPage() {
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-foreground">
               Daftar Sumber Lead
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Kelola sumber lead seperti Instagram Ads, WhatsApp, Website,
-              Referral, dan lain-lain.
+            <p className="text-sm text-muted-foreground mt-1">
+              Kelola sumber lead seperti Instagram Ads, WhatsApp, Website, dan
+              lain-lain
             </p>
           </div>
           <Button
-            className="gradient-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
+            className="bg-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -203,10 +202,10 @@ export default function LeadSourceMasterPage() {
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Cari nama atau kode sumber lead..."
-            className="pl-10 h-12 border-gray-300 focus:border-primary"
+            className="pl-10 h-12 border-muted-foreground focus:border-primary"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -245,7 +244,7 @@ export default function LeadSourceMasterPage() {
                   onChange={(e) => handleChange("code", e.target.value)}
                   placeholder="Misal: IG_ADS, WHATSAPP, WEB"
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Kode digunakan di laporan & filter (otomatis di-uppercase).
                 </p>
               </div>
@@ -264,7 +263,7 @@ export default function LeadSourceMasterPage() {
                   <Label className="flex items-center gap-1">
                     Status Aktif
                   </Label>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted-foreground">
                     Nonaktifkan jika sumber lead sudah tidak digunakan.
                   </p>
                 </div>
@@ -273,7 +272,7 @@ export default function LeadSourceMasterPage() {
                     checked={form.isActive}
                     onCheckedChange={(v) => handleChange("isActive", v)}
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-foreground">
                     {form.isActive ? "Aktif" : "Nonaktif"}
                   </span>
                 </div>
@@ -288,7 +287,7 @@ export default function LeadSourceMasterPage() {
                   Batal
                 </Button>
                 <Button
-                  className="gradient-primary text-white"
+                  className="bg-primary text-white"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                 >
@@ -325,7 +324,7 @@ export default function LeadSourceMasterPage() {
               <AlertDialogAction
                 onClick={confirmDelete}
                 disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-primary hover:bg-primary/50 text-white"
               >
                 {isDeleting ? "Memproses..." : "Ya, nonaktifkan"}
               </AlertDialogAction>

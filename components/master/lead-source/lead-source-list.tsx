@@ -66,9 +66,9 @@ export function LeadSourceList({
   return (
     <div className="space-y-4">
       {isLoading ? (
-        <div className="text-sm text-gray-500">Memuat data sumber lead...</div>
+        <div className="text-sm text-muted-foreground">Memuat data sumber lead...</div>
       ) : items.length === 0 ? (
-        <div className="border border-dashed rounded-xl p-8 text-center text-gray-500">
+        <div className="border border-dashed rounded-xl p-8 text-center text-muted-foreground">
           Belum ada data sumber lead. Tambahkan sumber baru terlebih dahulu.
         </div>
       ) : (
@@ -77,7 +77,7 @@ export function LeadSourceList({
 
           {/* Pagination */}
           <div className="flex flex-col md:flex-row items-center justify-between gap-3 mt-6 text-sm">
-            <div className="text-gray-500">
+            <div className="text-muted-foreground">
               {total > 0 && (
                 <>
                   Menampilkan{" "}
@@ -103,7 +103,7 @@ export function LeadSourceList({
                 Sebelumnya
               </Button>
 
-              <span className="text-gray-600">
+              <span className="text-muted-foreground">
                 Halaman <span className="font-semibold">{currentPage}</span> /{" "}
                 {totalPages}
               </span>

@@ -10,7 +10,7 @@ interface LeadCardProps {
 
 export function LeadCard({ leadName, channel, time, status }: LeadCardProps) {
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border">
+    <div className="bg-secondary rounded-xl p-4 shadow-sm border">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <h4 className="font-semibold mb-1">{leadName}</h4>

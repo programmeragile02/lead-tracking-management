@@ -17,7 +17,7 @@ export function PlaceholderRow(props: {
 
   return (
     <div className="flex items-start justify-between gap-3">
-      <code className="font-bold bg-gray-100 px-1 rounded">{props.code}</code>
+      <code className="font-bold bg-muted-foreground text-card px-1 rounded">{props.code}</code>
 
       <div className="flex items-center gap-2">
         {missingCount === 0 ? (

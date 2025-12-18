@@ -21,21 +21,21 @@ interface Props {
 
 export function LeadSourceTable({ items, onEdit, onDelete }: Props) {
   return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white shadow-sm">
+    <div className="rounded-xl border border-border overflow-hidden bg-secondary shadow-sm">
       <Table>
         <TableHeader>
-          <TableRow className="bg-gradient-subtle hover:bg-gradient-subtle">
-            <TableHead className="font-semibold text-gray-900">
+          <TableRow className="bg-primary hover:bg-primary">
+            <TableHead className="font-semibold text-foreground">
               Nama Sumber
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">Kode</TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">Kode</TableHead>
+            <TableHead className="font-semibold text-foreground">
               Keterangan
             </TableHead>
-            <TableHead className="font-semibold text-gray-900">
+            <TableHead className="font-semibold text-foreground">
               Status
             </TableHead>
-            <TableHead className="font-semibold text-gray-900 text-right">
+            <TableHead className="font-semibold text-foreground text-right">
               Aksi
             </TableHead>
           </TableRow>
@@ -44,10 +44,10 @@ export function LeadSourceTable({ items, onEdit, onDelete }: Props) {
           {items.map((item) => (
             <TableRow
               key={item.id}
-              className="hover:bg-gray-50 transition-colors"
+              className="hover:bg-muted-foreground/5 transition-colors"
             >
               <TableCell>
-                <p className="font-semibold text-gray-900">{item.name}</p>
+                <p className="font-semibold text-foreground">{item.name}</p>
               </TableCell>
               <TableCell>
                 <Badge
@@ -58,7 +58,7 @@ export function LeadSourceTable({ items, onEdit, onDelete }: Props) {
                 </Badge>
               </TableCell>
               <TableCell className="max-w-xs">
-                <p className="text-sm text-gray-700">
+                <p className="text-sm text-muted-foreground">
                   {item.description || "-"}
                 </p>
               </TableCell>
@@ -66,7 +66,7 @@ export function LeadSourceTable({ items, onEdit, onDelete }: Props) {
                 {item.isActive ? (
                   <Badge className="bg-green-500 text-white">Aktif</Badge>
                 ) : (
-                  <Badge className="bg-gray-400 text-white">Nonaktif</Badge>
+                  <Badge className="bg-muted-foreground text-white">Nonaktif</Badge>
                 )}
               </TableCell>
               <TableCell className="text-right">
@@ -74,7 +74,7 @@ export function LeadSourceTable({ items, onEdit, onDelete }: Props) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-black hover:bg-black/10"
+                    className="text-muted-foreground hover:bg-muted-foreground/10"
                     onClick={() => onEdit(item)}
                   >
                     <Edit className="h-4 w-4" />
@@ -82,7 +82,7 @@ export function LeadSourceTable({ items, onEdit, onDelete }: Props) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="text-red-600 hover:bg-red-50"
+                    className="text-primary hover:bg-primary/50"
                     onClick={() => onDelete(item)}
                   >
                     <Trash2 className="h-4 w-4" />

@@ -32,7 +32,7 @@ export async function GET(
 
   if (!plan)
     return NextResponse.json(
-      { ok: false, error: "Plan tidak ditemukan" },
+      { ok: false, error: "Urutan tidak ditemukan" },
       { status: 404 }
     );
   return NextResponse.json({ ok: true, data: plan });

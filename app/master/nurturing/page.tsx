@@ -11,17 +11,22 @@ export default function MasterNurturingPage() {
   return (
     <DashboardLayout title="Master Nurturing">
       <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          Kelola konten nurturing mulai dari Kategori →
-          Topik/Judul → Template A/B → Urutan
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Master Nurturing
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Kelola konten nurturing mulai dari Kategori → Topik/Judul → Template
+            A/B → Urutan
+          </p>
         </div>
 
         <Tabs defaultValue="categories" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full h-20 md:h-fit grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="categories">Kategori</TabsTrigger>
             <TabsTrigger value="topics">Topik / Judul</TabsTrigger>
             <TabsTrigger value="templates">Template A/B</TabsTrigger>
-            <TabsTrigger value="plans">Plan</TabsTrigger>
+            <TabsTrigger value="plans">Urutan Nurturing</TabsTrigger>
           </TabsList>
 
           <TabsContent value="categories" className="pt-4">

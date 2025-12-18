@@ -141,19 +141,6 @@ export function TemplatePanel() {
               </SelectContent>
             </Select>
           </div>
-
-          {/* <Button
-            variant="secondary"
-            className="w-full"
-            onClick={loadFromCurrent}
-            disabled={!topicId}
-          >
-            Muat dari data tersimpan
-          </Button> */}
-
-          <div className="text-xs text-muted-foreground">
-            Kamu bisa menyimpan body kosong (nullable) kalau ingin judul dulu.
-          </div>
         </CardContent>
       </Card>
 

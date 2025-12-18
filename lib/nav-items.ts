@@ -155,7 +155,6 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       href: "/organisasi",
       icon: Network,
     },
-    { id: "leads", label: "Lead", href: "/leads", icon: Users },
     {
       id: "laporan",
       label: "Laporan",

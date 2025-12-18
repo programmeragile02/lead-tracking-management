@@ -14,7 +14,7 @@ export function ActivityItem({ time, type, leadName, status, note }: ActivityIte
     if (status === "Hot") return "text-red-600 bg-red-50 border-red-200"
     if (status === "Warm") return "text-orange-600 bg-orange-50 border-orange-200"
     if (status === "Cold") return "text-blue-600 bg-blue-50 border-blue-200"
-    return "text-gray-600 bg-gray-50 border-gray-200"
+    return "text-muted-foreground bg-gray-50 border-gray-200"
   }
 
   return (
@@ -37,16 +37,16 @@ export function ActivityItem({ time, type, leadName, status, note }: ActivityIte
 
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm text-gray-600">Lead:</span>
+            <span className="text-sm text-muted-foreground">Lead:</span>
             <span className="font-semibold text-gray-900">{leadName}</span>
             <span className="text-gray-400">•</span>
-            <span className="text-sm text-gray-600">Status:</span>
+            <span className="text-sm text-muted-foreground">Status:</span>
             <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg border", getStatusColor(status))}>
               {status}
             </span>
           </div>
 
-          <p className="text-sm text-gray-600 italic bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+          <p className="text-sm text-muted-foreground italic bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
             "{note}"
           </p>
         </div>

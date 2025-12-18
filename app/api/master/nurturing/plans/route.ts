@@ -38,12 +38,12 @@ export async function POST(req: NextRequest) {
 
   if (!code)
     return NextResponse.json(
-      { ok: false, error: "Code plan wajib" },
+      { ok: false, error: "Code urutan wajib" },
       { status: 400 }
     );
   if (!name)
     return NextResponse.json(
-      { ok: false, error: "Nama plan wajib" },
+      { ok: false, error: "Nama urutan wajib" },
       { status: 400 }
     );
 

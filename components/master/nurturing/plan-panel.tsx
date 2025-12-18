@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -102,7 +102,7 @@ function SortableStepRow({
             {step.order}. {step.topic.title}
           </div>
           <div className="text-xs text-muted-foreground">
-            {step.topic.category?.name ?? "Kategori"} • Slot {step.slot} • Delay{" "}
+            {step.topic.category?.name ?? "Kategori"} • Template {step.slot} • Delay{" "}
             {step.delayHours} jam
           </div>
         </div>
@@ -186,7 +186,7 @@ export function PlanPanel() {
       const json = await res.json();
       if (!res.ok || !json.ok) throw new Error(json.error || "Gagal");
 
-      toast({ title: "Plan dibuat", description: json.data.name });
+      toast({ title: "Urutan dibuat", description: json.data.name });
       setCode("");
       setName("");
       setDesc("");
@@ -202,7 +202,7 @@ export function PlanPanel() {
 
   async function addStep() {
     if (!planId)
-      return toast({ title: "Pilih plan dulu", variant: "destructive" });
+      return toast({ title: "Pilih urutan dulu", variant: "destructive" });
     if (!topicId)
       return toast({ title: "Pilih topik dulu", variant: "destructive" });
 
@@ -297,14 +297,14 @@ export function PlanPanel() {
       {/* LEFT: create + select plan */}
       <Card className="lg:col-span-1">
         <CardHeader>
-          <CardTitle className="text-base">Master Plan</CardTitle>
+          <CardTitle className="text-base">Master Urutan Nurturing</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1">
-            <div className="text-sm font-medium">Pilih Plan</div>
+            <div className="text-sm font-medium">Pilih Urutan</div>
             <Select value={planId} onValueChange={setPlanId}>
               <SelectTrigger>
-                <SelectValue placeholder="Pilih plan" />
+                <SelectValue placeholder="Pilih Urutan" />
               </SelectTrigger>
               <SelectContent>
                 {planItems.map((p) => (
@@ -317,14 +317,14 @@ export function PlanPanel() {
           </div>
 
           <div className="rounded-xl border p-3 space-y-3">
-            <div className="text-sm font-semibold">Buat Plan Baru</div>
+            <div className="text-sm font-semibold">Buat Urutan Baru</div>
 
             <div className="space-y-1">
               <div className="text-sm font-medium">Code</div>
               <Input
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
-                placeholder="EDUKASI_PRODUK_A"
+                placeholder="NURTURING_A"
               />
             </div>
 
@@ -333,7 +333,7 @@ export function PlanPanel() {
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Edukasi Produk A (14 hari)"
+                placeholder="Nurturing A"
               />
             </div>
 
@@ -350,7 +350,7 @@ export function PlanPanel() {
               <div className="text-sm">
                 <div className="font-medium">Aktif</div>
                 <div className="text-xs text-muted-foreground">
-                  Plan aktif bisa dipakai assignment
+                  Urutan aktif bisa dipakai
                 </div>
               </div>
               <Switch checked={planActive} onCheckedChange={setPlanActive} />
@@ -361,7 +361,7 @@ export function PlanPanel() {
               onClick={createPlan}
               disabled={savingPlan || !code.trim() || !name.trim()}
             >
-              {savingPlan ? "Menyimpan..." : "Simpan Plan"}
+              {savingPlan ? "Menyimpan..." : "Simpan Urutan"}
             </Button>
           </div>
         </CardContent>
@@ -370,7 +370,10 @@ export function PlanPanel() {
       {/* RIGHT: steps + dnd */}
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle className="text-base">Step Plan (Drag & Drop)</CardTitle>
+          <CardTitle className="text-base">Step Urutan Nurturing</CardTitle>
+          <CardDescription>
+                Anda bisa mengurutkan step nurturing dengan drag & drop
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!planId ? (
@@ -398,7 +401,7 @@ export function PlanPanel() {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="text-sm font-medium">Slot</div>
+                  <div className="text-sm font-medium">Slot template</div>
                   <Select value={slot} onValueChange={(v: any) => setSlot(v)}>
                     <SelectTrigger>
                       <SelectValue />

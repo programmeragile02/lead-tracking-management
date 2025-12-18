@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
 import { sendWaMessage } from "@/lib/whatsapp-service";
 import { emitRealtime } from "@/lib/realtime";
+import { getWaTargetFromLead } from "@/lib/wa-utils";
 
 export async function POST(
   req: NextRequest,
@@ -46,9 +47,27 @@ export async function POST(
     );
   }
 
-  if (!lead.phone) {
+  // if (!lead.phone) {
+  //   return NextResponse.json(
+  //     { ok: false, error: "lead_has_no_phone" },
+  //     { status: 400 }
+  //   );
+  // }
+
+  const lastMsg = await prisma.leadMessage.findFirst({
+    where: {
+      leadId: lead.id,
+      channel: "WHATSAPP",
+    },
+    orderBy: { createdAt: "desc" },
+    select: { waChatId: true },
+  });
+
+  const waTarget = getWaTargetFromLead(lead, lastMsg?.waChatId);
+
+  if (!waTarget) {
     return NextResponse.json(
-      { ok: false, error: "lead_has_no_phone" },
+      { ok: false, error: "no_whatsapp_target" },
       { status: 400 }
     );
   }
@@ -60,8 +79,9 @@ export async function POST(
       salesId: user.id,
       channel: "WHATSAPP",
       direction: "OUTBOUND",
+      waChatId: lastMsg?.waChatId ?? null,
       fromNumber: user.phone || null,
-      toNumber: lead.phone,
+      toNumber: lead.phone || null,
       content: message.trim(),
       waStatus: "PENDING",
       sentAt: null,
@@ -77,13 +97,13 @@ export async function POST(
     },
   });
 
-  const toNumber = lead.phone.replace(/[^0-9]/g, ""); // normalisasi simpel
+  // const toNumber = lead.phone.replace(/[^0-9]/g, ""); // normalisasi simpel
 
   // 2. kirim pesan ke WA service
   try {
     const sendResult = await sendWaMessage({
       userId: user.id,
-      to: toNumber,
+      to: waTarget,
       body: message.trim(),
       meta: {
         leadId: lead.id,
