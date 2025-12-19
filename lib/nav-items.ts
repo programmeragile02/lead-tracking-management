@@ -41,7 +41,7 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
     { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
     {
       id: "wa-me",
-      label: "Koneksi Whatsapp",
+      label: "WhatsApp Synchronise",
       href: "/whatsapp/me",
       icon: Phone,
     },

@@ -225,3 +225,31 @@ input[type="number"] {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--primary)) rgb(var(--background));
 }
+
+/* =========================================
+   WHATSAPP TOAST – CLEAN SECONDARY
+   ========================================= */
+
+.toast-wa {
+  /* warna secondary NETRAL (abu kebiruan) */
+  background: hsl(220 18% 18%) !important;
+  border: 1px solid hsl(220 14% 28%);
+  color: hsl(210 40% 96%);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+
+  max-width: 420px;
+  width: 100%;
+  border-radius: 14px;
+}
+
+/* title */
+.toast-wa [data-title] {
+  color: hsl(210 40% 96%);
+  font-weight: 600;
+}
+
+/* description */
+.toast-wa [data-description] {
+  width: 100%;
+  color: hsl(215 20% 80%);
+}

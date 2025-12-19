@@ -1,10 +1,10 @@
-import { MessageCircle, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
+"use client";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Switch } from "../ui/switch";
 
@@ -29,14 +29,19 @@ export function LeadListCard({
   status,
   product,
   channel,
-  createdDate,
   leadAge,
   nextFollowUp,
   followUpType,
   indicator,
   nurturingEnabled,
-  importedFromExcel
+  importedFromExcel,
 }: LeadListCardProps) {
+  const { user } = useCurrentUser();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const isSales = user?.roleCode === "SALES";
+
   const statusColors = {
     new: "bg-amber-500 text-white border-amber-600",
     hot: "bg-red-500 text-white border-red-600",
@@ -62,8 +67,6 @@ export function LeadListCard({
     normal: "bg-muted-foreground",
   };
 
-  const { user } = useCurrentUser();
-  const { toast } = useToast();
   const [nurturingOn, setNurturingOn] = useState(
     typeof nurturingEnabled === "boolean" ? nurturingEnabled : true
   );
@@ -79,8 +82,8 @@ export function LeadListCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: next }),
       });
-      const json = await res.json();
 
+      const json = await res.json();
       if (!res.ok || !json.ok) {
         throw new Error(json.error || "Gagal mengubah nurturing");
       }
@@ -91,7 +94,7 @@ export function LeadListCard({
         title: next ? "Nurturing diaktifkan" : "Nurturing dimatikan",
         description: next
           ? "Pesan nurturing akan berjalan otomatis."
-          : "Nurturing dihentikan sementara untuk lead ini.",
+          : "Nurturing dihentikan sementara.",
       });
     } catch (e: any) {
       toast({
@@ -105,29 +108,40 @@ export function LeadListCard({
   }
 
   return (
-    <div className="bg-secondary rounded-xl shadow-md border-2 border-border overflow-hidden hover:shadow-lg transition-shadow">
+    <div
+      onClick={() => {
+        if (isSales) {
+          router.push(`/leads/${leadId}`);
+        }
+      }}
+      className={cn(
+        "bg-secondary rounded-xl shadow-md border-2 border-border overflow-hidden transition-shadow",
+        isSales && "cursor-pointer hover:shadow-lg"
+      )}
+    >
       <div className="flex">
+        {/* Indicator */}
         <div className={cn("w-1.5", indicatorColors[indicator])} />
 
         <div className="flex-1 p-4">
-          <div className="flex justify-between">
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-bold text-foreground">{leadName}</h4>
-                  <Badge
-                    className={cn(
-                      "text-xs font-semibold border",
-                      statusColors[status]
-                    )}
-                  >
-                    {statusLabels[status]}
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground font-medium">
-                  {product} • {channel}
-                </p>
+          {/* HEADER */}
+          <div className="flex justify-between mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h4 className="font-bold text-foreground">{leadName}</h4>
+                <Badge
+                  className={cn(
+                    "text-xs font-semibold border",
+                    statusColors[status]
+                  )}
+                >
+                  {statusLabels[status]}
+                </Badge>
               </div>
+
+              <p className="text-sm text-muted-foreground font-medium">
+                {product} • {channel}
+              </p>
             </div>
 
             <div className="flex flex-col items-end gap-1">
@@ -139,14 +153,16 @@ export function LeadListCard({
                   {leadAge}
                 </span>
               </div>
-              {importedFromExcel ? (
-                <span className="inline-flex items-center rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-border mb-3">
+
+              {importedFromExcel && (
+                <span className="inline-flex items-center rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-border">
                   Dari Excel
                 </span>
-              ) : null}
+              )}
             </div>
           </div>
 
+          {/* FOOTER */}
           <div className="flex items-center justify-between pt-3 border-t-2 border-border">
             <div className="text-sm">
               {nextFollowUp ? (
@@ -157,7 +173,9 @@ export function LeadListCard({
                   <span className="font-bold text-foreground">
                     {nextFollowUp}{" "}
                     {followUpType && (
-                      <span className="text-primary">({followUpType})</span>
+                      <span className="text-primary">
+                        ({followUpType})
+                      </span>
                     )}
                   </span>
                 </>
@@ -168,42 +186,27 @@ export function LeadListCard({
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Toggle nurturing */}
-              {user?.roleCode === "SALES" && (
-                <div
-                  className="flex items-center gap-2 rounded-lg border px-2 py-1 bg-primary"
-                  onClick={(e) => e.stopPropagation()}
+            {/* Switch nurturing (SALES only) */}
+            {isSales && (
+              <div
+                className="flex items-center gap-2 rounded-lg border px-2 py-1 bg-primary"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span
+                  className={cn(
+                    "text-[11px] font-medium",
+                    nurturingOn ? "text-green-400" : "text-foreground"
+                  )}
                 >
-                  <span
-                    className={cn(
-                      "text-[11px] font-medium",
-                      nurturingOn ? "text-green-400" : "text-foreground"
-                    )}
-                  >
-                    Nurturing
-                  </span>
-                  <Switch
-                    checked={nurturingOn}
-                    disabled={loadingNurturing}
-                    onCheckedChange={toggleNurturing}
-                  />
-                </div>
-              )}
-
-              {/* Tombol detail */}
-              {user?.roleCode === "SALES" && (
-                <Link href={`/leads/${leadId}`}>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-9 w-9 p-0 hover:bg-card text-primary"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-              )}
-            </div>
+                  Nurturing
+                </span>
+                <Switch
+                  checked={nurturingOn}
+                  disabled={loadingNurturing}
+                  onCheckedChange={toggleNurturing}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

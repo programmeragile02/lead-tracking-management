@@ -24,6 +24,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import type { AppRole } from "@/lib/nav-items";
 import { RealtimeListener } from "../realtime/realtime-listener";
+import { SidebarSkeleton } from "./sidebar-skeleton";
+import { MobileNavSkeleton } from "./mobilenav-skeleton";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -44,7 +46,7 @@ export function DashboardLayout({
   const { user, loading } = useCurrentUser();
 
   // role diambil dari user yang login
-  const role: AppRole = (user?.roleSlug as AppRole) ?? "sales";
+  const role: AppRole = (user?.roleSlug as AppRole) ?? undefined;
 
   const displayName = user?.name || "User";
   const displayEmail = user?.email || "";
@@ -80,6 +82,19 @@ export function DashboardLayout({
     }
   }
 
+  {
+    isDesktop && loading && (
+      <div className="lg:w-64 border-r border-border bg-sidebar animate-pulse">
+        <div className="h-16 border-b" />
+        <div className="p-4 space-y-3">
+          <div className="h-4 bg-muted rounded w-3/4" />
+          <div className="h-4 bg-muted rounded w-2/3" />
+          <div className="h-4 bg-muted rounded w-1/2" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <RealtimeListener />
@@ -94,7 +109,19 @@ export function DashboardLayout({
 
       <div className="lg:flex lg:h-screen">
         {/* Sidebar desktop */}
-        {isDesktop && <Sidebar role={role} collapsed={sidebarCollapsed} />}
+        {isDesktop && (
+          <>
+            {loading && <SidebarSkeleton collapsed={sidebarCollapsed} />}
+
+            {!loading && user && (
+              <Sidebar
+                key={user.id}
+                role={role!}
+                collapsed={sidebarCollapsed}
+              />
+            )}
+          </>
+        )}
 
         <main className="flex-1 flex flex-col overflow-hidden">
           {/* Desktop header */}
@@ -172,12 +199,6 @@ export function DashboardLayout({
                       >
                         Profil
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => router.push("/settings")}
-                        className="text-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
-                      >
-                        Pengaturan
-                      </DropdownMenuItem>
                       <DropdownMenuSeparator className="bg-border" />
                       <DropdownMenuItem
                         onClick={handleLogout}
@@ -202,12 +223,19 @@ export function DashboardLayout({
       {/* Mobile nav */}
       {!isDesktop && (
         <>
-          <MobileSidebar
-            role={role}
-            open={sidebarOpen}
-            onOpenChange={setSidebarOpen}
-          />
-          <BottomNav role={role} />
+          {loading && <MobileNavSkeleton />}
+
+          {!loading && user && (
+            <>
+              <MobileSidebar
+                key={user.id}
+                role={role!}
+                open={sidebarOpen}
+                onOpenChange={setSidebarOpen}
+              />
+              <BottomNav role={role!} />
+            </>
+          )}
         </>
       )}
 

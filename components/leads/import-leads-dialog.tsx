@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import {
   Upload,
@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Info,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,10 +22,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 
+/* =========================
+ * TYPES
+ * ========================= */
 type PreviewRow = {
   rowNumber: number;
-
-  createdAt: string | null; // ✅ baru
+  createdAt: string | null;
 
   name: string;
   phone: string | null;
@@ -67,6 +70,9 @@ type ImportMeta = {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+/* =========================
+ * HELPERS
+ * ========================= */
 function fmtMoney(v: string | null) {
   if (!v) return "-";
   const n = Number(v);
@@ -91,9 +97,14 @@ function fmtCreatedAt(iso: string | null) {
   });
 }
 
+/* =========================
+ * COMPONENT
+ * ========================= */
 export function ImportLeadsDialog(props: { onImported?: () => void }) {
   const { onImported } = props;
   const { toast } = useToast();
+
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -112,7 +123,7 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
     Array<{ rowNumber: number; messages: string[] }>
   >([]);
 
-  // meta only when modal open
+  /* meta data */
   const {
     data: meta,
     isLoading: loadingMeta,
@@ -137,6 +148,9 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
     setLoadingImport(false);
   }
 
+  /* =========================
+   * ACTIONS
+   * ========================= */
   async function handlePreview() {
     if (!file) return;
 
@@ -197,6 +211,7 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
         method: "POST",
         body: fd,
       });
+
       const json = await res.json();
 
       if (!res.ok || !json.ok) {
@@ -209,7 +224,6 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
       });
 
       onImported?.();
-
       setOpen(false);
       resetState();
     } catch (e: any) {
@@ -223,6 +237,9 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
     }
   }
 
+  /* =========================
+   * RENDER
+   * ========================= */
   return (
     <Dialog
       open={open}
@@ -238,82 +255,118 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
         </Button>
       </DialogTrigger>
 
-      {/* modal fixed height + body scroll */}
-      <DialogContent className="max-w-3xl p-0 overflow-hidden">
+      <DialogContent className="max-w-3xl px-0 overflow-hidden">
         <DialogHeader className="px-6 py-4 border-b">
           <DialogTitle className="text-base">
-            Import Lead dari Excel (Sales Only)
+            Import Lead dari Excel
           </DialogTitle>
         </DialogHeader>
 
         <div className="max-h-[80vh] overflow-y-auto px-6 py-4 space-y-4">
-          {/* actions */}
-          <div className="flex flex-wrap items-center gap-2">
-            <Button asChild variant="outline" className="gap-2">
-              <a href="/api/leads/import/template">
-                <Download className="h-4 w-4" />
-                Unduh Template
-              </a>
-            </Button>
+          {/* ===== DROPZONE ===== */}
+          <div
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const f = e.dataTransfer.files?.[0];
+              if (f) setFile(f);
+            }}
+            className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition
+              ${
+                file
+                  ? "border-primary bg-primary/10"
+                  : "border-primary/60 bg-primary/5 hover:bg-primary/10"
+              }`}
+          >
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx"
+              className="hidden"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
 
+            <div className="flex flex-col items-center gap-2">
+              <FileSpreadsheet className="h-8 w-8 text-primary" />
+
+              {!file ? (
+                <>
+                  <div className="text-sm font-medium">
+                    Klik atau tarik file Excel ke sini
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Format .xlsx • gunakan template yang tersedia
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-sm font-semibold text-primary">
+                    {file.name}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {(file.size / 1024).toFixed(1)} KB
+                  </div>
+                  <div className="text-xs underline text-primary">
+                    Klik untuk ganti file
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <a href="/api/leads/import/template" className="flex items-center justify-center gap-2 text-xs hover:text-primary transition">
+            <Download className="h-4 w-4" />
+            Unduh Template Excel
+          </a>
+
+          {/* ===== ACTIONS ===== */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center justify-center">
             <Button
               variant="secondary"
               onClick={handlePreview}
               disabled={!file || loadingPreview || loadingImport}
-              className="gap-2"
             >
-              {loadingPreview ? "Memproses..." : "Preview & Validasi"}
+              1️⃣ Preview & Validasi
             </Button>
 
             <Button
               onClick={handleImport}
               disabled={!canImport || loadingPreview || loadingImport}
-              className="gap-2"
             >
-              {loadingImport ? "Mengimpor..." : "Import Sekarang"}
+              2️⃣ Import Sekarang
             </Button>
           </div>
 
-          {/* file picker */}
-          <div className="rounded-lg border p-3">
-            <div className="text-sm font-medium mb-2 flex items-center gap-2">
-              <FileSpreadsheet className="h-4 w-4" />
-              Pilih file .xlsx
+          {!canImport && file && (
+            <p className="text-xs text-muted-foreground">
+              Lakukan preview terlebih dahulu untuk mengaktifkan import.
+            </p>
+          )}
+
+          <div className="mt-3 text-xs text-muted-foreground space-y-1">
+            <div className="font-medium text-foreground/90">
+              Kolom template:
             </div>
-
-            <input
-              type="file"
-              accept=".xlsx"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-sm"
-            />
-
-            <div className="mt-3 text-xs text-muted-foreground space-y-1">
-              <div className="font-medium text-foreground/90">
-                Kolom template:
-              </div>
-              <ul className="list-disc pl-5 space-y-1">
-                <li>
-                  <span className="font-medium">Wajib:</span> name
-                </li>
-                <li>
-                  <span className="font-medium">Opsional:</span> created_at,
-                  phone (auto 62..), address, product_name
-                </li>
-                <li>
-                  <span className="font-medium">Kode (opsional):</span>{" "}
-                  source_code, stage_code, status_code
-                </li>
-                <li>
-                  <span className="font-medium">Harga (opsional):</span>{" "}
-                  price_offering, price_negotiation, price_closing
-                </li>
-              </ul>
-              <div className="italic">
-                created_at contoh:{" "}
-                <span className="font-medium">2025-12-15</span> atau{" "}
-                <span className="font-medium">2025-12-15 08:00</span>
-              </div>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>
+                <span className="font-medium">Wajib:</span> name
+              </li>
+              <li>
+                <span className="font-medium">Opsional:</span> created_at, phone
+                (auto 62..), address, product_name
+              </li>
+              <li>
+                <span className="font-medium">Kode (opsional):</span>{" "}
+                source_code, stage_code, status_code
+              </li>
+              <li>
+                <span className="font-medium">Harga (opsional):</span>{" "}
+                price_offering, price_negotiation, price_closing
+              </li>
+            </ul>
+            <div className="italic">
+              created_at contoh: <span className="font-medium">2025-12-15</span>{" "}
+              atau <span className="font-medium">2025-12-15 08:00</span>
             </div>
           </div>
 
@@ -620,8 +673,6 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
               )}
             </div>
           )}
-
-          <div className="h-2" />
         </div>
       </DialogContent>
     </Dialog>

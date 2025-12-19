@@ -144,12 +144,6 @@ export function TopBar({ title, showBack, onMenuClick }: TopBarProps) {
               >
                 Profil
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => router.push("/settings")}
-                className="text-foreground hover:bg-secondary hover:text-foreground cursor-pointer"
-              >
-                Pengaturan
-              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={handleLogout}
