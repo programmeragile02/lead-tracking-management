@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+
+const WA_TOAST_KEY = "wa-toast-shown";
 
 type WaQrResponse = {
   ok: boolean;
@@ -69,6 +71,13 @@ export default function WhatsappConnectPage() {
   }, [data?.status]);
 
   const isConnected = data?.status === "CONNECTED";
+
+  useEffect(() => {
+    if (data?.status === "CONNECTED") {
+      // Tandai bahwa WhatsApp sudah terkoneksi
+      sessionStorage.setItem(WA_TOAST_KEY, "CONNECTED");
+    }
+  }, [data?.status]);
 
   async function handleManualRefresh() {
     try {

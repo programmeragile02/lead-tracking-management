@@ -26,6 +26,7 @@ import type { AppRole } from "@/lib/nav-items";
 import { RealtimeListener } from "../realtime/realtime-listener";
 import { SidebarSkeleton } from "./sidebar-skeleton";
 import { MobileNavSkeleton } from "./mobilenav-skeleton";
+import { useAutoCheckWhatsApp } from "../whatsapp/use-auto-check-whatsapp";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -38,6 +39,7 @@ export function DashboardLayout({
   title,
   showBack,
 }: DashboardLayoutProps) {
+  useAutoCheckWhatsApp();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false); // desktop
