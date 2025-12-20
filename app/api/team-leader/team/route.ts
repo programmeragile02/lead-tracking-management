@@ -108,6 +108,7 @@ export async function GET(req: NextRequest) {
     const closingTargetPerSales = Number(
       targetSetting?.closingTargetAmount ?? 0
     );
+    const closingTargetTeam = closingTargetPerSales * salesIds.length;
 
     // ===== Aggregasi lead & closing per sales (periode) =====
     const leadsPeriodAgg = await prisma.lead.groupBy({
@@ -304,6 +305,7 @@ export async function GET(req: NextRequest) {
           totalLeadsPeriod,
           totalClosingPeriod,
           totalRevenuePeriod,
+          closingTargetTeam,
         },
         members,
       },

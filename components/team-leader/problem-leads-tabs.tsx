@@ -82,7 +82,7 @@ export function ProblemLeadsTabs({
     <Tabs defaultValue="overdue" className="w-full">
       <TabsList className="w-full grid grid-cols-3">
         <TabsTrigger value="overdue">
-          Overdue
+          Follow Up Overdue
           {totalOverdue > 0 && (
             <span className="ml-1 inline-flex items-center justify-center rounded-full bg-red-100 text-red-700 text-[10px] px-1.5">
               {totalOverdue}
@@ -98,7 +98,7 @@ export function ProblemLeadsTabs({
           )}
         </TabsTrigger>
         <TabsTrigger value="untouched">
-          Belum Di-FU
+          Lead Belum Di Follow Up
           {totalUntouched > 0 && (
             <span className="ml-1 inline-flex items-center justify-center rounded-full bg-gray-100 text-gray-700 text-[10px] px-1.5">
               {totalUntouched}

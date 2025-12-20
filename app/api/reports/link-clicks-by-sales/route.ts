@@ -48,10 +48,8 @@ export async function GET(req: NextRequest) {
     if (isTeamLeader) {
       const sales = await prisma.user.findMany({
         where: {
-          OR: [
-            { id: currentUser.id },
-            { teamLeaderId: currentUser.id, role: { code: "SALES" } },
-          ],
+          teamLeaderId: currentUser.id,
+          role: { code: "SALES" },
           isActive: true,
         },
         select: { id: true },
@@ -83,7 +81,8 @@ export async function GET(req: NextRequest) {
 
       const sales = await prisma.user.findMany({
         where: {
-          OR: [{ id: tl.id }, { teamLeaderId: tl.id, role: { code: "SALES" } }],
+          teamLeaderId: tl.id,
+          role: { code: "SALES" },
           isActive: true,
         },
         select: { id: true },

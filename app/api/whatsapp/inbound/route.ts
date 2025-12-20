@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
     timestamp,
     waMessageId,
     waChatId,
+    waPhone,
     waDisplayName,
   } = payload;
 
@@ -74,7 +75,8 @@ export async function POST(req: NextRequest) {
 
   const salesId = Number(userId);
   const fromWaChatId = waChatId || from; // JID utama
-  const fromPhone = extractPhoneFromWaChatId(fromWaChatId);
+  const fromPhone = waPhone || extractPhoneFromWaChatId(fromWaChatId);
+
   const toPhone = typeof to === "string" ? extractPhoneFromWaChatId(to) : null;
 
   try {
@@ -133,17 +135,40 @@ export async function POST(req: NextRequest) {
       orderBy: { order: "asc" },
     });
 
-    // 3) cari lead berdasarkan nomor + sales
-    let lead = await prisma.lead.findFirst({
-      where: {
-        salesId: sales.id,
-        messages: {
-          some: {
-            waChatId: fromWaChatId,
+    // 3) CARI LEAD (PRIORITAS PHONE → FALLBACK waChatId)
+    let lead = null;
+
+    // 3.1) PRIORITAS: PHONE NUMBER
+    if (fromPhone) {
+      lead = await prisma.lead.findFirst({
+        where: {
+          salesId: sales.id,
+          phone: fromPhone,
+        },
+      });
+    }
+
+    // 3.2) FALLBACK: waChatId
+    if (!lead) {
+      lead = await prisma.lead.findFirst({
+        where: {
+          salesId: sales.id,
+          messages: {
+            some: {
+              waChatId: fromWaChatId,
+            },
           },
         },
-      },
-    });
+      });
+    }
+
+    // UPGRADE LEAD LAMA (dari @lid → nomor asli)
+    if (lead && !lead.phone && fromPhone) {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { phone: fromPhone },
+      });
+    }
 
     const now = new Date();
     let isNewLead = false;

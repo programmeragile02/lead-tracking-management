@@ -45,13 +45,11 @@ export async function GET(req: NextRequest) {
     let isTeamLeader = currentUser.roleCode === "TEAM_LEADER";
 
     if (isTeamLeader) {
-      // TL: lihat dirinya + semua sales yg dibawahi
+      // TL: hanya lihat SALES di bawahnya (TL tidak ikut)
       const sales = await prisma.user.findMany({
         where: {
-          OR: [
-            { id: currentUser.id },
-            { teamLeaderId: currentUser.id, role: { code: "SALES" } },
-          ],
+          teamLeaderId: currentUser.id,
+          role: { code: "SALES" },
           isActive: true,
         },
         select: { id: true },
@@ -85,7 +83,8 @@ export async function GET(req: NextRequest) {
 
       const sales = await prisma.user.findMany({
         where: {
-          OR: [{ id: tl.id }, { teamLeaderId: tl.id, role: { code: "SALES" } }],
+          teamLeaderId: tl.id,
+          role: { code: "SALES" },
           isActive: true,
         },
         select: { id: true },

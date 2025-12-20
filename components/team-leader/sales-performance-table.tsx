@@ -20,12 +20,15 @@ function percent(target: number, actual: number) {
   return Math.round((actual / target) * 100);
 }
 
-function formatRupiahShort(value: number) {
-  if (!value) return "0";
-  const jt = value / 1_000_000;
-  return `${jt.toLocaleString("id-ID", {
-    maximumFractionDigits: 1,
-  })} jt`;
+function formatRupiah(value: number) {
+  if (!value || value <= 0) return "Rp0";
+
+  return value.toLocaleString("id-ID", {
+    style: "currency",
+    currency: "IDR",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  });
 }
 
 export function SalesPerformanceTable({
@@ -43,7 +46,7 @@ export function SalesPerformanceTable({
   if (!rows || rows.length === 0) {
     return (
       <div className="bg-secondary rounded-2xl shadow-sm border p-6 text-sm text-muted-foreground">
-        Belum ada data sales di tim ini.
+        Belum ada data sales di tim ini
       </div>
     );
   }
@@ -58,7 +61,7 @@ export function SalesPerformanceTable({
                 Sales
               </th>
               <th className="text-left p-4 text-xs font-semibold text-foreground">
-                Lead (bulan ini)
+                Lead
               </th>
               <th className="text-left p-4 text-xs font-semibold text-foreground">
                 Pendapatan
@@ -102,8 +105,8 @@ export function SalesPerformanceTable({
                   <td className="p-4 align-top">
                     <div className="space-y-1 text-xs">
                       <p className="text-muted-foreground">
-                        {formatRupiahShort(row.revenueActual)} /{" "}
-                        {formatRupiahShort(row.revenueTarget)}
+                        {formatRupiah(row.revenueActual)} /{" "}
+                        {formatRupiah(row.revenueTarget)}
                       </p>
                       <div className="h-2 bg-muted rounded-full w-28">
                         <div

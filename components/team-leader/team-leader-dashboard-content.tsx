@@ -7,13 +7,44 @@ import { SalesPerformanceTable } from "@/components/team-leader/sales-performanc
 import { ProblemLeadsTabs } from "@/components/team-leader/problem-leads-tabs";
 import { Users, Target, DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { KPICardMini } from "../dashboard/kpi-card-mini";
+import { CoachingInsightPanel } from "./coaching-insight-panel";
+import { TrendChart } from "./trend-chart";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type DashboardResponse = {
   ok: boolean;
   data?: {
+    kpiDaily: {
+      activeLeads: {
+        value: number;
+        delta: number;
+        percentage: number;
+      };
+      readyToClose: {
+        value: number;
+        delta: number;
+        percentage: number;
+      };
+      overdueFollowUp: {
+        value: number;
+        delta: number;
+        percentage: number;
+      };
+      avgResponseTime: {
+        value: number;
+        delta: number;
+        percentage: number;
+      };
+    };
     summary: {
       teamLeaderId: number;
       teamLeaderName: string;
@@ -59,7 +90,6 @@ function formatRupiah(value: number) {
   if (!value) return "Rp0";
   return `Rp${value.toLocaleString("id-ID")}`;
 }
-
 
 type PeriodOption = {
   value: string; // "YYYY-MM"
@@ -107,6 +137,11 @@ export function TeamLeaderDashboardContent() {
     }
   );
 
+  const { data: trendData } = useSWR(
+    `/api/dashboard/team-leader/trend?month=${selectedMonth}`,
+    fetcher
+  );
+
   if (error) {
     return (
       <div className="text-sm text-red-600">Gagal memuat dashboard tim.</div>
@@ -133,11 +168,11 @@ export function TeamLeaderDashboardContent() {
 
   if (!data.ok || !data.data) {
     return (
-      <div className="text-sm text-primary">Gagal memuat dashboard tim.</div>
+      <div className="text-sm text-primary">Gagal memuat dashboard tim</div>
     );
   }
 
-  const { summary, salesPerformance, problemLeads } = data.data;
+  const { summary, salesPerformance, problemLeads, kpiDaily } = data.data;
 
   const currentPeriodLabel =
     periodOptions.find((p) => p.value === selectedMonth)?.label ||
@@ -188,59 +223,87 @@ export function TeamLeaderDashboardContent() {
         </div>
       </div>
 
-      {/* KPI utama */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KPICard
-          title="Total Lead Tim"
-          icon={Users}
-          count={summary.totalLeads}
-          unit="lead"
-          color="red"
-        />
-        <KPICard
-          title="Total Closing"
-          icon={Target}
-          count={summary.totalClosing}
-          unit="deal"
-          color="orange"
-        />
-        <KPICard
-          title="Total Pendapatan Closing"
-          icon={DollarSign}
-          target={summary.revenueTargetTeam}
-          actual={summary.revenueActualThisMonth}
-          unit="Rp"
-          color="amber"
-          format={(value) => formatRupiah(value)}
-        />
-      </div>
+      {/* ===== A. KPI Harian ===== */}
+      <section className="space-y-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICardMini
+            title="Lead Aktif"
+            value={kpiDaily.activeLeads.value}
+            delta={kpiDaily.activeLeads.delta}
+            percentage={kpiDaily.activeLeads.percentage}
+            subtitle="hari ini"
+            color="orange"
+          />
 
-      {/* KPI progress vs target */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <KPICardMini
+            title="Siap Closing"
+            value={kpiDaily.readyToClose.value}
+            delta={kpiDaily.readyToClose.delta}
+            percentage={kpiDaily.readyToClose.percentage}
+            subtitle="status HOT hari ini"
+            color="amber"
+          />
+
+          <KPICardMini
+            title="Follow Up Terlambat"
+            value={kpiDaily.overdueFollowUp.value}
+            delta={kpiDaily.overdueFollowUp.delta}
+            percentage={kpiDaily.overdueFollowUp.percentage}
+            subtitle="melewati jadwal hari ini"
+            color="red"
+          />
+
+          <KPICardMini
+            title="Rata-rata sales respon"
+            value={
+              kpiDaily.avgResponseTime.value !== null
+                ? `${kpiDaily.avgResponseTime.value} mnt`
+                : "–"
+            }
+            delta={kpiDaily.avgResponseTime.delta}
+            percentage={kpiDaily.avgResponseTime.percentage}
+            subtitle="rata-rata hari ini"
+            color="rose"
+          />
+        </div>
+      </section>
+
+      {/* ===== B. KPI Target ===== */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KPICard
-          title="Lead vs Target Tim"
+          title="Total Lead vs Target Lead Per Bulan"
           icon={Users}
           target={summary.leadTargetTeam}
           actual={summary.leadActualThisMonth}
           unit="lead"
           color="coral"
         />
+
         <KPICard
-          title="Pendapatan vs Target Tim"
+          title="Total Pendapatan vs Target Pendapatan Per Bulan"
           icon={DollarSign}
           target={summary.revenueTargetTeam}
           actual={summary.revenueActualThisMonth}
           unit="Rp"
           color="rose"
-          format={(value) => formatRupiah(value)}
+          format={formatRupiah}
         />
-      </div>
+      </section>
+
+      {trendData?.ok && (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TrendChart data={trendData.data} type="leads" />
+          <TrendChart data={trendData.data} type="revenue" />
+        </section>
+      )}
 
       {/* Tabel performa per sales */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold text-foreground">Performa Sales</h3>
-          <p className="text-xs text-muted-foreground">Periode: {currentPeriodLabel}</p>
+          <p className="text-xs text-muted-foreground">
+            Periode: {currentPeriodLabel}
+          </p>
         </div>
         <SalesPerformanceTable rows={salesPerformance} loading={false} />
       </section>
@@ -248,10 +311,9 @@ export function TeamLeaderDashboardContent() {
       {/* Lead problematik (tidak tergantung periode) */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-foreground">Lead Bermasalah</h3>
-          <p className="text-xs text-muted-foreground">
-            Membantu TL melihat lead yang perlu perhatian khusus.
-          </p>
+          <h3 className="text-lg font-bold text-foreground">
+            Lead Perlu Pantauan
+          </h3>
         </div>
         <ProblemLeadsTabs
           overdue={problemLeads.overdue}

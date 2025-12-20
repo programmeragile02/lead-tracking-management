@@ -55,6 +55,7 @@ type TeamApiResponse = {
       totalLeadsPeriod: number;
       totalClosingPeriod: number;
       totalRevenuePeriod: number;
+      closingTargetTeam: number;
     };
     members: TeamMember[];
   };
@@ -183,23 +184,23 @@ export function TeamLeaderTeamContent() {
       {/* KPI ringkasan tim */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KPICard
-          title="Lead Tim (periode)"
+          title="Total Lead Per Periode"
           icon={Users}
           count={summary.totalLeadsPeriod}
           unit="lead"
           color="red"
         />
         <KPICard
-          title="Closing Tim (periode)"
+          title="Total Closing Per Periode"
           icon={Target}
           count={summary.totalClosingPeriod}
           unit="deal"
           color="orange"
         />
         <KPICard
-          title="Revenue Closing (periode)"
+          title="Total Nominal Closing Per Periode"
           icon={DollarSign}
-          target={0}
+          target={summary.closingTargetTeam}
           actual={summary.totalRevenuePeriod}
           unit="Rp"
           color="amber"
