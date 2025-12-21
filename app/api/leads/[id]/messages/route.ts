@@ -47,9 +47,10 @@ export async function GET(
       leadId,
       channel: "WHATSAPP",
     },
-    orderBy: {
-      createdAt: "asc",
-    },
+    orderBy: [
+      { createdAt: "asc" },
+      { id: "asc" },
+    ],
   });
 
   return NextResponse.json({ ok: true, data: messages });

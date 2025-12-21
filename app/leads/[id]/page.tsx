@@ -1467,6 +1467,10 @@ export default function LeadDetailPage() {
     if (!leadId) return;
     try {
       setSyncingChat(true);
+      toast({
+        title: "Sinkronisasi chat dimulai",
+        description: "Mohon tunggu sebentar..",
+      });
 
       const res = await fetch(`/api/leads/${leadId}/whatsapp/sync-chat`, {
         method: "POST",
@@ -1634,9 +1638,36 @@ export default function LeadDetailPage() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [stageModalOpen, setStageModalOpen] = useState(false);
 
+  const isAnyModalOpen =
+    scheduleModalOpen ||
+    proposalModalOpen ||
+    quickMsgOpen ||
+    editTplOpen ||
+    saveTplOpen ||
+    activityModalOpen ||
+    activityPreviewOpen ||
+    priceModalOpen ||
+    statusModalOpen ||
+    stageModalOpen;
+
+  useEffect(() => {
+    if (isAnyModalOpen) {
+      document.body.style.position = "fixed";
+      document.body.style.width = "100%";
+    } else {
+      document.body.style.position = "";
+      document.body.style.width = "";
+    }
+
+    return () => {
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, [isAnyModalOpen]);
+
   return (
     <DashboardLayout title="Detail Leads">
-      <div className="flex min-h-screen flex-col">
+      <div className="flex min-h-[100dvh] flex-col">
         <main className="mx-auto flex w-full flex-1 flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 md:pb-8">
           {/* RINGKASAN LEAD */}
           <section className="flex flex-col gap-5 rounded-xl border p-5 md:flex-row md:items-center md:justify-between bg-secondary">
@@ -2402,15 +2433,17 @@ export default function LeadDetailPage() {
       </div>
 
       {/* ===== FLOATING ACTION BUTTON ===== */}
-      <LeadActionFab
-        onFollowUp={() => setScheduleModalOpen(true)}
-        onPrice={handleOpenPriceModal}
-        onActivity={() => setActivityModalOpen(true)}
-        onSyncChat={handleSyncChat}
-        onAnalyzeAi={() => handleAnalyzeChat(60)}
-        onStatus={() => setStatusModalOpen(true)}
-        onStage={() => setStageModalOpen(true)}
-      />
+      {!isAnyModalOpen && (
+        <LeadActionFab
+          onFollowUp={() => setScheduleModalOpen(true)}
+          onPrice={handleOpenPriceModal}
+          onActivity={() => setActivityModalOpen(true)}
+          onSyncChat={handleSyncChat}
+          onAnalyzeAi={() => handleAnalyzeChat(60)}
+          onStatus={() => setStatusModalOpen(true)}
+          onStage={() => setStageModalOpen(true)}
+        />
+      )}
 
       <StatusModal
         open={statusModalOpen}

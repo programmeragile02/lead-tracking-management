@@ -120,20 +120,20 @@ export function LeadActionFab({
       {/* Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 z-40"
+          className="fixed inset-0 z-40 bg-black/20 pointer-events-auto"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Action buttons */}
-      <div className="fixed bottom-36 md:bottom-25 right-4 z-50 flex flex-col-reverse gap-3">
+      <div className="fixed bottom-36 md:bottom-25 right-4 z-50 flex flex-col-reverse gap-3 pointer-events-none">
         {isOpen &&
           actions.map((action, index) => {
             const Icon = action.icon;
             return (
               <div
                 key={action.id}
-                className="flex items-center gap-3 animate-in slide-in-from-bottom-5 duration-200"
+                className="flex items-center gap-3 pointer-events-auto animate-in slide-in-from-bottom-5 duration-200"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <span className="text-sm font-medium text-gray-900 bg-white px-3 py-1.5 rounded-lg shadow-md">
@@ -158,7 +158,7 @@ export function LeadActionFab({
       <Button
         size="icon"
         className={cn(
-          "fixed bottom-20 right-4 lg:bottom-6 lg:right-8 w-14 h-14 rounded-full shadow-lg transition-all z-50",
+          "fixed bottom-20 right-4 lg:bottom-6 lg:right-8 w-14 h-14 rounded-full shadow-lg transition-all z-50 pointer-events-auto",
           isOpen
             ? "bg-gray-700 hover:bg-gray-800 rotate-45"
             : "bg-primary hover:bg-primary"
@@ -167,8 +167,6 @@ export function LeadActionFab({
       >
         {isOpen ? <Plus className="w-6 h-6" /> : <Wrench className="w-6 h-6" />}
       </Button>
-
-      {/* <StageModal open={showStageModal} onOpenChange={setShowStageModal} /> */}
     </>
   );
 }

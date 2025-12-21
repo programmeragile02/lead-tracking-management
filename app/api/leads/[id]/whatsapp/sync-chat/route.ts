@@ -77,9 +77,18 @@ export async function POST(
 
     await prisma.$transaction(async (tx) => {
       for (const m of messages) {
-        const direction = m.fromMe
-          ? MessageDirection.OUTBOUND
-          : MessageDirection.INBOUND;
+        const session = await prisma.whatsAppSession.findUnique({
+          where: { userId: waUserId },
+          select: { phoneNumber: true },
+        });
+
+        const myNumber = session?.phoneNumber;
+        const fromDigits = (m.from || "").replace(/[^\d]/g, "");
+
+        const direction =
+          myNumber && fromDigits.endsWith(myNumber)
+            ? MessageDirection.OUTBOUND
+            : MessageDirection.INBOUND;
 
         // fromNumber / toNumber: simpan angka saja biar konsisten
         const fromNumber = (m.from || "").replace(/[^\d]/g, "") || null;
