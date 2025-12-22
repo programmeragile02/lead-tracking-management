@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LeadListCard } from "@/components/leads/lead-list-card";
@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ImportLeadsDialog } from "@/components/leads/import-leads-dialog";
+import { useCurrentUser } from "@/hooks/use-current-user";
+import { io as ioClient } from "socket.io-client";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -214,6 +216,31 @@ export default function LeadsPage() {
   const hasNext = leadsResp?.hasNext ?? false;
 
   const subCounts = leadsResp?.countsBySubStatusCode ?? {};
+
+  const SOCKET_URL =
+    process.env.NEXT_PUBLIC_SOCKET_URL;
+
+  const { user } = useCurrentUser();
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const s = ioClient(SOCKET_URL, {
+      transports: ["websocket"],
+    });
+
+    // join room user
+    s.emit("join", { userId: user.id });
+
+    s.on("lead_list_changed", () => {
+      mutateLeads(); // auto refresh list
+    });
+
+    return () => {
+      s.emit("leave", { userId: user.id });
+      s.disconnect();
+    };
+  }, [user?.id, mutateLeads]);
 
   return (
     <DashboardLayout title="Lead">

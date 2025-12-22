@@ -286,10 +286,34 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < createData.length; i += CHUNK) {
       const chunk = createData.slice(i, i + CHUNK);
+
       await prisma.$transaction(async (tx) => {
         for (const data of chunk) {
           const lead = await tx.lead.create({ data });
 
+          const salesId = lead.salesId ?? user.id;
+
+          /* =========================
+           * STAGE HISTORY
+           * ========================= */
+          if (lead.stageId) {
+            await tx.leadStageHistory.create({
+              data: {
+                leadId: lead.id,
+                stageId: lead.stageId,
+
+                changedById: user.id,
+                salesId,
+
+                mode: "NORMAL",
+                note: "Imported from Excel",
+              },
+            });
+          }
+
+          /* =========================
+           * STATUS HISTORY
+           * ========================= */
           if (lead.statusId) {
             await tx.leadStatusHistory.create({
               data: {
@@ -297,11 +321,15 @@ export async function POST(req: NextRequest) {
                 statusId: lead.statusId,
 
                 changedById: user.id,
-                salesId: lead.salesId ?? user.id,
+                salesId,
+                note: "Imported from Excel",
               },
             });
           }
 
+          /* =========================
+           * SUB STATUS HISTORY
+           * ========================= */
           if (lead.subStatusId) {
             await tx.leadSubStatusHistory.create({
               data: {
@@ -309,12 +337,14 @@ export async function POST(req: NextRequest) {
                 subStatusId: lead.subStatusId,
 
                 changedById: user.id,
-                salesId: lead.salesId ?? user.id,
+                salesId,
+                note: "Imported from Excel",
               },
             });
           }
         }
       });
+
       inserted += chunk.length;
     }
 

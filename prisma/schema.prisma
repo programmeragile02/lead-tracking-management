@@ -74,6 +74,9 @@ model User {
   // owner lead (sales)
   subStatusHistoriesAsSales LeadSubStatusHistory[] @relation("SubStatusHistorySales")
 
+  // daftar kontak WA yang dikecualikan (khusus sales)
+  excludedContacts SalesExcludedContact[]
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -932,4 +935,36 @@ model LeadSubStatusHistory {
   @@index([subStatusId])
   @@index([salesId])
   @@map("lead_sub_status_histories")
+}
+
+model SalesExcludedContact {
+  id        Int      @id @default(autoincrement())
+
+  /// pemilik pengecualian (sales)
+  salesId   Int
+  sales     User     @relation(fields: [salesId], references: [id])
+
+  /// nomor WhatsApp (WA normalized: 628xxxx)
+  phone     String
+
+  /// nama kontak (opsional, hanya untuk UI)
+  name      String?
+
+  /// catatan tambahan (opsional)
+  /// contoh: "teman kuliah", "keluarga", "internal kantor"
+  note      String?
+
+  /// aktif / nonaktif tanpa hapus data
+  isActive  Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// 1 sales tidak boleh punya nomor pengecualian yang sama
+  @@unique([salesId, phone])
+
+  @@index([salesId])
+  @@index([phone])
+
+  @@map("sales_excluded_contacts")
 }

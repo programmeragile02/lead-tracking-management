@@ -17,6 +17,8 @@ import {
   Phone,
   ChartColumnIncreasing,
   ChartBarIncreasing,
+  PhoneOff,
+  UserRoundX,
 } from "lucide-react";
 
 export type AppRole = "sales" | "team-leader" | "manager";
@@ -44,6 +46,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       label: "WhatsApp Synchronise",
       href: "/whatsapp/me",
       icon: Phone,
+    },
+    {
+      id: "pengecualian-kontak",
+      label: "Pengecualian Kontak",
+      href: "/settings/excluded-contacts",
+      icon: UserRoundX,
     },
   ],
 
@@ -126,6 +134,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           id: "master-status",
           label: "Status Lead",
           href: "/master/status",
+          icon: FileChartColumn,
+        },
+        {
+          id: "master-sub-status",
+          label: "Sub Status Lead",
+          href: "/master/lead-sub-status",
           icon: FileChartColumn,
         },
         {

@@ -132,20 +132,31 @@ export function WhatsAppChatCard(props: {
             backgroundImage:
               `url("data:image/svg+xml,` +
               encodeURIComponent(`
-                <svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'>
-                  <g fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='1.5'>
-                    <path d='M28 44c16-10 28-10 44 0' />
-                    <path d='M168 44c16-10 28-10 44 0' />
-                    <path d='M40 132c18-12 30-12 48 0' />
-                    <path d='M150 140c18-12 30-12 48 0' />
-                    <circle cx='70' cy='86' r='9' />
-                    <circle cx='184' cy='94' r='9' />
-                    <path d='M112 76l14 14-14 14-14-14z' />
-                    <path d='M120 170c10-8 22-8 32 0' />
-                    <path d='M20 200c14-10 26-10 40 0' />
-                  </g>
-                </svg>
-              `) +
+      <svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'>
+        <g fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='1.5'>
+
+          <!-- senyum kecil -->
+          <path d='M28 52c10 8 22 8 32 0' />
+          <path d='M168 52c10 8 22 8 32 0' />
+
+          <!-- senyum medium -->
+          <path d='M40 120c14 12 30 12 44 0' />
+          <path d='M150 128c14 12 30 12 44 0' />
+
+          <!-- mata -->
+          <circle cx='70' cy='90' r='7' />
+          <circle cx='184' cy='98' r='7' />
+
+          <!-- diamond -->
+          <path d='M112 88l14 14-14 14-14-14z' />
+
+          <!-- senyum besar -->
+          <path d='M96 172c18 14 40 14 58 0' />
+          <path d='M20 196c12 10 26 10 38 0' />
+
+        </g>
+      </svg>
+    `) +
               `")`,
             backgroundRepeat: "repeat",
           }}

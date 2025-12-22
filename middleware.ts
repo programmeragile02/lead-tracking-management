@@ -29,7 +29,10 @@ function isAllowed(pathname: string, role: RoleSlug): boolean {
   if (
     pathname.startsWith("/dashboard/manager") ||
     pathname.startsWith("/master") ||
-    pathname.startsWith("/settings")
+    pathname.startsWith("/settings/general") ||
+    pathname.startsWith("/settings/lead-fields") ||
+    pathname.startsWith("/settings/target-lead") ||
+    pathname.startsWith("/settings/template-quick-messages")
   ) {
     return role === "manager";
   }
@@ -43,7 +46,10 @@ function isAllowed(pathname: string, role: RoleSlug): boolean {
   }
 
   // Sales area
-  if (pathname.startsWith("/dashboard/sales")) {
+  if (
+    pathname.startsWith("/dashboard/sales") ||
+    pathname.startsWith("/settings/excluded-contacts")
+  ) {
     return role === "sales";
     // return role === "sales" || role === "team-leader" || role === "manager";
   }
@@ -71,7 +77,7 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/cron")) {
     return NextResponse.next();
   }
-  
+
   if (pathname.startsWith("/go")) {
     return NextResponse.next();
   }

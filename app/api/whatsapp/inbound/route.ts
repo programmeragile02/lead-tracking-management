@@ -105,6 +105,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, skipped: "from_is_sales" });
     }
 
+    // SKIP JIKA NOMOR MASUK PENGECUALIAN KONTAK SALES
+    if (fromPhone) {
+      const excluded = await prisma.salesExcludedContact.findFirst({
+        where: {
+          salesId,
+          phone: fromPhone,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          name: true,
+        },
+      });
+
+      if (excluded) {
+        console.log(
+          "[inbound] excluded contact, skip inbound:",
+          fromPhone,
+          excluded.name
+        );
+
+        return NextResponse.json({
+          ok: true,
+          skipped: "excluded_contact",
+        });
+      }
+    }
+
     // 2) pastikan sales pemilik client ada
     const sales = await prisma.user.findUnique({
       where: { id: salesId },
@@ -336,6 +364,17 @@ export async function POST(req: NextRequest) {
         message: body,
         from: fromPhone,
         at: sentAt.toISOString(),
+      },
+    });
+
+    await emitRealtime({
+      room: `user:${sales.id}`,
+      event: "lead_list_changed",
+      payload: {
+        leadId: lead.id,
+        isNew: isNewLead,
+        from: fromPhone,
+        at: new Date().toISOString(),
       },
     });
 
