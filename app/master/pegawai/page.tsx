@@ -11,7 +11,7 @@ export default function EmployeeMasterPage() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Master Pegawai</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Kelola struktur tim mulai dari Manager, Team Leader, hingga Sales
+            Kelola struktur tim mulai dari Manager, Team Leader, Sales, Super Admin
           </p>
         </div>
 

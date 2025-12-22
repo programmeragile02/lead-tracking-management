@@ -21,12 +21,14 @@ export async function PUT(
       name,
       phone,
       address,
+      city,
       productId,
       customValues,
     }: {
       name: string;
       phone?: string | null;
       address?: string | null;
+      city?: string | null;
       productId?: number | null;
       customValues?: { fieldId: number; value: string }[];
     } = body;
@@ -47,6 +49,7 @@ export async function PUT(
         name: name.trim(),
         phone: phone?.trim() || null,
         address: address?.trim() || null,
+        city: city?.trim() || null,
         productId: productIdNumber,
       },
     });

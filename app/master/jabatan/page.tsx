@@ -8,7 +8,7 @@ export default function JabatanMasterPage() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">Master Jabatan</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Informasi hirarki jabatan dalam sistem: Manager, Team Leader, dan
+            Informasi hirarki jabatan dalam sistem: Super Admin, Manager, Team Leader, dan
             Sales.
           </p>
         </div>

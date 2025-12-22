@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest) {
 
     const data = roles.map((r) => ({
       id: r.id,
-      code: r.code as "MANAGER" | "TEAM_LEADER" | "SALES",
+      code: r.code as "MANAGER" | "TEAM_LEADER" | "SALES" | "SUPERADMIN",
       name: r.name,
       description: r.description,
       isActive: r.isActive,

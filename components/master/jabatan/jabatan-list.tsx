@@ -6,7 +6,7 @@ import { BriefcaseBusiness, Loader2, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-export type RoleCode = "MANAGER" | "TEAM_LEADER" | "SALES";
+export type RoleCode = "MANAGER" | "TEAM_LEADER" | "SALES" | "SUPERADMIN";
 
 export interface JabatanItem {
   id: number;

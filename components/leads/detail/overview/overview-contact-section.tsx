@@ -11,6 +11,7 @@ export function OverviewContactSection(props: {
   displayName: string;
   displayPhone: string;
   displaySource: string;
+  displayAddress: string;
   displayCity: string;
 
   overviewName: string;
@@ -19,6 +20,8 @@ export function OverviewContactSection(props: {
   setOverviewPhone: (v: string) => void;
   overviewAddress: string;
   setOverviewAddress: (v: string) => void;
+  overviewCity: string;
+  setOverviewCity: (v: string) => void;
 }) {
   const {
     overviewEditing,
@@ -26,6 +29,7 @@ export function OverviewContactSection(props: {
     displayName,
     displayPhone,
     displaySource,
+    displayAddress,
     displayCity,
 
     overviewName,
@@ -34,6 +38,8 @@ export function OverviewContactSection(props: {
     setOverviewPhone,
     overviewAddress,
     setOverviewAddress,
+    overviewCity,
+    setOverviewCity,
   } = props;
 
   return (
@@ -78,6 +84,18 @@ export function OverviewContactSection(props: {
               className="text-xs sm:text-sm w-56"
               value={overviewAddress}
               onChange={(e) => setOverviewAddress(e.target.value)}
+            />
+          ) : (
+            displayAddress
+          )}
+        </OverviewInfoItem>
+
+        <OverviewInfoItem icon={MapPin} label="Kota">
+          {overviewEditing ? (
+            <Input
+              className="h-9 text-xs sm:text-sm"
+              value={overviewCity}
+              onChange={(e) => setOverviewCity(e.target.value)}
             />
           ) : (
             displayCity

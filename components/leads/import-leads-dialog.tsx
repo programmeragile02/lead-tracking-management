@@ -32,6 +32,7 @@ type PreviewRow = {
   name: string;
   phone: string | null;
   address: string | null;
+  city: string | null;
 
   productName: string | null;
   productId: number | null;
@@ -39,6 +40,7 @@ type PreviewRow = {
   sourceId: number | null;
   stageId: number | null;
   statusId: number | null;
+  subStatusId: number | null;
 
   priceOffering: string | null;
   priceNegotiation: string | null;
@@ -64,6 +66,12 @@ type ImportMeta = {
     sources: Array<{ id: number; code: string; name: string }>;
     stages: Array<{ id: number; code: string; name: string; order: number }>;
     statuses: Array<{ id: number; code: string; name: string; order: number }>;
+    subStatuses: Array<{
+      id: number;
+      code: string;
+      name: string;
+      status: { code: string; name: string };
+    }>;
   };
   error?: string;
 };
@@ -314,7 +322,10 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
               )}
             </div>
           </div>
-          <a href="/api/leads/import/template" className="flex items-center justify-center gap-2 text-xs hover:text-primary transition">
+          <a
+            href="/api/leads/import/template"
+            className="flex items-center justify-center gap-2 text-xs hover:text-primary transition"
+          >
             <Download className="h-4 w-4" />
             Unduh Template Excel
           </a>
@@ -349,24 +360,27 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
             </div>
             <ul className="list-disc pl-5 space-y-1">
               <li>
-                <span className="font-medium">Wajib:</span> name
+                <span className="font-medium">Wajib:</span> Nama Lead
               </li>
               <li>
-                <span className="font-medium">Opsional:</span> created_at, phone
-                (auto 62..), address, product_name
+                <span className="font-medium">Opsional:</span> Tanggal lead
+                masuk, No. Whatsapp (auto 62..), Alamat, Nama Produk
               </li>
               <li>
-                <span className="font-medium">Kode (opsional):</span>{" "}
-                source_code, stage_code, status_code
+                <span className="font-medium">Kode (opsional):</span> Sumber
+                Lead, Tahap, Status Utama, Sub Status
               </li>
+
               <li>
-                <span className="font-medium">Harga (opsional):</span>{" "}
-                price_offering, price_negotiation, price_closing
+                <span className="font-medium">Harga (opsional):</span> Harga
+                Penawaran, Harga Negosiasi, Harga Closing
               </li>
             </ul>
             <div className="italic">
-              created_at contoh: <span className="font-medium">2025-12-15</span>{" "}
-              atau <span className="font-medium">2025-12-15 08:00</span>
+              Tanggal masuk contoh:{" "}
+              <span className="font-medium">2025-12-15</span> atau{" "}
+              <span className="font-medium">2025-12-15 08:00</span> atau{" "}
+              <span className="font-medium">2025/12/15</span>
             </div>
           </div>
 
@@ -398,57 +412,107 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                   Gagal ambil data master: {meta?.error || "Unknown error"}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <div className="text-sm font-medium mb-2">
-                      Produk (isi: product_name)
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <div className="text-sm font-medium mb-2">
+                        Produk (isi: Nama Produk)
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
+                        {meta.data!.products.length ? (
+                          meta.data!.products.map((p) => (
+                            <div
+                              key={p.id}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="text-foreground">{p.name}</span>
+                              <span className="opacity-70">#{p.id}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div>-</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
-                      {meta.data!.products.length ? (
-                        meta.data!.products.map((p) => (
-                          <div
-                            key={p.id}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span className="truncate">{p.name}</span>
-                            <span className="opacity-70">#{p.id}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div>-</div>
-                      )}
-                    </div>
-                  </div>
 
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <div className="text-sm font-medium mb-2">
-                      Sumber Lead (isi: source_code)
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <div className="text-sm font-medium mb-2">
+                        Sumber Lead (isi: Sumber Lead)
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
+                        {meta.data!.sources.length ? (
+                          meta.data!.sources.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="truncate">
+                                <span className="font-medium text-foreground">
+                                  {s.code}
+                                </span>{" "}
+                                — {s.name}
+                              </span>
+                              <span className="opacity-70">#{s.id}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div>-</div>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
-                      {meta.data!.sources.length ? (
-                        meta.data!.sources.map((s) => (
+
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <div className="text-sm font-medium mb-2">
+                        Status (isi: Status Utama)
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
+                        {meta.data!.statuses.length ? (
+                          meta.data!.statuses.map((s) => (
+                            <div
+                              key={s.id}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="truncate">
+                                <span className="font-medium text-foreground">
+                                  {s.code}
+                                </span>{" "}
+                                — {s.name}
+                              </span>
+                              <span className="opacity-70">#{s.id}</span>
+                            </div>
+                          ))
+                        ) : (
+                          <div>-</div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-md bg-muted/40 p-3">
+                      <div className="text-sm font-medium mb-2">
+                        Sub Status (isi: Sub Status)
+                      </div>
+                      <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
+                        {meta.data!.subStatuses.map((s) => (
                           <div
                             key={s.id}
-                            className="flex items-center justify-between gap-3"
+                            className="flex justify-between gap-3"
                           >
-                            <span className="truncate">
+                            <span>
                               <span className="font-medium text-foreground">
                                 {s.code}
                               </span>{" "}
                               — {s.name}
                             </span>
-                            <span className="opacity-70">#{s.id}</span>
+                            <span className="opacity-70">{s.status.name}</span>
                           </div>
-                        ))
-                      ) : (
-                        <div>-</div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="rounded-md bg-muted/40 p-3">
+                  <div className="rounded-md bg-muted/40 p-3 mt-3">
                     <div className="text-sm font-medium mb-2">
-                      Tahap (isi: stage_code)
+                      Tahap (isi: Tahap Lead)
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
                       {meta.data!.stages.length ? (
@@ -471,33 +535,7 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                       )}
                     </div>
                   </div>
-
-                  <div className="rounded-md bg-muted/40 p-3">
-                    <div className="text-sm font-medium mb-2">
-                      Status (isi: status_code)
-                    </div>
-                    <div className="text-xs text-muted-foreground space-y-1 max-h-40 overflow-auto pr-1">
-                      {meta.data!.statuses.length ? (
-                        meta.data!.statuses.map((s) => (
-                          <div
-                            key={s.id}
-                            className="flex items-center justify-between gap-3"
-                          >
-                            <span className="truncate">
-                              <span className="font-medium text-foreground">
-                                {s.code}
-                              </span>{" "}
-                              — {s.name}
-                            </span>
-                            <span className="opacity-70">#{s.id}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div>-</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                </>
               )}
             </div>
           )}
@@ -570,8 +608,20 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                         </div>
 
                         <div className="mt-1 text-xs text-muted-foreground">
-                          {r.address ? `Alamat: ${r.address}` : "Alamat: -"}
+                          Alamat:{" "}
+                          <span className="font-medium text-foreground">
+                            {r.address ? `${r.address}` : "-"}
+                          </span>
                         </div>
+
+                        {r.city && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Kota:{" "}
+                            <span className="font-medium text-foreground">
+                              {r.city}
+                            </span>
+                          </div>
+                        )}
 
                         <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                           <div className="rounded-md border bg-background/60 p-2">
@@ -602,6 +652,12 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                               Status id:{" "}
                               <span className="font-medium text-foreground">
                                 {r.statusId ?? "-"}
+                              </span>
+                            </div>
+                            <div className="text-muted-foreground">
+                              Sub Status id:{" "}
+                              <span className="font-medium text-foreground">
+                                {r.subStatusId ?? "-"}
                               </span>
                             </div>
                           </div>

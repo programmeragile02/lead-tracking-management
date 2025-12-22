@@ -12,6 +12,7 @@ import { ImportLeadsDialog } from "@/components/leads/import-leads-dialog";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
+const SUB_STATUS_API = "/api/lead-sub-statuses";
 
 // ---- Types dari API ----
 type LeadStatusMaster = {
@@ -44,6 +45,7 @@ type LeadListApiResponse = {
   ok: boolean;
   data: LeadListItem[];
   countsByStatusCode?: Record<string, number>;
+  countsBySubStatusCode?: Record<string, number>;
   page?: number;
   pageSize?: number;
   hasNext?: boolean;
@@ -163,6 +165,7 @@ function computeLeadAgeLabel(iso: string): string {
 export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [activeStatusCode, setActiveStatusCode] = useState<string>("ALL"); // ALL / HOT / WARM / ...
+  const [activeSubStatusCode, setActiveSubStatusCode] = useState<string>("ALL");
   const [page, setPage] = useState(1);
 
   // ambil master status
@@ -171,6 +174,14 @@ export default function LeadsPage() {
     fetcher
   );
   const statuses = statusResp?.data ?? [];
+
+  const { data: subStatusResp } = useSWR(
+    activeStatusCode !== "ALL"
+      ? `${SUB_STATUS_API}?statusCode=${activeStatusCode}`
+      : null,
+    fetcher
+  );
+  const subStatuses = subStatusResp?.data ?? [];
 
   // URL API leads dengan query & filter status
   const searchQuery = search.trim()
@@ -182,7 +193,12 @@ export default function LeadsPage() {
       ? `status=${encodeURIComponent(activeStatusCode)}`
       : "status=ALL";
 
-  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${searchQuery}`;
+  const subStatusQuery =
+    activeSubStatusCode && activeSubStatusCode !== "ALL"
+      ? `&subStatus=${encodeURIComponent(activeSubStatusCode)}`
+      : "";
+
+  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${searchQuery}`;
 
   const {
     data: leadsResp,
@@ -196,6 +212,8 @@ export default function LeadsPage() {
 
   const leadsRespPage = leadsResp?.page ?? page;
   const hasNext = leadsResp?.hasNext ?? false;
+
+  const subCounts = leadsResp?.countsBySubStatusCode ?? {};
 
   return (
     <DashboardLayout title="Lead">
@@ -272,6 +290,7 @@ export default function LeadsPage() {
                   )}
                   onClick={() => {
                     setActiveStatusCode(st.code);
+                    setActiveSubStatusCode("ALL");
                     setPage(1);
                   }}
                 >
@@ -281,7 +300,7 @@ export default function LeadsPage() {
                       "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
                       isActive
                         ? "bg-white/20 text-white"
-                    : "bg-muted-foreground text-secondary"
+                        : "bg-muted-foreground text-secondary"
                     )}
                   >
                     {count}
@@ -290,6 +309,71 @@ export default function LeadsPage() {
               );
             })}
           </div>
+          {/* SUB STATUS */}
+          {activeStatusCode !== "ALL" && subStatuses.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 pl-1">
+              {/* Semua Sub */}
+              <button
+                type="button"
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center",
+                  activeSubStatusCode === "ALL"
+                    ? "bg-primary text-white border-primary"
+                    : "bg-secondary text-muted-foreground"
+                )}
+                onClick={() => {
+                  setActiveSubStatusCode("ALL");
+                  setPage(1);
+                }}
+              >
+                <span>Semua</span>
+                <span
+                  className={cn(
+                    "ml-2 inline-flex h-4 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px]",
+                    activeSubStatusCode === "ALL"
+                      ? "bg-white/20 text-white"
+                      : "bg-muted-foreground text-secondary"
+                  )}
+                >
+                  {Object.values(subCounts).reduce((a, b) => a + b, 0)}
+                </span>
+              </button>
+
+              {subStatuses.map((ss: any) => {
+                const isActive = activeSubStatusCode === ss.code;
+                const count = subCounts[ss.code] ?? 0;
+
+                return (
+                  <button
+                    key={ss.id}
+                    type="button"
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center",
+                      isActive
+                        ? "bg-primary text-white border-primary"
+                        : "bg-secondary text-muted-foreground"
+                    )}
+                    onClick={() => {
+                      setActiveSubStatusCode(ss.code);
+                      setPage(1);
+                    }}
+                  >
+                    <span>{ss.name}</span>
+                    <span
+                      className={cn(
+                        "ml-2 inline-flex h-4 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px]",
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-muted-foreground text-secondary"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Lead List */}

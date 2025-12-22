@@ -5,32 +5,36 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const headers = [
-    "created_at",
-    "name",
-    "phone",
-    "address",
-    "product_name",
-    "source_code",
-    "stage_code",
-    "status_code",
-    "price_offering",
-    "price_negotiation",
-    "price_closing",
+    "Tanggal Lead Masuk",
+    "Nama Lead *",
+    "No. WhatsApp",
+    "Alamat",
+    "Kota",
+    "Nama Produk",
+    "Sumber Lead (Kode)",
+    "Tahap Lead (Kode)",
+    "Status Utama (Kode)",
+    "Sub Status (Kode)",
+    "Harga Penawaran",
+    "Harga Negosiasi",
+    "Harga Closing",
   ];
 
   const sample = [
     {
-      created_at: "2025-12-15 08:00", // boleh "2025-12-15" juga
-      name: "Budi Santoso",
-      phone: "0812-3456-7890",
-      address: "Jakarta",
-      product_name: "Paket Premium",
-      source_code: "IG_ADS",
-      stage_code: "KONTAK_AWAL",
-      status_code: "WARM",
-      price_offering: "Rp 12.000.000",
-      price_negotiation: "",
-      price_closing: "",
+      "Tanggal Lead Masuk": "2025/12/15",
+      "Nama Lead *": "Budi Santoso",
+      "No. WhatsApp": "081234567890",
+      Alamat: "Jl. Sudirman No. 10",
+      Kota: "Jakarta Selatan",
+      "Nama Produk": "SevenRent",
+      "Sumber Lead (Kode)": "IG_ADS",
+      "Tahap Lead (Kode)": "KONTAK_AWAL",
+      "Sub Status (Kode)": "NO_RESPON",
+      "Status Utama (Kode)": "",
+      "Harga Penawaran": "12000000",
+      "Harga Negosiasi": "",
+      "Harga Closing": "",
     },
   ];
 

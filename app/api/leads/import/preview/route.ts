@@ -21,6 +21,7 @@ type PreviewRow = {
   sourceId: number | null;
   stageId: number | null;
   statusId: number | null;
+  subStatusId: number | null;
 
   priceOffering: string | null;
   priceNegotiation: string | null;
@@ -33,6 +34,32 @@ function nameKey(v: any) {
   return String(v ?? "")
     .trim()
     .toLowerCase();
+}
+
+const HEADER_MAP: Record<string, string> = {
+  "Tanggal Lead Masuk": "created_at",
+  "Nama Lead *": "name",
+  "No. WhatsApp": "phone",
+  Alamat: "address",
+  Kota: "city",
+  "Nama Produk": "product_name",
+  "Sumber Lead (Kode)": "source_code",
+  "Tahap Lead (Kode)": "stage_code",
+  "Status Utama (Kode)": "status_code",
+  "Sub Status (Kode)": "sub_status_code",
+  "Harga Penawaran": "price_offering",
+  "Harga Negosiasi": "price_negotiation",
+  "Harga Closing": "price_closing",
+};
+
+function normalizeRow(row: Record<string, any>): Record<string, any> {
+  const out: Record<string, any> = {};
+
+  for (const [label, key] of Object.entries(HEADER_MAP)) {
+    out[key] = row[label] ?? "";
+  }
+
+  return out;
 }
 
 export async function POST(req: NextRequest) {
@@ -73,24 +100,34 @@ export async function POST(req: NextRequest) {
     });
 
     // preload master untuk lookup (lebih cepat & konsisten)
-    const [products, sources, stages, statuses] = await Promise.all([
-      prisma.product.findMany({
-        where: { deletedAt: null },
-        select: { id: true, name: true },
-      }),
-      prisma.leadSource.findMany({
-        where: { deletedAt: null },
-        select: { id: true, code: true, name: true },
-      }),
-      prisma.leadStage.findMany({
-        where: { isActive: true },
-        select: { id: true, code: true, name: true },
-      }),
-      prisma.leadStatus.findMany({
-        where: { isActive: true },
-        select: { id: true, code: true, name: true },
-      }),
-    ]);
+    const [products, sources, stages, statuses, subStatuses] =
+      await Promise.all([
+        prisma.product.findMany({
+          where: { deletedAt: null },
+          select: { id: true, name: true },
+        }),
+        prisma.leadSource.findMany({
+          where: { deletedAt: null },
+          select: { id: true, code: true, name: true },
+        }),
+        prisma.leadStage.findMany({
+          where: { isActive: true },
+          select: { id: true, code: true, name: true },
+        }),
+        prisma.leadStatus.findMany({
+          where: { isActive: true },
+          select: { id: true, code: true, name: true },
+        }),
+        prisma.leadSubStatus.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            code: true,
+            statusId: true,
+            status: { select: { code: true } },
+          },
+        }),
+      ]);
 
     const productByName = new Map(products.map((p) => [nameKey(p.name), p.id]));
 
@@ -106,68 +143,108 @@ export async function POST(req: NextRequest) {
       statuses.map((s) => [String(s.code).toUpperCase(), s.id])
     );
 
+    const subStatusByCode = new Map(
+      subStatuses.map((s) => [s.code.toUpperCase(), s])
+    );
+
     const errors: Array<{ rowNumber: number; messages: string[] }> = [];
     const validRows: PreviewRow[] = [];
 
     raw.forEach((r, idx) => {
+      const row = normalizeRow(r);
+
       const rowNumber = idx + 2;
       const msgs: string[] = [];
 
-      const createdAt = parseExcelDateNullable(r.created_at);
-      if (String(r.created_at || "").trim() && !createdAt) {
+      const createdAt = parseExcelDateNullable(row.created_at);
+      if (String(row.created_at || "").trim() && !createdAt) {
         msgs.push(
-          "created_at tidak valid. Isi contoh: 2025-12-15 atau 2025-12-15 08:00"
+          "Tanggal masuk tidak valid. Isi contoh: 2025-12-15 atau 2025-12-15 08:00 atau 2025/12/15"
         );
       }
 
-      const name = String(r.name || "").trim();
-      if (!name) msgs.push("Kolom 'name' wajib diisi.");
+      const name = String(row.name || "").trim();
+      if (!name) msgs.push("Kolom 'Nama Lead *' wajib diisi.");
 
-      const phone = normalizePhone(r.phone);
-      if (String(r.phone || "").trim() && !phone)
-        msgs.push("Format 'phone' tidak valid. Contoh: 0812xxx atau 62812xxx.");
+      const phone = normalizePhone(row.phone);
+      if (String(row.phone || "").trim() && !phone)
+        msgs.push("Format 'No Wa' tidak valid. Contoh: 0812xxx atau 62812xxx.");
 
-      const address = String(r.address || "").trim() || null;
+      const address = String(row.address || "").trim() || null;
+      const city = String(row.city || "").trim() || null;
 
-      const productName = String(r.product_name || "").trim() || null;
+      const productName = String(row.product_name || "").trim() || null;
       const productId = productName
         ? productByName.get(nameKey(productName)) ?? null
         : null;
       if (productName && !productId)
-        msgs.push(`product_name '${productName}' tidak ditemukan.`);
+        msgs.push(`Nama Produk '${productName}' tidak ditemukan.`);
 
-      const sourceCode = String(r.source_code || "").trim();
+      const sourceCode = String(row.source_code || "").trim();
       const sourceId = sourceCode
         ? sourceByCode.get(sourceCode.toUpperCase()) ?? null
         : null;
       if (sourceCode && !sourceId)
-        msgs.push(`source_code '${sourceCode}' tidak ditemukan.`);
+        msgs.push(`Sumber lead '${sourceCode}' tidak ditemukan.`);
 
-      const stageCode = String(r.stage_code || "").trim();
+      const stageCode = String(row.stage_code || "").trim();
       const stageId = stageCode
         ? stageByCode.get(stageCode.toUpperCase()) ?? null
         : null;
       if (stageCode && !stageId)
-        msgs.push(`stage_code '${stageCode}' tidak ditemukan.`);
+        msgs.push(`Tahap lead '${stageCode}' tidak ditemukan.`);
 
-      const statusCode = String(r.status_code || "").trim();
-      const statusId = statusCode
-        ? statusByCode.get(statusCode.toUpperCase()) ?? null
-        : null;
-      if (statusCode && !statusId)
-        msgs.push(`status_code '${statusCode}' tidak ditemukan.`);
+      const statusCode = String(row.status_code || "").trim();
+      let statusId: number | null = null;
 
-      const priceOffering = parseDecimalNullable(r.price_offering);
-      if (String(r.price_offering || "").trim() && priceOffering === null)
-        msgs.push("price_offering tidak valid.");
+      if (statusCode) {
+        statusId = statusByCode.get(statusCode.toUpperCase()) ?? null;
+        if (!statusId) {
+          msgs.push(`Status utama '${statusCode}' tidak ditemukan.`);
+        }
+      }
 
-      const priceNegotiation = parseDecimalNullable(r.price_negotiation);
-      if (String(r.price_negotiation || "").trim() && priceNegotiation === null)
-        msgs.push("price_negotiation tidak valid.");
+      const subStatusCode = String(row.sub_status_code || "").trim();
+      let subStatusId: number | null = null;
 
-      const priceClosing = parseDecimalNullable(r.price_closing);
-      if (String(r.price_closing || "").trim() && priceClosing === null)
-        msgs.push("price_closing tidak valid.");
+      // Keduanya kosong
+      // if (!statusCode && !subStatusCode) {
+      //   msgs.push("Isi minimal salah satu: status_code atau sub_status_code.");
+      // }
+
+      // Kalau ada sub status → tentukan status utama
+      if (subStatusCode) {
+        const ss = subStatusByCode.get(subStatusCode.toUpperCase());
+        if (!ss) {
+          msgs.push(`Sub status '${subStatusCode}' tidak ditemukan.`);
+        } else {
+          subStatusId = ss.id;
+
+          // AUTO SET STATUS DARI SUB (kalau kosong)
+          if (!statusId) {
+            statusId = ss.statusId;
+          } else if (statusId !== ss.statusId) {
+            msgs.push(
+              `Sub status '${subStatusCode}' tidak cocok dengan status_code.`
+            );
+          }
+        }
+      }
+
+      const priceOffering = parseDecimalNullable(row.price_offering);
+      if (String(row.price_offering || "").trim() && priceOffering === null)
+        msgs.push("Harga penawaran tidak valid.");
+
+      const priceNegotiation = parseDecimalNullable(row.price_negotiation);
+      if (
+        String(row.price_negotiation || "").trim() &&
+        priceNegotiation === null
+      )
+        msgs.push("Harga negosiasi tidak valid.");
+
+      const priceClosing = parseDecimalNullable(row.price_closing);
+      if (String(row.price_closing || "").trim() && priceClosing === null)
+        msgs.push("Harga closing tidak valid.");
 
       if (msgs.length) {
         errors.push({ rowNumber, messages: msgs });
@@ -177,11 +254,13 @@ export async function POST(req: NextRequest) {
           name,
           phone,
           address,
+          city,
           productName,
           productId,
           sourceId,
           stageId,
           statusId,
+          subStatusId,
           priceOffering,
           priceNegotiation,
           priceClosing,

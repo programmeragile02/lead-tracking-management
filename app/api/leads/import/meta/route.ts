@@ -21,32 +21,45 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const [products, sources, stages, statuses] = await Promise.all([
-      prisma.product.findMany({
-        where: { deletedAt: null },
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      }),
-      prisma.leadSource.findMany({
-        where: { deletedAt: null },
-        select: { id: true, code: true, name: true },
-        orderBy: { order: "asc" },
-      }),
-      prisma.leadStage.findMany({
-        where: { isActive: true },
-        select: { id: true, code: true, name: true, order: true },
-        orderBy: { order: "asc" },
-      }),
-      prisma.leadStatus.findMany({
-        where: { isActive: true },
-        select: { id: true, code: true, name: true, order: true },
-        orderBy: { order: "asc" },
-      }),
-    ]);
+    const [products, sources, stages, statuses, subStatuses] =
+      await Promise.all([
+        prisma.product.findMany({
+          where: { deletedAt: null },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        }),
+        prisma.leadSource.findMany({
+          where: { deletedAt: null },
+          select: { id: true, code: true, name: true },
+          orderBy: { order: "asc" },
+        }),
+        prisma.leadStage.findMany({
+          where: { isActive: true },
+          select: { id: true, code: true, name: true, order: true },
+          orderBy: { order: "asc" },
+        }),
+        prisma.leadStatus.findMany({
+          where: { isActive: true },
+          select: { id: true, code: true, name: true, order: true },
+          orderBy: { order: "asc" },
+        }),
+        prisma.leadSubStatus.findMany({
+          where: { isActive: true },
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            status: {
+              select: { code: true, name: true },
+            },
+          },
+          orderBy: [{ status: { order: "asc" } }, { order: "asc" }],
+        }),
+      ]);
 
     return NextResponse.json({
       ok: true,
-      data: { products, sources, stages, statuses },
+      data: { products, sources, stages, statuses, subStatuses },
     });
   } catch (e: any) {
     return NextResponse.json(

@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Users, Crown, Target } from "lucide-react";
+import { Users, Crown, Target, UserRoundCog } from "lucide-react";
 import { JabatanItem } from "./jabatan-list";
 
 function getRoleLabel(role: JabatanItem["code"]) {
@@ -13,17 +13,21 @@ function getRoleLabel(role: JabatanItem["code"]) {
       return "Team Leader";
     case "SALES":
       return "Sales";
+    case "SUPERADMIN":
+      return "Super Admin";
   }
 }
 
 function getRoleTagline(role: JabatanItem["code"]) {
   switch (role) {
     case "MANAGER":
-      return "Pengambil keputusan utama dan pengelola seluruh tim.";
+      return "Pengambil keputusan utama dan pengelola seluruh tim";
     case "TEAM_LEADER":
-      return "Koordinator tim sales dan penghubung dengan manager.";
+      return "Koordinator tim sales dan penghubung dengan manager";
     case "SALES":
-      return "Eksekutor lapangan yang berinteraksi langsung dengan lead.";
+      return "Eksekutor lapangan yang berinteraksi langsung dengan lead";
+    case "SUPERADMIN":
+      return "Admin untuk konfigurasi data master";
   }
 }
 
@@ -35,6 +39,8 @@ function getRoleIcon(role: JabatanItem["code"]) {
       return Users;
     case "SALES":
       return Target;
+    case "SUPERADMIN":
+      return UserRoundCog;
   }
 }
 
@@ -46,6 +52,8 @@ function roleBadgeClass(role: JabatanItem["code"]) {
       return "bg-orange-600 text-white";
     case "SALES":
       return "bg-amber-600 text-white";
+    case "SUPERADMIN":
+      return "bg-green-600 text-white";
   }
 }
 

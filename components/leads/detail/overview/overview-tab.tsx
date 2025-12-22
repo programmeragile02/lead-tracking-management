@@ -26,6 +26,7 @@ export function OverviewTab(props: {
   displayName: string;
   displayPhone: string;
   displaySource: string;
+  displayAddress: string;
   displayCity: string;
   displayProductName: string;
 
@@ -41,6 +42,8 @@ export function OverviewTab(props: {
   setOverviewPhone: (v: string) => void;
   overviewAddress: string;
   setOverviewAddress: (v: string) => void;
+  overviewCity: string;
+  setOverviewCity: (v: string) => void;
 
   overviewProductId: string;
   setOverviewProductId: (v: string) => void;
@@ -64,6 +67,7 @@ export function OverviewTab(props: {
     displayName,
     displayPhone,
     displaySource,
+    displayAddress,
     displayCity,
     displayProductName,
 
@@ -77,6 +81,8 @@ export function OverviewTab(props: {
     setOverviewPhone,
     overviewAddress,
     setOverviewAddress,
+    overviewCity,
+    setOverviewCity,
     overviewProductId,
     setOverviewProductId,
 
@@ -107,6 +113,7 @@ export function OverviewTab(props: {
             displayName={displayName}
             displayPhone={displayPhone}
             displaySource={displaySource}
+            displayAddress={displayAddress}
             displayCity={displayCity}
             overviewName={overviewName}
             setOverviewName={setOverviewName}
@@ -114,6 +121,8 @@ export function OverviewTab(props: {
             setOverviewPhone={setOverviewPhone}
             overviewAddress={overviewAddress}
             setOverviewAddress={setOverviewAddress}
+            overviewCity={overviewCity}
+            setOverviewCity={setOverviewCity}
           />
 
           <OverviewProductSection

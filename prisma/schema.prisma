@@ -68,6 +68,12 @@ model User {
 
   whatsappTemplates WhatsAppMessageTemplate[]
 
+  // siapa yang mengubah sub status
+  subStatusHistoriesChanged LeadSubStatusHistory[] @relation("SubStatusHistoryChangedBy")
+
+  // owner lead (sales)
+  subStatusHistoriesAsSales LeadSubStatusHistory[] @relation("SubStatusHistorySales")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -129,6 +135,8 @@ model LeadStatus {
 
   leads     Lead[]
   statusHistories LeadStatusHistory[]
+  subStatuses LeadSubStatus[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -209,6 +217,7 @@ model Lead {
   // FIELD PATEN
   name      String
   address   String?
+  city      String?
   phone     String?
   photoUrl  String?
 
@@ -224,6 +233,11 @@ model Lead {
   // status (cold, warm, hot)
   statusId Int?
   status   LeadStatus? @relation(fields: [statusId], references: [id])
+
+  // sub status
+  subStatusId Int?
+  subStatus LeadSubStatus? @relation("LeadSubStatusLeads", fields: [subStatusId], references: [id])
+  subStatusHistories LeadSubStatusHistory[]
 
   // SUMBER LEAD
   sourceId Int?
@@ -863,4 +877,59 @@ model WhatsAppMessageTemplate {
   @@index([parentId])
   @@unique([ownerId, parentId])
   @@map("whatsapp_message_templates")
+}
+
+model LeadSubStatus {
+  id        Int        @id @default(autoincrement())
+
+  // label untuk user & marketing
+  name      String     // contoh: "No Respon", "Belum Tertarik"
+  code      String     @unique // contoh: "NO_RESPONSE", "NOT_INTERESTED"
+
+  // relasi ke status utama
+  statusId  Int
+  status    LeadStatus @relation(fields: [statusId], references: [id])
+
+  // untuk urutan dropdown
+  order     Int        @default(0)
+
+  // bisa dimatikan tanpa hapus data
+  isActive  Boolean    @default(true)
+
+  // relasi
+  leads Lead[] @relation("LeadSubStatusLeads")
+  histories LeadSubStatusHistory[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([statusId])
+  @@map("lead_sub_statuses")
+}
+
+model LeadSubStatusHistory {
+  id          Int           @id @default(autoincrement())
+
+  leadId      Int
+  lead        Lead          @relation(fields: [leadId], references: [id])
+
+  subStatusId Int
+  subStatus   LeadSubStatus @relation(fields: [subStatusId], references: [id])
+
+  // siapa yang mengubah
+  changedById Int?
+  changedBy   User? @relation("SubStatusHistoryChangedBy", fields: [changedById], references: [id])
+
+  // owner lead (sales)
+  salesId     Int?
+  sales       User? @relation("SubStatusHistorySales", fields: [salesId], references: [id])
+
+  note        String?
+
+  createdAt   DateTime      @default(now())
+
+  @@index([leadId])
+  @@index([subStatusId])
+  @@index([salesId])
+  @@map("lead_sub_status_histories")
 }

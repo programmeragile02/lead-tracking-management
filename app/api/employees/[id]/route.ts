@@ -9,7 +9,7 @@ type UpdateBody = {
   phone?: string | null;
   photo?: string | null;
   address?: string | null;
-  roleCode?: "MANAGER" | "TEAM_LEADER" | "SALES";
+  roleCode?: "MANAGER" | "TEAM_LEADER" | "SALES" | "SUPERADMIN";
   managerId?: number | null;
   teamLeaderId?: number | null;
   isActive?: boolean;

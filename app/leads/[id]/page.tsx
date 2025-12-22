@@ -754,7 +754,8 @@ export default function LeadDetailPage() {
   const displayName = lead?.name || "Lead Tanpa Nama";
   const displayPhone = lead?.phone || "-";
   const displaySource = lead?.source?.name || "Tanpa sumber";
-  const displayCity = lead?.address || "-";
+  const displayAddress = lead?.address || "-";
+  const displayCity = lead?.city || "-";
   const displayProductName = lead?.product?.name || "Belum dipilih";
 
   const [updatingProduct, setUpdatingProduct] = useState(false);
@@ -1193,6 +1194,7 @@ export default function LeadDetailPage() {
   const [overviewName, setOverviewName] = useState("");
   const [overviewPhone, setOverviewPhone] = useState("");
   const [overviewAddress, setOverviewAddress] = useState("");
+  const [overviewCity, setOverviewCity] = useState("");
   const [overviewProductId, setOverviewProductId] = useState<string>("");
 
   // field dinamis, disimpan per fieldId
@@ -1207,6 +1209,7 @@ export default function LeadDetailPage() {
     setOverviewName(lead.name || "");
     setOverviewPhone(lead.phone || "");
     setOverviewAddress(lead.address || "");
+    setOverviewCity(lead.city || "");
     setOverviewProductId(lead.productId ? String(lead.productId) : "");
 
     // field dinamis
@@ -1239,6 +1242,7 @@ export default function LeadDetailPage() {
           name: overviewName,
           phone: overviewPhone,
           address: overviewAddress,
+          city: overviewCity,
           productId: overviewProductId ? Number(overviewProductId) : null,
           customValues: customValuesPayload,
         }),
@@ -2000,6 +2004,7 @@ export default function LeadDetailPage() {
                     displayName={displayName}
                     displayPhone={displayPhone}
                     displaySource={displaySource}
+                    displayAddress={displayAddress}
                     displayCity={displayCity}
                     displayProductName={displayProductName}
                     lead={lead}
@@ -2011,6 +2016,8 @@ export default function LeadDetailPage() {
                     setOverviewPhone={setOverviewPhone}
                     overviewAddress={overviewAddress}
                     setOverviewAddress={setOverviewAddress}
+                    overviewCity={overviewCity}
+                    setOverviewCity={setOverviewCity}
                     overviewProductId={overviewProductId}
                     setOverviewProductId={setOverviewProductId}
                     formatCurrencyIDR={formatCurrencyIDR}

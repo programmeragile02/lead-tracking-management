@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
-type RoleCode = "MANAGER" | "TEAM_LEADER" | "SALES";
+type RoleCode = "MANAGER" | "TEAM_LEADER" | "SALES" | "SUPERADMIN";
 
 type CreateBody = {
   name: string;
@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
       const qUpper = qTrim.toUpperCase();
 
       where.OR = [
-        { name: { contains: qTrim, mode: "insensitive" } },
-        { email: { contains: qTrim, mode: "insensitive" } },
+        { name: { contains: qTrim } },
+        { email: { contains: qTrim } },
         { phone: { contains: qTrim } },
         {
           role: {

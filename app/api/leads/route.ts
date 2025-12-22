@@ -59,6 +59,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() || "";
     const statusCodeParam = searchParams.get("status")?.trim().toUpperCase();
+    const subStatusCodeParam = searchParams
+      .get("subStatus")
+      ?.trim()
+      .toUpperCase();
 
     const pageParam = searchParams.get("page");
     const page = Math.max(1, Number(pageParam || 1) || 1);
@@ -83,6 +87,12 @@ export async function GET(req: NextRequest) {
     if (statusCodeParam && statusCodeParam !== "ALL") {
       leadsWhere.AND = (leadsWhere.AND || []).concat({
         status: { code: statusCodeParam },
+      });
+    }
+
+    if (subStatusCodeParam && subStatusCodeParam !== "ALL") {
+      leadsWhere.AND = (leadsWhere.AND || []).concat({
+        subStatus: { code: subStatusCodeParam },
       });
     }
 
@@ -117,6 +127,17 @@ export async function GET(req: NextRequest) {
       _count: { _all: true },
     });
 
+    const groupedSubStatus = await prisma.lead.groupBy({
+      where: {
+        ...baseWhere,
+        ...(statusCodeParam && statusCodeParam !== "ALL"
+          ? { status: { code: statusCodeParam } }
+          : {}),
+      },
+      by: ["subStatusId"],
+      _count: { _all: true },
+    });
+
     const statusIds = grouped
       .map((g) => g.statusId)
       .filter((id): id is number => id !== null);
@@ -124,6 +145,21 @@ export async function GET(req: NextRequest) {
     const statusList = statusIds.length
       ? await prisma.leadStatus.findMany({ where: { id: { in: statusIds } } })
       : [];
+
+    const subStatusIds = groupedSubStatus
+      .map((g) => g.subStatusId)
+      .filter((id): id is number => id !== null);
+
+    const subStatuses = subStatusIds.length
+      ? await prisma.leadSubStatus.findMany({
+          where: { id: { in: subStatusIds } },
+        })
+      : [];
+
+    const subStatusMap = new Map<number, string>();
+    for (const ss of subStatuses) {
+      subStatusMap.set(ss.id, ss.code);
+    }
 
     const statusMapById = new Map<number, string>();
     for (const st of statusList)
@@ -146,6 +182,17 @@ export async function GET(req: NextRequest) {
       }
     }
     countsByStatusCode["ALL"] = totalAll;
+
+    const countsBySubStatusCode: Record<string, number> = {};
+
+    for (const g of groupedSubStatus) {
+      if (!g.subStatusId) continue;
+      const code = subStatusMap.get(g.subStatusId);
+      if (code) {
+        countsBySubStatusCode[code] =
+          (countsBySubStatusCode[code] || 0) + g._count._all;
+      }
+    }
 
     const data = leadsPage.map((lead) => {
       const latestFU = lead.followUps[0];
@@ -174,6 +221,7 @@ export async function GET(req: NextRequest) {
       ok: true,
       data,
       countsByStatusCode,
+      countsBySubStatusCode,
       page,
       pageSize,
       hasNext,
