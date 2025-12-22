@@ -24,11 +24,11 @@ export async function GET() {
     {
       "Tanggal Lead Masuk": "2025/12/15",
       "Nama Lead *": "Budi Santoso",
-      "No. WhatsApp": "081234567890",
+      "No. WhatsApp": "6281234567890",
       Alamat: "Jl. Sudirman No. 10",
       Kota: "Jakarta Selatan",
       "Nama Produk": "SevenRent",
-      "Sumber Lead (Kode)": "IG_ADS",
+      "Sumber Lead (Kode)": "INSTAGRAM",
       "Tahap Lead (Kode)": "KONTAK_AWAL",
       "Sub Status (Kode)": "NO_RESPON",
       "Status Utama (Kode)": "",

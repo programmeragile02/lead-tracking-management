@@ -130,8 +130,23 @@ export async function POST(req: NextRequest) {
     );
 
     const errors: Array<{ rowNumber: number; messages: string[] }> = [];
+    const skipped: Array<{ rowNumber: number; reason: string }> = [];
     const createData: Array<Parameters<typeof prisma.lead.create>[0]["data"]> =
       [];
+
+    const existingLeads = await prisma.lead.findMany({
+      where: {
+        salesId: user.id,
+        phone: { not: null },
+      },
+      select: {
+        phone: true,
+      },
+    });
+
+    const existingPhoneSet = new Set(
+      existingLeads.map((l) => l.phone).filter(Boolean)
+    );
 
     raw.forEach((r, idx) => {
       const row = normalizeRow(r);
@@ -152,6 +167,15 @@ export async function POST(req: NextRequest) {
       const phone = normalizePhone(row.phone);
       if (String(row.phone || "").trim() && !phone)
         msgs.push("Format 'No Wa' tidak valid.");
+
+      // === DUPLICATE CHECK (BY PHONE) ===
+      if (phone && existingPhoneSet.has(phone)) {
+        skipped.push({
+          rowNumber,
+          reason: `Duplikat No. WhatsApp (${phone})`,
+        });
+        return;
+      }
 
       const address = String(row.address || "").trim() || null;
       const city = String(row.city || "").trim() || null;
@@ -262,9 +286,35 @@ export async function POST(req: NextRequest) {
 
     for (let i = 0; i < createData.length; i += CHUNK) {
       const chunk = createData.slice(i, i + CHUNK);
-      await prisma.$transaction(
-        chunk.map((data) => prisma.lead.create({ data }))
-      );
+      await prisma.$transaction(async (tx) => {
+        for (const data of chunk) {
+          const lead = await tx.lead.create({ data });
+
+          if (lead.statusId) {
+            await tx.leadStatusHistory.create({
+              data: {
+                leadId: lead.id,
+                statusId: lead.statusId,
+
+                changedById: user.id,
+                salesId: lead.salesId ?? user.id,
+              },
+            });
+          }
+
+          if (lead.subStatusId) {
+            await tx.leadSubStatusHistory.create({
+              data: {
+                leadId: lead.id,
+                subStatusId: lead.subStatusId,
+
+                changedById: user.id,
+                salesId: lead.salesId ?? user.id,
+              },
+            });
+          }
+        }
+      });
       inserted += chunk.length;
     }
 
@@ -273,7 +323,9 @@ export async function POST(req: NextRequest) {
       data: {
         totalRows: raw.length,
         inserted,
-        rejected: errors.length,
+        skipped: skipped.length,
+        invalid: errors.length,
+        skippedRows: skipped.slice(0, 200),
         errors: errors.slice(0, 200),
       },
     });

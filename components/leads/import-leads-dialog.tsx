@@ -52,8 +52,10 @@ type PreviewResp = {
   data?: {
     totalRows: number;
     validRows: number;
+    skippedRows: number;
     invalidRows: number;
     preview: PreviewRow[];
+    skipped?: Array<{ rowNumber: number; reason: string }>;
     errors: Array<{ rowNumber: number; messages: string[] }>;
   };
   error?: string;
@@ -130,6 +132,9 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
   const [errors, setErrors] = useState<
     Array<{ rowNumber: number; messages: string[] }>
   >([]);
+  const [skipped, setSkipped] = useState<
+    Array<{ rowNumber: number; reason: string }>
+  >([]);
 
   /* meta data */
   const {
@@ -152,6 +157,7 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
     setStats(null);
     setPreview([]);
     setErrors([]);
+    setSkipped([]);
     setLoadingPreview(false);
     setLoadingImport(false);
   }
@@ -189,12 +195,13 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
       });
       setPreview(json.data!.preview ?? []);
       setErrors(json.data!.errors ?? []);
+      setSkipped(json.data!.skipped ?? []);
 
       toast({
-        title: "Preview berhasil",
-        description: `Valid: ${json.data!.validRows} • Invalid: ${
-          json.data!.invalidRows
-        }`,
+        title: "Preview selesai",
+        description: `Valid: ${json.data!.validRows}
+      • Dilewati: ${json.data!.skippedRows}
+      • Invalid: ${json.data!.invalidRows}`,
       });
     } catch (e: any) {
       toast({
@@ -228,7 +235,9 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
 
       toast({
         title: "Import selesai",
-        description: `Sukses: ${json.data.inserted} • Ditolak: ${json.data.rejected}`,
+        description: `Sukses: ${json.data.inserted}
+      • Dilewati: ${json.data.skipped}
+      • Invalid: ${json.data.invalid}`,
       });
 
       onImported?.();
@@ -554,6 +563,10 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                 <span className="font-medium text-foreground">
                   {stats.validRows}
                 </span>{" "}
+                • Dilewate:{" "}
+                <span className="font-medium text-foreground">
+                  {skipped.length}
+                </span>{" "}
                 • Invalid:{" "}
                 <span className="font-medium text-foreground">
                   {stats.invalidRows}
@@ -701,6 +714,26 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                   <div className="text-xs text-muted-foreground">
                     Preview menampilkan hasil mapping ke ID (kalau kosong
                     berarti tidak diisi / nullable).
+                  </div>
+                </div>
+              )}
+
+              {skipped.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">
+                    Dilewati (tidak diimport)
+                  </div>
+
+                  <div className="space-y-2 max-h-40 overflow-auto pr-1">
+                    {skipped.map((s, i) => (
+                      <div
+                        key={`${s.rowNumber}-${i}`}
+                        className="rounded-md border border-yellow-500/40 bg-yellow-500/5 p-3 text-xs"
+                      >
+                        <div className="font-medium">Row {s.rowNumber}</div>
+                        <div className="text-muted-foreground">{s.reason}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

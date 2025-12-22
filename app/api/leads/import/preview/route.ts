@@ -129,6 +129,18 @@ export async function POST(req: NextRequest) {
         }),
       ]);
 
+    const existingLeads = await prisma.lead.findMany({
+      where: {
+        salesId: user.id,
+        phone: { not: null },
+      },
+      select: { phone: true },
+    });
+
+    const existingPhoneSet = new Set(
+      existingLeads.map((l) => l.phone).filter(Boolean)
+    );
+
     const productByName = new Map(products.map((p) => [nameKey(p.name), p.id]));
 
     const sourceByCode = new Map(
@@ -148,6 +160,7 @@ export async function POST(req: NextRequest) {
     );
 
     const errors: Array<{ rowNumber: number; messages: string[] }> = [];
+    const skipped: Array<{ rowNumber: number; reason: string }> = [];
     const validRows: PreviewRow[] = [];
 
     raw.forEach((r, idx) => {
@@ -169,6 +182,15 @@ export async function POST(req: NextRequest) {
       const phone = normalizePhone(row.phone);
       if (String(row.phone || "").trim() && !phone)
         msgs.push("Format 'No Wa' tidak valid. Contoh: 0812xxx atau 62812xxx.");
+
+      // === DUPLICATE CHECK (PREVIEW) ===
+      if (phone && existingPhoneSet.has(phone)) {
+        skipped.push({
+          rowNumber,
+          reason: `Duplikat No. WhatsApp (${phone})`,
+        });
+        return;
+      }
 
       const address = String(row.address || "").trim() || null;
       const city = String(row.city || "").trim() || null;
@@ -274,8 +296,10 @@ export async function POST(req: NextRequest) {
       data: {
         totalRows: raw.length,
         validRows: validRows.length,
+        skippedRows: skipped.length,
         invalidRows: errors.length,
         preview: validRows.slice(0, 10),
+        skipped: skipped.slice(0, 50),
         errors: errors.slice(0, 200),
       },
     });
