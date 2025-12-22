@@ -255,7 +255,7 @@ function FilterChip({
           "min-w-[1.5rem] h-6 rounded-full text-xs flex items-center justify-center " +
           (active
             ? "bg-primary-foreground/20 text-primary-foreground"
-            : "bg-background text-muted-foreground")
+            : "bg-muted-foreground text-secondary")
         }
       >
         {shownCount}

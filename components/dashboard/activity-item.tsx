@@ -26,27 +26,27 @@ export function ActivityItem({ time, type, leadName, status, note }: ActivityIte
       </div>
 
       {/* Content */}
-      <div className="flex-1 bg-white rounded-2xl p-4 shadow-md border-2 border-purple-50 hover:shadow-lg transition-all">
+      <div className="flex-1 bg-secondary rounded-2xl p-4 shadow-md border-2 border-border hover:shadow-lg transition-all">
         <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center gap-1.5 text-red-700 bg-red-50 px-3 py-1 rounded-full border border-red-200">
             <Clock className="h-3.5 w-3.5" />
             <span className="text-xs font-bold">{time}</span>
           </div>
-          <span className="text-sm font-bold text-gray-900">{type}</span>
+          <span className="text-sm font-bold text-foreground">{type}</span>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Lead:</span>
-            <span className="font-semibold text-gray-900">{leadName}</span>
-            <span className="text-gray-400">•</span>
+            <span className="font-semibold text-foreground">{leadName}</span>
+            <span className="text-muted-foreground">•</span>
             <span className="text-sm text-muted-foreground">Status:</span>
             <span className={cn("text-xs font-bold px-2.5 py-1 rounded-lg border", getStatusColor(status))}>
               {status}
             </span>
           </div>
 
-          <p className="text-sm text-muted-foreground italic bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
+          <p className="text-sm text-foreground italic bg-muted-foreground px-3 py-2 rounded-lg border border-border">
             "{note}"
           </p>
         </div>

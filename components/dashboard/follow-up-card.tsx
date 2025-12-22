@@ -28,14 +28,14 @@ export function FollowUpCard({ leadName, product, followUpType, time, status }: 
       <div className="flex items-center justify-between pt-3 border-t-2 border-border">
         <span className="text-sm font-bold text-foreground">{time}</span>
         <div className="flex gap-2">
-          <Button
+          {/* <Button
             size="sm"
             variant="outline"
             className="h-9 bg-white hover:bg-green-50 border-green-200 text-green-700 font-semibold"
           >
             <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
             Chat WA
-          </Button>
+          </Button> */}
           <Button size="sm" variant="ghost" className="h-9 w-9 p-0 hover:bg-purple-100">
             <ChevronRight className="h-4 w-4" />
           </Button>

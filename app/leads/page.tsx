@@ -248,7 +248,7 @@ export default function LeadsPage() {
                   "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
                   activeStatusCode === "ALL"
                     ? "bg-white/20 text-white"
-                    : "bg-muted-foreground text-foreground"
+                    : "bg-muted-foreground text-secondary"
                 )}
               >
                 {allCount}
@@ -281,7 +281,7 @@ export default function LeadsPage() {
                       "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
                       isActive
                         ? "bg-white/20 text-white"
-                    : "bg-muted-foreground text-foreground"
+                    : "bg-muted-foreground text-secondary"
                     )}
                   >
                     {count}

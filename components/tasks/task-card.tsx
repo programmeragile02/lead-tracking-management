@@ -195,7 +195,7 @@ export function TaskCard({
     <>
       <div
         className={cn(
-          "bg-white rounded-xl p-4 shadow-sm border",
+          "bg-secondary rounded-xl p-4 shadow-sm border",
           isDone && "opacity-90"
         )}
       >
@@ -240,7 +240,7 @@ export function TaskCard({
             </div>
 
             {isDone && doneStr && (
-              <p className="text-xs text-emerald-700 flex items-center gap-1">
+              <p className="text-xs text-emerald-500 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 <span>Ditandai selesai: {doneStr}</span>
               </p>
@@ -249,7 +249,7 @@ export function TaskCard({
 
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
-              variant={isDone ? "outline" : "secondary"}
+              variant={isDone ? "outline" : "outline"}
               size="sm"
               onClick={handleMarkDone}
               disabled={isDone || markingDone}
@@ -277,7 +277,7 @@ export function TaskCard({
 
             <Button
               size="sm"
-              className="gradient-primary text-white"
+              className="bg-primary text-white"
               onClick={() => router.push(`/leads/${leadId}`)}
               disabled={markingDone}
             >
