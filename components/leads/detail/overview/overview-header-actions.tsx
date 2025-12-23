@@ -10,6 +10,7 @@ export function OverviewHeaderActions(props: {
   savingOverview: boolean;
   onCancel: () => void;
   onSave: () => void;
+  isSales: boolean;
 }) {
   const {
     overviewEditing,
@@ -18,20 +19,25 @@ export function OverviewHeaderActions(props: {
     savingOverview,
     onCancel,
     onSave,
+    isSales,
   } = props;
 
   if (!overviewEditing) {
     return (
-      <Button
-        size="sm"
-        variant="default"
-        className="h-8 px-2 text-xs"
-        onClick={() => setOverviewEditing(true)}
-        disabled={detailLoading}
-      >
-        <Pencil className="mr-1 h-3 w-3" />
-        Edit
-      </Button>
+      <>
+        {isSales && (
+          <Button
+            size="sm"
+            variant="default"
+            className="h-8 px-2 text-xs"
+            onClick={() => setOverviewEditing(true)}
+            disabled={detailLoading}
+          >
+            <Pencil className="mr-1 h-3 w-3" />
+            Edit
+          </Button>
+        )}
+      </>
     );
   }
 

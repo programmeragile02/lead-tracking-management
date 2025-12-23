@@ -55,6 +55,7 @@ export function OverviewTab(props: {
   dynamicFields: any[]; // kalau mau rapih: DynamicField[]
   overviewCustomValues: Record<number, string>;
   setCustomValue: (fieldId: number, value: string) => void;
+  isSales: boolean;
 }) {
   const {
     overviewEditing,
@@ -91,6 +92,7 @@ export function OverviewTab(props: {
     dynamicFields,
     overviewCustomValues,
     setCustomValue,
+    isSales,
   } = props;
 
   return (
@@ -105,6 +107,7 @@ export function OverviewTab(props: {
               savingOverview={savingOverview}
               onCancel={onCancel}
               onSave={onSave}
+              isSales={isSales}
             />
           </div>
 

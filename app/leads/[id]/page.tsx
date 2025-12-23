@@ -42,14 +42,18 @@ import { StatusModal } from "@/components/leads/detail/status-modal";
 import { StageModal } from "@/components/leads/detail/stage-modal";
 import { QuickStagePanel } from "@/components/leads/detail/QuickStagePanel";
 import { PriceItem } from "@/components/leads/detail/price-item";
+import { useCurrentUser } from "@/hooks/use-current-user";
 
 type LeadStatusUi = "new" | "cold" | "warm" | "hot" | "won" | "lost";
 
 type ChatFrom = "client" | "sales";
+type SentByRole = "sales" | "team-leader" | "manager" | null;
 
 interface ChatMessageUi {
   id: string | number;
   from: ChatFrom;
+  sentByRole?: SentByRole;
+  sentByName?: string | null;
   text: string;
   time: string;
   waStatus?: "PENDING" | "SENT" | "DELIVERED" | "READ" | "FAILED" | null;
@@ -201,6 +205,13 @@ type WhatsAppAiAnalysis = {
   statusHint: AiStatusHint;
 };
 
+type WaClientStatus =
+  | "INIT"
+  | "PENDING_QR"
+  | "CONNECTED"
+  | "DISCONNECTED"
+  | "ERROR";
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 // mapping UI ↔ DB code
@@ -275,6 +286,11 @@ export default function LeadDetailPage() {
   const params = useParams<{ id: string }>();
   const leadId = params.id;
   const { toast } = useToast();
+
+  const { user } = useCurrentUser();
+  const isSales = user?.roleSlug === "sales";
+  const isTeamLeader = user?.roleSlug === "team-leader";
+  const isManager = user?.roleSlug === "manager";
 
   const {
     data: detailRes,
@@ -646,6 +662,8 @@ export default function LeadDetailPage() {
       return {
         id: m.id,
         from: m.direction === "OUTBOUND" ? "sales" : "client",
+        sentByRole: m.sentByRole ?? null,
+        sentByName: m.sentBy?.name ?? null,
         text: m.content,
         time: formatTime(timeBase),
         waStatus: m.waStatus ?? "PENDING",
@@ -679,6 +697,15 @@ export default function LeadDetailPage() {
 
   const handleSend = async () => {
     if (!chatInput.trim()) return;
+
+    if (waStatus !== "CONNECTED") {
+      toast({
+        variant: "destructive",
+        title: "WhatsApp belum siap",
+        description: "Menghubungkan Whatsapp",
+      });
+      return;
+    }
     try {
       setSending(true);
       const res = await fetch(`/api/leads/${leadId}/whatsapp`, {
@@ -1669,6 +1696,24 @@ export default function LeadDetailPage() {
     };
   }, [isAnyModalOpen]);
 
+  const waInfo = detailRes?.data?.whatsapp;
+
+  const waStatus: WaClientStatus | null = waInfo?.status ?? null;
+  const waSalesId = waInfo?.salesId ?? null;
+
+  useEffect(() => {
+    if (!waSalesId) return;
+    if (!waStatus) return;
+
+    // kalau sudah siap → tidak usah start
+    if (waStatus === "CONNECTED") return;
+
+    // init secara eksplisit
+    fetch(`/api/leads/${leadId}/whatsapp/start`, {
+      method: "POST",
+    }).catch(() => {});
+  }, [waSalesId, waStatus]);
+
   return (
     <DashboardLayout title="Detail Leads">
       <div className="flex min-h-[100dvh] flex-col">
@@ -1924,26 +1969,28 @@ export default function LeadDetailPage() {
                     {/* Action */}
                     {lastFollowUp && !lastFollowUp.doneAt && (
                       <div className="mt-3">
-                        <Button
-                          size="sm"
-                          className="h-8 w-full text-xs"
-                          onClick={() =>
-                            handleMarkFollowUpDone(lastFollowUp.id)
-                          }
-                          disabled={markingFollowUpDone}
-                        >
-                          {markingFollowUpDone ? (
-                            <>
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              Menyimpan
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="mr-1 h-3 w-3" />
-                              Tandai selesai
-                            </>
-                          )}
-                        </Button>
+                        {isSales && (
+                          <Button
+                            size="sm"
+                            className="h-8 w-full text-xs"
+                            onClick={() =>
+                              handleMarkFollowUpDone(lastFollowUp.id)
+                            }
+                            disabled={markingFollowUpDone}
+                          >
+                            {markingFollowUpDone ? (
+                              <>
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                Menyimpan
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                Tandai selesai
+                              </>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2024,6 +2071,7 @@ export default function LeadDetailPage() {
                     dynamicFields={dynamicFields}
                     overviewCustomValues={overviewCustomValues}
                     setCustomValue={setCustomValue}
+                    isSales={isSales}
                   />
                 </TabsContent>
 
@@ -2144,6 +2192,9 @@ export default function LeadDetailPage() {
                         insertAtCursor={insertAtCursor}
                         chatInputRef={chatInputRef}
                         onSaveMessageToTemplate={handleSaveBubbleToTemplate}
+                        waStatus={waStatus}
+                        waSalesId={waSalesId}
+                        sales={isSales}
                       />
                     </div>
 
@@ -2440,7 +2491,7 @@ export default function LeadDetailPage() {
       </div>
 
       {/* ===== FLOATING ACTION BUTTON ===== */}
-      {!isAnyModalOpen && (
+      {!isAnyModalOpen && isSales && (
         <LeadActionFab
           onFollowUp={() => setScheduleModalOpen(true)}
           onPrice={handleOpenPriceModal}

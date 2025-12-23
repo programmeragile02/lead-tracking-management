@@ -121,3 +121,19 @@ export async function fetchWaHistory(params: {
     };
   };
 }
+
+export async function fetchWaStatus(userId: number) {
+  const resp = await fetch(`${WA_SERVICE_BASE}/clients/${userId}/status`, {
+    cache: "no-store",
+  });
+
+  if (!resp.ok) {
+    throw new Error("Failed to fetch WA status");
+  }
+
+  return resp.json() as Promise<{
+    ok: boolean;
+    status: "INIT" | "PENDING_QR" | "CONNECTED" | "DISCONNECTED" | "ERROR";
+    phoneNumber?: string | null;
+  }>;
+}

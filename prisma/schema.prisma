@@ -77,6 +77,8 @@ model User {
   // daftar kontak WA yang dikecualikan (khusus sales)
   excludedContacts SalesExcludedContact[]
 
+  sentLeadMessages LeadMessage[] @relation("LeadMessageSentBy")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -504,6 +506,13 @@ model LeadMessage {
   salesId     Int?
   sales       User?              @relation("UserLeadMessages", fields: [salesId], references: [id])
 
+  // AUDIT: siapa yang klik kirim
+  sentById Int?
+  sentBy   User? @relation("LeadMessageSentBy", fields: [sentById], references: [id])
+
+  // snapshot role saat kirim
+  sentByRole  String?
+
   channel     LeadMessageChannel
   direction   MessageDirection
 
@@ -513,7 +522,7 @@ model LeadMessage {
   fromNumber  String?            // "628123456789"
   toNumber    String?            // "628987654321"
 
-  content     String             // isi pesan
+  content     String  @db.LongText  // isi pesan
 
   type        LeadMessageType    @default(TEXT)
   mediaUrl    String?

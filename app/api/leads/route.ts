@@ -46,16 +46,6 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    if (currentUser.roleSlug !== "sales") {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "Hanya sales yang dapat melihat daftar lead di halaman ini",
-        },
-        { status: 403 }
-      );
-    }
-
     const { searchParams } = new URL(req.url);
     const q = searchParams.get("q")?.trim() || "";
     const statusCodeParam = searchParams.get("status")?.trim().toUpperCase();
@@ -64,11 +54,47 @@ export async function GET(req: NextRequest) {
       ?.trim()
       .toUpperCase();
 
+    const teamLeaderIdParam = searchParams.get("teamLeaderId");
+    const salesIdParam = searchParams.get("salesId");
+
+    const teamLeaderId = teamLeaderIdParam ? Number(teamLeaderIdParam) : null;
+
+    const salesId = salesIdParam ? Number(salesIdParam) : null;
+
     const pageParam = searchParams.get("page");
     const page = Math.max(1, Number(pageParam || 1) || 1);
     const pageSize = 10;
 
-    const baseWhere: any = { salesId: currentUser.id };
+    const baseWhere: any = {};
+
+    // ====================
+    // ROLE VISIBILITY
+    // ====================
+    if (currentUser.roleSlug === "sales") {
+      baseWhere.salesId = currentUser.id;
+    }
+
+    if (currentUser.roleSlug === "team-leader") {
+      baseWhere.sales = {
+        teamLeaderId: currentUser.id,
+      };
+
+      if (salesId) {
+        baseWhere.salesId = salesId;
+      }
+    }
+
+    if (currentUser.roleSlug === "manager") {
+      if (teamLeaderId) {
+        baseWhere.sales = {
+          teamLeaderId,
+        };
+      }
+
+      if (salesId) {
+        baseWhere.salesId = salesId;
+      }
+    }
 
     if (q) {
       baseWhere.AND = [
@@ -105,6 +131,17 @@ export async function GET(req: NextRequest) {
         source: true,
         status: true,
         nurturingState: true,
+        sales: {
+          select: {
+            id: true,
+            name: true,
+            teamLeader: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
         followUps: {
           where: { doneAt: null, nextActionAt: { not: null } },
           orderBy: { nextActionAt: "desc" },
@@ -202,6 +239,8 @@ export async function GET(req: NextRequest) {
       return {
         id: lead.id,
         name: lead.name,
+        salesName: lead.sales?.name ?? null,
+        teamLeaderName: lead.sales?.teamLeader?.name ?? null,
         productName: lead.product?.name ?? null,
         sourceName: lead.source?.name ?? null,
         statusCode: lead.status?.code ?? null,

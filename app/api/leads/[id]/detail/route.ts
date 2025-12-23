@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
+import { fetchWaStatus } from "@/lib/whatsapp-service";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,17 @@ export async function GET(
       { ok: false, error: "Forbidden" },
       { status: 403 }
     );
+  }
+
+  let waStatus: string | null = null;
+
+  if (lead.salesId) {
+    try {
+      const waState = await fetchWaStatus(lead.salesId);
+      waStatus = waState?.status ?? "INIT";
+    } catch {
+      waStatus = "ERROR";
+    }
   }
 
   // === Ambil master + history + fielddefs + settings secara paralel ===
@@ -147,6 +159,10 @@ export async function GET(
       followUpTypes,
       currentUser,
       settings: safeSettings,
+      whatsapp: {
+        salesId: lead.salesId,
+        status: waStatus, // INIT | PENDING_QR | CONNECTED | DISCONNECTED | ERROR
+      },
     },
   });
 }

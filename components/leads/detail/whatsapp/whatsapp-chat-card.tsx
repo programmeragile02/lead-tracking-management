@@ -54,6 +54,10 @@ export function WhatsAppChatCard(props: {
   EMOJIS: string[];
   insertAtCursor: (e: string) => void;
   chatInputRef: React.RefObject<HTMLTextAreaElement>;
+
+  waStatus?: "INIT" | "PENDING_QR" | "CONNECTED" | "DISCONNECTED" | "ERROR";
+  waSalesId?: number | null;
+  sales: boolean;
 }) {
   const {
     displayName,
@@ -71,6 +75,9 @@ export function WhatsAppChatCard(props: {
     EMOJIS,
     insertAtCursor,
     chatInputRef,
+    waStatus,
+    waSalesId,
+    sales,
   } = props;
 
   // Controlled dropdown per message id
@@ -125,6 +132,22 @@ export function WhatsAppChatCard(props: {
 
       {/* Body chat */}
       <CardContent className="p-0">
+        {waStatus !== "CONNECTED" && (
+          <div className="border-b border-[#2A3942] bg-[#111B21] px-3 py-2 text-xs text-[#E9EDEF]">
+            {waStatus === "INIT" && (
+              <span>⏳ Menyiapkan koneksi WhatsApp…</span>
+            )}
+            {waStatus === "PENDING_QR" && (
+              <span>📱 WhatsApp belum terhubung</span>
+            )}
+            {waStatus === "DISCONNECTED" && (
+              <span>⚠️ WhatsApp terputus. Menghubungkan ulang…</span>
+            )}
+            {waStatus === "ERROR" && (
+              <span>❌ Gagal menghubungkan WhatsApp</span>
+            )}
+          </div>
+        )}
         <div
           className="h-[420px] sm:h-[520px]"
           style={{
@@ -181,6 +204,9 @@ export function WhatsAppChatCard(props: {
             {chatMessages.map((m) => {
               const isSales = m.from === "sales";
 
+              const isSupervisor =
+                isSales && m.sentByRole && m.sentByRole !== "sales";
+
               return (
                 <div
                   key={m.id}
@@ -230,12 +256,21 @@ export function WhatsAppChatCard(props: {
                       </a>
                     ) : null}
 
+                    {/* LABEL PENGIRIM (Manager / TL) */}
+                    {isSupervisor && (
+                      <div className="mb-1 text-[11px] text-[#CDE6E0] opacity-90">
+                        {m.sentByRole === "manager" && "Manager"}
+                        {m.sentByRole === "team-leader" && "Team Leader"}
+                        {m.sentByName ? ` ${m.sentByName}` : ""}
+                      </div>
+                    )}
+
                     {m.text ? (
                       <p className="whitespace-pre-line">{m.text}</p>
                     ) : null}
 
                     {/* aksi bubble untuk pesan dari sales */}
-                    {isSales ? (
+                    {isSales && sales ? (
                       <div className="absolute -top-2 -right-2">
                         <DropdownMenu
                           open={!!menuOpenById[String(m.id)]}
@@ -334,6 +369,7 @@ export function WhatsAppChatCard(props: {
                   if (!sending && chatInput.trim()) void onSend();
                 }
               }}
+              disabled={props.waStatus !== "CONNECTED"}
             />
 
             <Button
@@ -341,7 +377,9 @@ export function WhatsAppChatCard(props: {
               size="icon"
               className="h-11 w-11 rounded-full bg-[#005C4B] hover:bg-[#006D5B]"
               onClick={onSend}
-              disabled={!chatInput.trim() || sending}
+              disabled={
+                props.waStatus !== "CONNECTED" || !chatInput.trim() || sending
+              }
               title="Kirim"
             >
               {sending ? (
@@ -364,15 +402,17 @@ export function WhatsAppChatCard(props: {
               Kirim Penawaran
             </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
-              onClick={onOpenQuickMessage}
-            >
-              <MessageSquareText className="mr-2 h-4 w-4" />
-              Pesan Cepat
-            </Button>
+            {sales && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
+                onClick={onOpenQuickMessage}
+              >
+                <MessageSquareText className="mr-2 h-4 w-4" />
+                Pesan Cepat
+              </Button>
+            )}
           </div>
         </div>
       </div>

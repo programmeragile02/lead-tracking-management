@@ -62,6 +62,7 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       href: "/dashboard/team-leader",
       icon: Home,
     },
+    { id: "leads", label: "Lead", href: "/leads", icon: Users },
     { id: "team", label: "Tim", href: "/team", icon: BarChart3 },
     {
       id: "laporan",
@@ -99,6 +100,8 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       href: "/dashboard/manager",
       icon: Home,
     },
+
+    { id: "leads", label: "Lead", href: "/leads", icon: Users },
 
     // === Group MASTER ===
     {

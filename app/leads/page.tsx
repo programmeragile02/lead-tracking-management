@@ -33,6 +33,8 @@ type LeadListItem = {
   name: string;
   productName: string | null;
   sourceName: string | null;
+  salesName?: string | null;
+  teamLeaderName?: string | null;
   statusCode: string | null; // COLD/WARM/HOT...
   statusName: string | null;
   createdAt: string; // ISO
@@ -168,6 +170,8 @@ export default function LeadsPage() {
   const [search, setSearch] = useState("");
   const [activeStatusCode, setActiveStatusCode] = useState<string>("ALL"); // ALL / HOT / WARM / ...
   const [activeSubStatusCode, setActiveSubStatusCode] = useState<string>("ALL");
+  const [activeTeamLeaderId, setActiveTeamLeaderId] = useState("ALL");
+  const [activeSalesId, setActiveSalesId] = useState("ALL");
   const [page, setPage] = useState(1);
 
   // ambil master status
@@ -200,7 +204,16 @@ export default function LeadsPage() {
       ? `&subStatus=${encodeURIComponent(activeSubStatusCode)}`
       : "";
 
-  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${searchQuery}`;
+  const hierarchyQuery = [
+    activeTeamLeaderId !== "ALL" ? `teamLeaderId=${activeTeamLeaderId}` : null,
+    activeSalesId !== "ALL" ? `salesId=${activeSalesId}` : null,
+  ]
+    .filter(Boolean)
+    .join("&");
+
+  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${searchQuery}${
+    hierarchyQuery ? `&${hierarchyQuery}` : ""
+  }`;
 
   const {
     data: leadsResp,
@@ -217,10 +230,50 @@ export default function LeadsPage() {
 
   const subCounts = leadsResp?.countsBySubStatusCode ?? {};
 
-  const SOCKET_URL =
-    process.env.NEXT_PUBLIC_SOCKET_URL;
+  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 
   const { user } = useCurrentUser();
+
+  const { data: tlResp } = useSWR(
+    user?.roleSlug === "manager" ? "/api/users/team-leaders" : null,
+    fetcher
+  );
+  const teamLeaders = tlResp?.data ?? [];
+
+  const salesUrl =
+    user?.roleSlug === "manager"
+      ? activeTeamLeaderId !== "ALL"
+        ? `/api/users/sales?teamLeaderId=${activeTeamLeaderId}`
+        : null
+      : user?.roleSlug === "team-leader"
+      ? "/api/users/sales"
+      : null;
+
+  const { data: salesResp } = useSWR(salesUrl, fetcher);
+  const salesList = salesResp?.data ?? [];
+
+  const { data: tlCountResp } = useSWR(
+    user?.roleSlug === "manager" ? "/api/leads/count-by-team-leader" : null,
+    fetcher
+  );
+
+  const tlCounts = tlCountResp?.data ?? {};
+  const totalTL = tlCountResp?.total ?? 0;
+
+  // ===== SALES COUNT (badge) =====
+  const salesCountUrl =
+    user?.roleSlug === "manager"
+      ? activeTeamLeaderId !== "ALL"
+        ? `/api/leads/count-by-sales?teamLeaderId=${activeTeamLeaderId}`
+        : null
+      : user?.roleSlug === "team-leader"
+      ? "/api/leads/count-by-sales"
+      : null;
+
+  const { data: salesCountResp } = useSWR(salesCountUrl, fetcher);
+
+  const salesCounts: Record<number, number> = salesCountResp?.data ?? {};
+  const totalSales: number = salesCountResp?.total ?? 0;
 
   useEffect(() => {
     if (!user?.id) return;
@@ -247,6 +300,135 @@ export default function LeadsPage() {
       <div className="space-y-4">
         {/* Search + Filter Bar */}
         <div className="top-0 z-10 bg-background pb-4 space-y-3 pt-1">
+          {user?.roleSlug === "manager" && teamLeaders.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {/* Semua TL */}
+              <button
+                className={cn(
+                  "px-4 py-1.5 rounded-full text-sm font-medium border inline-flex items-center",
+                  activeTeamLeaderId === "ALL"
+                    ? "bg-primary text-white border-primary"
+                    : "bg-secondary text-muted-foreground"
+                )}
+                onClick={() => {
+                  setActiveTeamLeaderId("ALL");
+                  setActiveSalesId("ALL");
+                  setPage(1);
+                }}
+              >
+                <span>Semua TL</span>
+                <span
+                  className={cn(
+                    "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
+                    activeTeamLeaderId === "ALL"
+                      ? "bg-white/20 text-white"
+                      : "bg-muted-foreground text-secondary"
+                  )}
+                >
+                  {totalTL}
+                </span>
+              </button>
+
+              {teamLeaders.map((tl: any) => {
+                const count = tlCounts[tl.id] ?? 0;
+                const isActive = activeTeamLeaderId === String(tl.id);
+
+                return (
+                  <button
+                    key={tl.id}
+                    className={cn(
+                      "px-4 py-1.5 rounded-full text-sm font-medium border inline-flex items-center",
+                      isActive
+                        ? "bg-primary text-white border-primary"
+                        : "bg-secondary text-muted-foreground"
+                    )}
+                    onClick={() => {
+                      setActiveTeamLeaderId(String(tl.id));
+                      setActiveSalesId("ALL");
+                      setPage(1);
+                    }}
+                  >
+                    <span>{tl.name}</span>
+                    <span
+                      className={cn(
+                        "ml-2 inline-flex h-5 min-w-[1.5rem] items-center justify-center rounded-full px-1 text-xs",
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-muted-foreground text-secondary"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {(user?.roleSlug === "manager" || user?.roleSlug === "team-leader") &&
+            salesList.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1 pl-1">
+                {/* Semua Sales */}
+                <button
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center",
+                    activeSalesId === "ALL"
+                      ? "bg-primary text-white border-primary"
+                      : "bg-secondary text-muted-foreground"
+                  )}
+                  onClick={() => {
+                    setActiveSalesId("ALL");
+                    setPage(1);
+                  }}
+                >
+                  <span>Semua Sales</span>
+                  <span
+                    className={cn(
+                      "ml-2 inline-flex h-4 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px]",
+                      activeSalesId === "ALL"
+                        ? "bg-white/20 text-white"
+                        : "bg-muted-foreground text-secondary"
+                    )}
+                  >
+                    {totalSales}
+                  </span>
+                </button>
+
+                {salesList.map((s: any) => {
+                  const count = salesCounts[s.id] ?? 0;
+                  const isActive = activeSalesId === String(s.id);
+
+                  return (
+                    <button
+                      key={s.id}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center",
+                        isActive
+                          ? "bg-primary text-white border-primary"
+                          : "bg-secondary text-muted-foreground"
+                      )}
+                      onClick={() => {
+                        setActiveSalesId(String(s.id));
+                        setPage(1);
+                      }}
+                    >
+                      <span>{s.name}</span>
+                      <span
+                        className={cn(
+                          "ml-2 inline-flex h-4 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px]",
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-muted-foreground text-secondary"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
           {/* Search */}
           <div className="flex gap-2 items-center">
             <div className="relative flex-1">
@@ -261,14 +443,14 @@ export default function LeadsPage() {
                 }}
               />
             </div>
-            <ImportLeadsDialog
-              onImported={async () => {
-                // reset ke page 1 biar user lihat data terbaru di atas
-                setPage(1);
-                // refresh list sesuai filter yg sedang aktif
-                await mutateLeads();
-              }}
-            />
+            {user?.roleSlug === "sales" && (
+              <ImportLeadsDialog
+                onImported={async () => {
+                  setPage(1);
+                  await mutateLeads();
+                }}
+              />
+            )}
           </div>
 
           {/* Filter status (pill) */}
@@ -434,6 +616,8 @@ export default function LeadsPage() {
                   indicator={indicator}
                   nurturingEnabled={lead.nurturingEnabled}
                   importedFromExcel={!!lead.importedFromExcel}
+                  salesName={lead.salesName}
+                  teamLeaderName={lead.teamLeaderName}
                 />
               );
             })

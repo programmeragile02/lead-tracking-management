@@ -54,10 +54,9 @@ function isAllowed(pathname: string, role: RoleSlug): boolean {
     // return role === "sales" || role === "team-leader" || role === "manager";
   }
 
-  // Halaman bersama: leads, tasks, profile – semua role boleh
+  // Halaman bersama: leads, profile – semua role boleh
   if (
     pathname.startsWith("/leads") ||
-    pathname.startsWith("/tasks") ||
     pathname.startsWith("/profile")
   ) {
     return true;

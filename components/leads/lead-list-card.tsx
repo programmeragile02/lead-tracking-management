@@ -21,6 +21,8 @@ interface LeadListCardProps {
   indicator: "overdue" | "due-today" | "updated" | "normal";
   nurturingEnabled?: boolean;
   importedFromExcel?: boolean;
+  salesName?: string | null;
+  teamLeaderName?: string | null;
 }
 
 export function LeadListCard({
@@ -35,12 +37,16 @@ export function LeadListCard({
   indicator,
   nurturingEnabled,
   importedFromExcel,
+  salesName,
+  teamLeaderName,
 }: LeadListCardProps) {
   const { user } = useCurrentUser();
   const { toast } = useToast();
   const router = useRouter();
 
-  const isSales = user?.roleCode === "SALES";
+  const isSales = user?.roleSlug === "sales";
+  const isTeamLeader = user?.roleSlug === "team-leader";
+  const isManager = user?.roleSlug === "manager";
 
   const statusColors = {
     new: "bg-amber-500 text-white border-amber-600",
@@ -107,16 +113,18 @@ export function LeadListCard({
     }
   }
 
+  const canOpenDetail = isSales || isTeamLeader || isManager;
+
   return (
     <div
       onClick={() => {
-        if (isSales) {
+        if (canOpenDetail) {
           router.push(`/leads/${leadId}`);
         }
       }}
       className={cn(
         "bg-secondary rounded-xl shadow-md border-2 border-border overflow-hidden transition-shadow",
-        isSales && "cursor-pointer hover:shadow-lg"
+        canOpenDetail && "cursor-pointer hover:shadow-lg hover:shadow-muted"
       )}
     >
       <div className="flex">
@@ -125,10 +133,13 @@ export function LeadListCard({
 
         <div className="flex-1 p-4">
           {/* HEADER */}
-          <div className="flex justify-between mb-2">
-            <div>
+          <div className="flex justify-between items-start gap-3 mb-2">
+            {/* LEFT: Lead info */}
+            <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-bold text-foreground">{leadName}</h4>
+                <h4 className="font-bold text-foreground truncate">
+                  {leadName}
+                </h4>
                 <Badge
                   className={cn(
                     "text-xs font-semibold border",
@@ -139,25 +150,42 @@ export function LeadListCard({
                 </Badge>
               </div>
 
-              <p className="text-sm text-muted-foreground font-medium">
+              <p className="text-sm text-muted-foreground font-medium truncate">
                 {product} • {channel}
               </p>
             </div>
 
-            <div className="flex flex-col items-end gap-1">
-              <div className="inline-flex items-center rounded-full border border-border bg-card px-2.5 py-1">
-                <span className="text-[11px] font-medium text-muted-foreground mr-1">
-                  Umur lead
+            {/* RIGHT: Owner + meta */}
+            <div className="flex flex-col items-end gap-2 shrink-0 text-right">
+              {/* UMUR LEAD */}
+              <div className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 mt-1">
+                <span className="text-[10px] text-muted-foreground mr-1">
+                  Umur
                 </span>
-                <span className="text-xs font-semibold text-foreground">
+                <span className="text-[11px] font-semibold text-foreground">
                   {leadAge}
                 </span>
               </div>
 
               {importedFromExcel && (
-                <span className="inline-flex items-center rounded-full bg-emerald-200 px-2 py-0.5 text-[11px] font-medium text-emerald-700 border border-border">
-                  Dari Excel
+                <span className="inline-flex items-center rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-border">
+                  Excel
                 </span>
+              )}
+
+              {/* OWNER INFO */}
+              {(isTeamLeader || isManager) && salesName && (
+                <div className="text-xs leading-tight text-foreground">
+                  <span className="font-medium text-muted-foreground">Sales:</span>{" "}
+                  {salesName}
+                </div>
+              )}
+
+              {isManager && teamLeaderName && (
+                <div className="text-xs leading-tight text-foreground">
+                  <span className="font-medium text-muted-foreground">Team Leader:</span>{" "}
+                  {teamLeaderName}
+                </div>
               )}
             </div>
           </div>
@@ -173,9 +201,7 @@ export function LeadListCard({
                   <span className="font-bold text-foreground">
                     {nextFollowUp}{" "}
                     {followUpType && (
-                      <span className="text-primary">
-                        ({followUpType})
-                      </span>
+                      <span className="text-primary">({followUpType})</span>
                     )}
                   </span>
                 </>

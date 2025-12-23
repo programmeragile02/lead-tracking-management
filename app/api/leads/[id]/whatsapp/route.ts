@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
-import { sendWaMessage } from "@/lib/whatsapp-service";
+import { ensureWaClient, sendWaMessage } from "@/lib/whatsapp-service";
 import { emitRealtime } from "@/lib/realtime";
 import { getWaTargetFromLead } from "@/lib/wa-utils";
+import { canAccessLead } from "@/lib/lead-access";
+
+export const runtime = "nodejs";
 
 export async function POST(
   req: NextRequest,
@@ -11,6 +14,7 @@ export async function POST(
 ) {
   const { id } = await ctx.params;
   const user = await getCurrentUser(req);
+
   if (!user) {
     return NextResponse.json(
       { ok: false, error: "unauthenticated" },
@@ -19,8 +23,14 @@ export async function POST(
   }
 
   const leadId = Number(id);
-  const { message } = await req.json();
+  if (!leadId || Number.isNaN(leadId)) {
+    return NextResponse.json(
+      { ok: false, error: "invalid_lead_id" },
+      { status: 400 }
+    );
+  }
 
+  const { message } = await req.json();
   if (!message || !message.trim()) {
     return NextResponse.json(
       { ok: false, error: "message_required" },
@@ -28,8 +38,18 @@ export async function POST(
     );
   }
 
+  // === ambil lead + sales + hirarki ===
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
+    include: {
+      sales: {
+        select: {
+          id: true,
+          name: true,
+          teamLeaderId: true,
+        },
+      },
+    },
   });
 
   if (!lead) {
@@ -39,21 +59,24 @@ export async function POST(
     );
   }
 
-  // aturan: sales hanya boleh kirim ke lead miliknya
-  if (user.roleSlug === "sales" && lead.salesId !== user.id) {
+  // === GUARD AKSES ===
+  if (!canAccessLead(user, lead)) {
     return NextResponse.json(
       { ok: false, error: "forbidden" },
       { status: 403 }
     );
   }
 
-  // if (!lead.phone) {
-  //   return NextResponse.json(
-  //     { ok: false, error: "lead_has_no_phone" },
-  //     { status: 400 }
-  //   );
-  // }
+  // === OWNER WA HARUS ADA ===
+  const salesId = lead.salesId;
+  if (!salesId) {
+    return NextResponse.json(
+      { ok: false, error: "lead_has_no_sales" },
+      { status: 400 }
+    );
+  }
 
+  // === ambil chat terakhir (untuk waChatId) ===
   const lastMsg = await prisma.leadMessage.findFirst({
     where: {
       leadId: lead.id,
@@ -64,7 +87,6 @@ export async function POST(
   });
 
   const waTarget = getWaTargetFromLead(lead, lastMsg?.waChatId);
-
   if (!waTarget) {
     return NextResponse.json(
       { ok: false, error: "no_whatsapp_target" },
@@ -72,22 +94,29 @@ export async function POST(
     );
   }
 
-  // 1. simpan pesan sebagai OUTBOUND di DB
+  // 1) SIMPAN MESSAGE (PENDING)
   const leadMessage = await prisma.leadMessage.create({
     data: {
       leadId: lead.id,
-      salesId: user.id,
+
+      // WA OWNER (SALES)
+      salesId: salesId,
+
+      // AUDIT
+      sentById: user.id,
+      sentByRole: user.roleSlug,
+
       channel: "WHATSAPP",
       direction: "OUTBOUND",
+
       waChatId: lastMsg?.waChatId ?? null,
-      fromNumber: user.phone || null,
-      toNumber: lead.phone || null,
+      toNumber: lead.phone ?? null,
       content: message.trim(),
       waStatus: "PENDING",
-      sentAt: null,
     },
   });
 
+  // realtime optimistic update
   await emitRealtime({
     room: `lead:${lead.id}`,
     event: "wa_outbound_created",
@@ -97,24 +126,26 @@ export async function POST(
     },
   });
 
-  // const toNumber = lead.phone.replace(/[^0-9]/g, ""); // normalisasi simpel
-
-  // 2. kirim pesan ke WA service
+  // 2) KIRIM VIA WA SERVICE (PASTI SALES)
   try {
     const sendResult = await sendWaMessage({
-      userId: user.id,
+      userId: salesId, 
       to: waTarget,
       body: message.trim(),
       meta: {
         leadId: lead.id,
         leadMessageId: leadMessage.id,
+        sentById: user.id,
+        sentByRole: user.roleSlug,
       },
     });
 
-    // 3. update waMessageId
+    // === 3) UPDATE WA MESSAGE ID ===
     const updated = await prisma.leadMessage.update({
       where: { id: leadMessage.id },
-      data: { waMessageId: sendResult.waMessageId },
+      data: {
+        waMessageId: sendResult.waMessageId,
+      },
     });
 
     return NextResponse.json({ ok: true, data: updated });
@@ -126,7 +157,6 @@ export async function POST(
       data: { waStatus: "FAILED" },
     });
 
-    // optional: tandai error
     return NextResponse.json(
       { ok: false, error: "send_failed" },
       { status: 500 }
