@@ -50,6 +50,77 @@ const responseJsonSchema = {
   ],
 };
 
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await ctx.params;
+  const leadId = Number(id);
+  if (!leadId || Number.isNaN(leadId)) {
+    return NextResponse.json(
+      { ok: false, error: "Lead ID tidak valid" },
+      { status: 400 }
+    );
+  }
+
+  /**
+   * OPTIONAL (RECOMMENDED)
+   * Cek hak akses ke lead:
+   * - SALES → hanya lead miliknya
+   * - selain SALES → bebas
+   */
+  if (user.roleCode === "SALES") {
+    const ownLead = await prisma.lead.findFirst({
+      where: { id: leadId, salesId: user.id },
+      select: { id: true },
+    });
+
+    if (!ownLead) {
+      return NextResponse.json(
+        { ok: false, error: "Tidak punya akses ke lead ini" },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Ambil cache terbaru
+  const latestInsight = await prisma.leadAIInsight.findFirst({
+    where: {
+      leadId,
+      type: "WHATSAPP_ANALYSIS",
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  if (!latestInsight) {
+    return NextResponse.json({
+      ok: true,
+      data: null,
+      cached: false,
+      note: "Belum ada analisis AI",
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    data: latestInsight.payload,
+    cached: true,
+    meta: {
+      model: latestInsight.model,
+      createdAt: latestInsight.createdAt,
+      messageCount: latestInsight.messageCount,
+    },
+  });
+}
+
 export async function POST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }

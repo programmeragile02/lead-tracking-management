@@ -12,6 +12,7 @@ import {
   Sparkles,
   Wrench,
   Activity,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +48,12 @@ const actions = [
     color: "bg-sky-500 hover:bg-sky-600",
   },
   {
+    id: "substatus",
+    label: "Sub Status Lead",
+    icon: Layers,
+    color: "bg-yellow-500 hover:bg-yellow-600",
+  },
+  {
     id: "status",
     label: "Status Lead",
     icon: Activity,
@@ -68,6 +75,7 @@ type LeadActionFabProps = {
   onAnalyzeAi: () => void;
   onStatus: () => void;
   onStage: () => void;
+  onSubStatus: () => void;
 };
 
 export function LeadActionFab({
@@ -78,6 +86,7 @@ export function LeadActionFab({
   onAnalyzeAi,
   onStatus,
   onStage,
+  onSubStatus
 }: LeadActionFabProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -111,6 +120,10 @@ export function LeadActionFab({
 
       case "stage":
         onStage();
+        break;
+
+      case "substatus":
+        onSubStatus();
         break;
     }
   };

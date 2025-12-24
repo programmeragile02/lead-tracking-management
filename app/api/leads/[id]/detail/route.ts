@@ -32,6 +32,7 @@ export async function GET(
       product: true,
       source: true,
       status: true,
+      subStatus: true,
       stage: true,
       sales: { select: { id: true, name: true, email: true } },
       customValues: { include: { field: { include: { options: true } } } },

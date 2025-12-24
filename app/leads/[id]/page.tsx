@@ -43,8 +43,9 @@ import { StageModal } from "@/components/leads/detail/stage-modal";
 import { QuickStagePanel } from "@/components/leads/detail/QuickStagePanel";
 import { PriceItem } from "@/components/leads/detail/price-item";
 import { useCurrentUser } from "@/hooks/use-current-user";
-
-type LeadStatusUi = "new" | "cold" | "warm" | "hot" | "won" | "lost";
+import { getStatusClass } from "@/lib/lead-status";
+import { cn } from "@/lib/utils";
+import { SubStatusModal } from "@/components/leads/detail/sub-status-modal";
 
 type ChatFrom = "client" | "sales";
 type SentByRole = "sales" | "team-leader" | "manager" | null;
@@ -214,43 +215,6 @@ type WaClientStatus =
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// mapping UI ↔ DB code
-function mapStatusDbToUi(code?: string | null): LeadStatusUi {
-  switch (code) {
-    case "NEW":
-      return "new";
-    case "COLD":
-      return "cold";
-    case "WARM":
-      return "warm";
-    case "HOT":
-      return "hot";
-    case "CLOSE_WON":
-      return "won";
-    case "CLOSE_LOST":
-      return "lost";
-    default:
-      return "new";
-  }
-}
-
-function mapStatusUiToDb(ui: LeadStatusUi): string {
-  switch (ui) {
-    case "new":
-      return "NEW";
-    case "cold":
-      return "COLD";
-    case "warm":
-      return "WARM";
-    case "hot":
-      return "HOT";
-    case "won":
-      return "CLOSE_WON";
-    case "lost":
-      return "CLOSE_LOST";
-  }
-}
-
 function formatCurrencyIDR(value?: number | string | null) {
   if (value === null || value === undefined || value === "") return "-";
 
@@ -321,6 +285,16 @@ export default function LeadDetailPage() {
     fetcher
   );
 
+  const {
+    data: aiCacheRes,
+    isLoading: aiCacheLoading,
+    mutate: mutateAiCache,
+  } = useSWR<{
+    ok: boolean;
+    data: WhatsAppAiAnalysis | null;
+    cached?: boolean;
+  }>(leadId ? `/api/leads/${leadId}/whatsapp/ai-analysis` : null, fetcher);
+
   const SOCKET_URL =
     process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3016";
 
@@ -351,68 +325,55 @@ export default function LeadDetailPage() {
   const statusHistory = detailRes?.data?.statusHistory ?? [];
   const followUpTypes = detailRes?.data?.followUpTypes ?? [];
   const profileCompletion = detailRes?.data?.profileCompletion ?? 0;
+  const statuses = detailRes?.data?.statuses ?? [];
+  const salesName = lead?.sales?.name ?? null;
+
+  function getStatusNameById(id: number | null) {
+    if (!id) return "";
+    return statuses.find((s) => s.id === id)?.name || "";
+  }
 
   const followUps = followUpsRes?.data ?? [];
   const lastFollowUp = followUps[0] ?? null;
 
   // ==== STATUS ====
-  const [status, setStatus] = useState<LeadStatusUi>("new");
+  const [statusId, setStatusId] = useState<number | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
 
   useEffect(() => {
-    if (lead?.status?.code) {
-      setStatus(mapStatusDbToUi(lead.status.code));
-    }
-  }, [lead?.status?.code]);
+    setStatusId(lead?.statusId ?? null);
+  }, [lead?.statusId]);
 
-  const statusLabelMap: Record<LeadStatusUi, string> = {
-    new: "New",
-    cold: "Cold",
-    warm: "Warm",
-    hot: "Hot",
-    won: "Close Won",
-    lost: "Close Lost",
-  };
-
-  function getStatusBadgeClass(s: LeadStatusUi) {
-    switch (s) {
-      case "new":
-        return "bg-slate-200 text-slate-800";
-      case "cold":
-        return "bg-slate-700 text-slate-50";
-      case "warm":
-        return "bg-amber-500 text-white";
-      case "hot":
-        return "bg-red-500 text-white";
-      case "won":
-        return "bg-emerald-500 text-white";
-      case "lost":
-        return "bg-rose-500 text-white";
-      default:
-        return "";
-    }
-  }
-
-  async function updateStatus(next: LeadStatusUi) {
+  async function updateStatus(nextStatusId: number) {
     if (!leadId) return;
+
+    const statusName = getStatusNameById(nextStatusId);
+
     try {
-      setStatus(next);
       setStatusUpdating(true);
 
       const res = await fetch(`/api/leads/${leadId}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          statusCode: mapStatusUiToDb(next),
+          statusId: nextStatusId,
         }),
       });
+
       const json = await res.json();
       if (!res.ok || !json.ok) {
         throw new Error(json.error || "Gagal mengubah status");
       }
+
       await mutateDetail();
+
+      toast({
+        title: "Status berhasil diubah",
+        description: statusName
+          ? `Status lead diubah ke "${statusName}"`
+          : "Status lead berhasil diperbarui.",
+      });
     } catch (err: any) {
-      console.error(err);
       toast({
         variant: "destructive",
         title: "Gagal mengubah status",
@@ -423,8 +384,9 @@ export default function LeadDetailPage() {
     }
   }
 
-  const handleQuickStatus = (s: LeadStatusUi) => {
-    void updateStatus(s);
+  const handleQuickStatus = (nextStatusId: number) => {
+    setStatusId(nextStatusId); // optimistic
+    void updateStatus(nextStatusId);
   };
 
   // ==== STAGE / TAHAPAN ====
@@ -817,13 +779,16 @@ export default function LeadDetailPage() {
     }
   }
 
+  const currentStatus = lead?.status ?? null;
+
   const statusBadge = (
     <Badge
-      className={`rounded-full px-3 py-0.5 text-md ${getStatusBadgeClass(
-        status
-      )}`}
+      className={cn(
+        "rounded-full px-3 py-0.5 text-md",
+        getStatusClass(currentStatus?.code)
+      )}
     >
-      {statusLabelMap[status]}
+      {currentStatus?.name ?? "Tanpa Status"}
     </Badge>
   );
 
@@ -1541,6 +1506,16 @@ export default function LeadDetailPage() {
   const [aiCached, setAiCached] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!aiCacheRes) return;
+
+    if (aiCacheRes.ok && aiCacheRes.data) {
+      setAiData(aiCacheRes.data);
+      setAiCached(true);
+      setAiError(null);
+    }
+  }, [aiCacheRes]);
+
   async function handleAnalyzeChat(limit = 60) {
     if (!leadId) return;
 
@@ -1561,6 +1536,8 @@ export default function LeadDetailPage() {
 
       setAiData(json.data ?? null);
       setAiCached(Boolean(json.cached));
+
+      await mutateAiCache();
 
       toast({
         title: "Analisis AI siap",
@@ -1669,6 +1646,11 @@ export default function LeadDetailPage() {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [stageModalOpen, setStageModalOpen] = useState(false);
 
+  // ==== SUB STATUS ====
+  const [subStatusId, setSubStatusId] = useState<number | null>(null);
+  const [subStatusUpdating, setSubStatusUpdating] = useState(false);
+  const [subStatusModalOpen, setSubStatusModalOpen] = useState(false);
+
   const isAnyModalOpen =
     scheduleModalOpen ||
     proposalModalOpen ||
@@ -1679,7 +1661,8 @@ export default function LeadDetailPage() {
     activityPreviewOpen ||
     priceModalOpen ||
     statusModalOpen ||
-    stageModalOpen;
+    stageModalOpen ||
+    subStatusModalOpen;
 
   useEffect(() => {
     if (isAnyModalOpen) {
@@ -1714,10 +1697,63 @@ export default function LeadDetailPage() {
     }).catch(() => {});
   }, [waSalesId, waStatus]);
 
+  useEffect(() => {
+    setSubStatusId(lead?.subStatusId ?? null);
+  }, [lead?.subStatusId]);
+
+  async function updateSubStatus(nextSubStatusId: number) {
+    if (!leadId) return;
+
+    try {
+      setSubStatusUpdating(true);
+
+      const res = await fetch(`/api/leads/${leadId}/sub-status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subStatusId: nextSubStatusId,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.message || "Gagal mengubah sub status");
+      }
+
+      await Promise.all([
+        mutateDetail(),
+        mutateActivities(), // 🔥 biar langsung muncul di timeline
+      ]);
+
+      toast({
+        title: "Sub status diperbarui",
+        description: `Sub status diubah ke "${json.data.subStatus.name}"`,
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal mengubah sub status",
+        description: err?.message || "Terjadi kesalahan.",
+      });
+    } finally {
+      setSubStatusUpdating(false);
+    }
+  }
+
   return (
     <DashboardLayout title="Detail Leads">
       <div className="flex min-h-[100dvh] flex-col">
         <main className="mx-auto flex w-full flex-1 flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 md:pb-8">
+          {/* SALES INFO */}
+          <Badge
+            variant="default"
+            className="flex items-center gap-1.5 text-xs sm:text-sm"
+          >
+            Sales:
+            <span className="font-medium">
+              {salesName ?? "Belum ditentukan"}
+            </span>
+          </Badge>
           {/* RINGKASAN LEAD */}
           <section className="flex flex-col gap-5 rounded-xl border p-5 md:flex-row md:items-center md:justify-between bg-secondary">
             {/* ===== IDENTITAS LEAD ===== */}
@@ -1823,7 +1859,11 @@ export default function LeadDetailPage() {
               <InfoItem
                 icon={Activity}
                 label="Status"
-                value={statusLabelMap[status]}
+                value={
+                  lead?.subStatus
+                    ? `${lead.status?.name} · ${lead.subStatus.name}`
+                    : lead?.status?.name ?? "-"
+                }
                 highlight
               />
 
@@ -1856,64 +1896,6 @@ export default function LeadDetailPage() {
             <CardContent className="px-0">
               {/* QUICK ACTIONS DI ATAS CHAT */}
               <div className="space-y-2 rounded-md border bg-secondary p-2 mb-4">
-                {/* Quick Status */}
-                {/* <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[11px] md:text-sm text-muted-foreground">
-                          Status lead:
-                        </span>
-                        {statusBadge}
-                        <div className="flex flex-wrap gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] md:text-sm"
-                            onClick={() => handleQuickStatus("new")}
-                          >
-                            New
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] md:text-sm"
-                            onClick={() => handleQuickStatus("cold")}
-                          >
-                            Cold
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] md:text-sm"
-                            onClick={() => handleQuickStatus("warm")}
-                          >
-                            Warm
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] md:text-sm"
-                            onClick={() => handleQuickStatus("hot")}
-                          >
-                            Hot
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] md:text-sm"
-                            onClick={() => handleQuickStatus("won")}
-                          >
-                            Close Won
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 px-2 text-[11px] md:text-sm"
-                            onClick={() => handleQuickStatus("lost")}
-                          >
-                            Close Lost
-                          </Button>
-                        </div>
-                      </div> */}
-
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {/* Quick Tindak Lanjut */}
                   <div className="flex flex-col justify-between rounded-lg border bg-background p-3">
@@ -2328,25 +2310,6 @@ export default function LeadDetailPage() {
                       </div> */}
                   </div>
 
-                  {/* MODAL TINDAK LANJUT */}
-                  <FollowUpScheduleDialog
-                    open={scheduleModalOpen}
-                    onOpenChange={setScheduleModalOpen}
-                    followUpTypeCode={followUpTypeCode}
-                    setFollowUpTypeCode={setFollowUpTypeCode}
-                    followUpDate={followUpDate}
-                    setFollowUpDate={setFollowUpDate}
-                    followUpTime={followUpTime}
-                    setFollowUpTime={setFollowUpTime}
-                    followUpChannel={followUpChannel}
-                    setFollowUpChannel={setFollowUpChannel}
-                    followUpNote={followUpNote}
-                    setFollowUpNote={setFollowUpNote}
-                    followUpTypes={followUpTypes}
-                    saving={savingFollowUp}
-                    onSave={handleSaveFollowUp}
-                  />
-
                   {/* MODAL KIRIM PENAWARAN (PDF) */}
                   <ProposalDialog
                     open={proposalModalOpen}
@@ -2414,7 +2377,7 @@ export default function LeadDetailPage() {
                   {/* ===== AI INSIGHT + REPLIES ===== */}
                   <AiInsightPanel
                     aiData={aiData}
-                    aiLoading={aiLoading}
+                    aiLoading={aiLoading || aiCacheLoading}
                     aiCached={aiCached}
                     aiError={aiError}
                     onAnalyze={handleAnalyzeChat}
@@ -2484,6 +2447,25 @@ export default function LeadDetailPage() {
                   onChangeInput={(v) => setPriceInput(formatRupiahInput(v))}
                   onSave={handleSavePrice}
                 />
+
+                {/* MODAL TINDAK LANJUT */}
+                <FollowUpScheduleDialog
+                  open={scheduleModalOpen}
+                  onOpenChange={setScheduleModalOpen}
+                  followUpTypeCode={followUpTypeCode}
+                  setFollowUpTypeCode={setFollowUpTypeCode}
+                  followUpDate={followUpDate}
+                  setFollowUpDate={setFollowUpDate}
+                  followUpTime={followUpTime}
+                  setFollowUpTime={setFollowUpTime}
+                  followUpChannel={followUpChannel}
+                  setFollowUpChannel={setFollowUpChannel}
+                  followUpNote={followUpNote}
+                  setFollowUpNote={setFollowUpNote}
+                  followUpTypes={followUpTypes}
+                  saving={savingFollowUp}
+                  onSave={handleSaveFollowUp}
+                />
               </Tabs>
             </CardContent>
           </section>
@@ -2491,7 +2473,7 @@ export default function LeadDetailPage() {
       </div>
 
       {/* ===== FLOATING ACTION BUTTON ===== */}
-      {!isAnyModalOpen && isSales && (
+      {!isAnyModalOpen && (
         <LeadActionFab
           onFollowUp={() => setScheduleModalOpen(true)}
           onPrice={handleOpenPriceModal}
@@ -2500,16 +2482,31 @@ export default function LeadDetailPage() {
           onAnalyzeAi={() => handleAnalyzeChat(60)}
           onStatus={() => setStatusModalOpen(true)}
           onStage={() => setStageModalOpen(true)}
+          onSubStatus={() => setSubStatusModalOpen(true)}
         />
       )}
 
       <StatusModal
         open={statusModalOpen}
         onOpenChange={setStatusModalOpen}
-        value={status}
+        value={statusId}
         loading={statusUpdating}
-        onChange={(next) => {
-          handleQuickStatus(next);
+        onChange={(nextStatusId: number) => {
+          setStatusId(nextStatusId); // optimistic
+          updateStatus(nextStatusId);
+        }}
+      />
+
+      <SubStatusModal
+        open={subStatusModalOpen}
+        onOpenChange={setSubStatusModalOpen}
+        statusId={lead?.statusId ?? null}
+        statusName={lead?.status?.name}
+        value={subStatusId}
+        loading={subStatusUpdating}
+        onChange={(nextSubStatusId) => {
+          setSubStatusId(nextSubStatusId);
+          updateSubStatus(nextSubStatusId);
         }}
       />
 
