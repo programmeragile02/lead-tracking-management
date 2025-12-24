@@ -4,13 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LeadListCard } from "@/components/leads/lead-list-card";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Calendar1, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ImportLeadsDialog } from "@/components/leads/import-leads-dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { io as ioClient } from "socket.io-client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -53,6 +59,7 @@ type LeadListApiResponse = {
   page?: number;
   pageSize?: number;
   hasNext?: boolean;
+  totalPages: number;
 };
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
@@ -164,15 +171,30 @@ function computeLeadAgeLabel(iso: string): string {
   return `${months} bln ${daysRemainder} hari`;
 }
 
+function getCurrentMonth() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function formatMonthLabel(month: string) {
+  return new Date(month + "-01").toLocaleDateString("id-ID", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
 // =================== PAGE ===================
 
 export default function LeadsPage() {
+  const { toast } = useToast();
+
   const [search, setSearch] = useState("");
   const [activeStatusCode, setActiveStatusCode] = useState<string>("ALL"); // ALL / HOT / WARM / ...
   const [activeSubStatusCode, setActiveSubStatusCode] = useState<string>("ALL");
   const [activeTeamLeaderId, setActiveTeamLeaderId] = useState("ALL");
   const [activeSalesId, setActiveSalesId] = useState("ALL");
   const [page, setPage] = useState(1);
+  const [activeMonth, setActiveMonth] = useState<string | null>(null);
 
   // ambil master status
   const { data: statusResp } = useSWR<LeadStatusApiResponse>(
@@ -211,7 +233,11 @@ export default function LeadsPage() {
     .filter(Boolean)
     .join("&");
 
-  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${searchQuery}${
+  const monthQuery = activeMonth
+    ? `&month=${encodeURIComponent(activeMonth)}`
+    : "";
+
+  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${searchQuery}${monthQuery}${
     hierarchyQuery ? `&${hierarchyQuery}` : ""
   }`;
 
@@ -252,10 +278,14 @@ export default function LeadsPage() {
   const { data: salesResp } = useSWR(salesUrl, fetcher);
   const salesList = salesResp?.data ?? [];
 
-  const { data: tlCountResp } = useSWR(
-    user?.roleSlug === "manager" ? "/api/leads/count-by-team-leader" : null,
-    fetcher
-  );
+  const tlCountUrl =
+    user?.roleSlug === "manager"
+      ? `/api/leads/count-by-team-leader${
+          activeMonth ? `?month=${activeMonth}` : ""
+        }`
+      : null;
+
+  const { data: tlCountResp } = useSWR(tlCountUrl, fetcher);
 
   const tlCounts = tlCountResp?.data ?? {};
   const totalTL = tlCountResp?.total ?? 0;
@@ -264,10 +294,14 @@ export default function LeadsPage() {
   const salesCountUrl =
     user?.roleSlug === "manager"
       ? activeTeamLeaderId !== "ALL"
-        ? `/api/leads/count-by-sales?teamLeaderId=${activeTeamLeaderId}`
-        : null
+        ? `/api/leads/count-by-sales?teamLeaderId=${activeTeamLeaderId}${
+            activeMonth ? `&month=${activeMonth}` : ""
+          }`
+        : activeMonth
+        ? `/api/leads/count-by-sales?month=${activeMonth}`
+        : "/api/leads/count-by-sales"
       : user?.roleSlug === "team-leader"
-      ? "/api/leads/count-by-sales"
+      ? `/api/leads/count-by-sales${activeMonth ? `?month=${activeMonth}` : ""}`
       : null;
 
   const { data: salesCountResp } = useSWR(salesCountUrl, fetcher);
@@ -285,8 +319,39 @@ export default function LeadsPage() {
     // join room user
     s.emit("join", { userId: user.id });
 
-    s.on("lead_list_changed", () => {
-      mutateLeads(); // auto refresh list
+    s.on("lead_list_changed", (payload) => {
+      mutateLeads();
+
+      if (!payload?.type) return;
+
+      // UX kecil tapi kerasa
+      if (payload.type === "ASSIGN_ACTIVITY") {
+        toast({
+          title: "Lead berhasil dialihkan",
+          description: payload.leadName
+            ? `Lead ${payload.leadName} dialihkan ke sales ${payload.toSalesName}`
+            : "Lead berhasil dialihkan",
+        });
+      }
+
+      if (payload.type === "ASSIGNED_TO_YOU") {
+        toast({
+          title: "Lead baru",
+          description: payload.leadName
+            ? `Lead ${payload.leadName} dialihkan ke Anda`
+            : "Ada lead baru dialihkan ke Anda",
+        });
+      }
+
+      if (payload.type === "REMOVED_FROM_YOU") {
+        toast({
+          title: "Lead dialihkan",
+          description: payload.leadName
+            ? `Lead ${payload.leadName} dialihkan ke sales ${payload.toSalesName}`
+            : "Lead anda dialihkan",
+          variant: "default",
+        });
+      }
     });
 
     return () => {
@@ -295,11 +360,13 @@ export default function LeadsPage() {
     };
   }, [user?.id, mutateLeads]);
 
+  const totalPages = leadsResp?.totalPages ?? 1;
+
   return (
     <DashboardLayout title="Lead">
       <div className="space-y-4">
         {/* Search + Filter Bar */}
-        <div className="top-0 z-10 bg-background pb-4 space-y-3 pt-1">
+        <div className="top-0 z-10 bg-background space-y-3 pt-1">
           {user?.roleSlug === "manager" && teamLeaders.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {/* Semua TL */}
@@ -443,6 +510,54 @@ export default function LeadsPage() {
                 }}
               />
             </div>
+
+            {/* FILTER BULAN */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={activeMonth ? "default" : "outline"}
+                  size="icon"
+                  title="Filter bulan"
+                  className="w-11 h-11"
+                >
+                  <Calendar1 className="h-4 w-4 text-foreground" />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent className="w-56 p-3 mr-4">
+                <div className="space-y-3">
+                  <div className="text-sm font-medium">Filter Bulan</div>
+
+                  {/* INPUT TETAP ADA TAPI KECIL */}
+                  <input
+                    type="month"
+                    className="
+                      w-full rounded-md border
+                      px-2 py-1.5 text-sm
+                      scheme-dark
+                    "
+                    value={activeMonth ?? ""}
+                    onChange={(e) => {
+                      setActiveMonth(e.target.value || null);
+                      setPage(1);
+                    }}
+                  />
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setActiveMonth(getCurrentMonth());
+                      setPage(1);
+                    }}
+                  >
+                    Bulan ini
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             {user?.roleSlug === "sales" && (
               <ImportLeadsDialog
                 onImported={async () => {
@@ -585,6 +700,15 @@ export default function LeadsPage() {
           )}
         </div>
 
+        {activeMonth && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground px-1">
+            <span>Periode:</span>
+            <span className="font-medium text-foreground">
+              {formatMonthLabel(activeMonth)}
+            </span>
+          </div>
+        )}
+
         {/* Lead List */}
         <div className="space-y-3">
           {isLoading ? (
@@ -623,21 +747,26 @@ export default function LeadsPage() {
             })
           )}
 
-          <div className="flex items-center justify-start pt-2">
+          <div className="flex items-center gap-2 pt-2">
+            <div className="text-sm text-muted-foreground">
+              Halaman {page} / {totalPages}
+            </div>
+
             <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={leadsRespPage <= 1}
-                onClick={() => setPage((prev) => (prev > 1 ? prev - 1 : 1))}
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
               >
                 Sebelumnya
               </Button>
+
               <Button
                 variant="outline"
                 size="sm"
                 disabled={!hasNext}
-                onClick={() => setPage((prev) => prev + 1)}
+                onClick={() => setPage((p) => p + 1)}
               >
                 Berikutnya
               </Button>

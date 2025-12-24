@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
 
+function getMonthRange(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) return null;
+
+  return {
+    start: new Date(y, m - 1, 1, 0, 0, 0),
+    end: new Date(y, m, 1, 0, 0, 0),
+  };
+}
+
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser(req);
   if (!user) {
@@ -9,6 +19,7 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
+  const monthParam = searchParams.get("month");
   const teamLeaderIdParam = searchParams.get("teamLeaderId");
   const teamLeaderId = teamLeaderIdParam ? Number(teamLeaderIdParam) : null;
 
@@ -20,6 +31,16 @@ export async function GET(req: NextRequest) {
 
   if (user.roleSlug === "manager" && teamLeaderId) {
     whereLead.sales = { teamLeaderId };
+  }
+
+  if (monthParam) {
+    const range = getMonthRange(monthParam);
+    if (range) {
+      whereLead.createdAt = {
+        gte: range.start,
+        lt: range.end,
+      };
+    }
   }
 
   const rows = await prisma.lead.groupBy({

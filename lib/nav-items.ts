@@ -19,6 +19,7 @@ import {
   ChartBarIncreasing,
   PhoneOff,
   UserRoundX,
+  SquareArrowRight,
 } from "lucide-react";
 
 export type AppRole = "sales" | "team-leader" | "manager";
@@ -69,6 +70,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       label: "Laporan",
       icon: ChartColumnIncreasing,
       children: [
+        {
+          id: "laporan-assignmnet-lead",
+          label: "Assignment Lead",
+          href: "/reports/lead-assignments",
+          icon: SquareArrowRight,
+        },
         {
           id: "laporan-tahapan",
           label: "Laporan Tahapan",
@@ -177,6 +184,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       label: "Laporan",
       icon: ChartColumnIncreasing,
       children: [
+        {
+          id: "laporan-assignmnet-lead",
+          label: "Assignment Lead",
+          href: "/reports/lead-assignments",
+          icon: SquareArrowRight,
+        },
         {
           id: "laporan-tahapan",
           label: "Laporan Tahapan",

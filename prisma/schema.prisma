@@ -79,6 +79,10 @@ model User {
 
   sentLeadMessages LeadMessage[] @relation("LeadMessageSentBy")
 
+  assignedLeadsFrom LeadAssignmentHistory[] @relation("LeadAssignFrom")
+  assignedLeadsTo   LeadAssignmentHistory[] @relation("LeadAssignTo")
+  assignedLeadActions LeadAssignmentHistory[] @relation("LeadAssignedBy")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -276,6 +280,8 @@ model Lead {
   trackedLinkClicks  LeadTrackedLinkClick[] @relation("LeadTrackedLinkClicks_Lead")
 
   aiInsights LeadAIInsight[] @relation("LeadAIInsightLead")
+
+  assignmentHistories LeadAssignmentHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -976,4 +982,30 @@ model SalesExcludedContact {
   @@index([phone])
 
   @@map("sales_excluded_contacts")
+}
+
+model LeadAssignmentHistory {
+  id Int @id @default(autoincrement())
+
+  leadId Int
+  lead   Lead @relation(fields: [leadId], references: [id])
+
+  fromSalesId Int?
+  fromSales   User? @relation("LeadAssignFrom", fields: [fromSalesId], references: [id])
+
+  toSalesId Int?
+  toSales   User? @relation("LeadAssignTo", fields: [toSalesId], references: [id])
+
+  assignedById Int?
+  assignedBy   User? @relation("LeadAssignedBy", fields: [assignedById], references: [id])
+
+  assignedByRole String? // MANAGER / TEAM_LEADER
+
+  reason String? @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([fromSalesId])
+  @@index([toSalesId])
 }

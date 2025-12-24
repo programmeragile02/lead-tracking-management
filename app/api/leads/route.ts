@@ -29,6 +29,16 @@ function normalizePhoneTo62(input: string | null | undefined): string | null {
   return s;
 }
 
+function getMonthRange(month: string) {
+  const [y, m] = month.split("-").map(Number);
+  if (!y || !m) return null;
+
+  const start = new Date(y, m - 1, 1, 0, 0, 0);
+  const end = new Date(y, m, 1, 0, 0, 0);
+
+  return { start, end };
+}
+
 type CustomValueInput = {
   fieldId: number;
   value: string;
@@ -60,6 +70,8 @@ export async function GET(req: NextRequest) {
     const teamLeaderId = teamLeaderIdParam ? Number(teamLeaderIdParam) : null;
 
     const salesId = salesIdParam ? Number(salesIdParam) : null;
+
+    const monthParam = searchParams.get("month"); // "YYYY-MM"
 
     const pageParam = searchParams.get("page");
     const page = Math.max(1, Number(pageParam || 1) || 1);
@@ -93,6 +105,16 @@ export async function GET(req: NextRequest) {
 
       if (salesId) {
         baseWhere.salesId = salesId;
+      }
+    }
+
+    if (monthParam) {
+      const range = getMonthRange(monthParam);
+      if (range) {
+        baseWhere.createdAt = {
+          gte: range.start,
+          lt: range.end,
+        };
       }
     }
 
@@ -231,6 +253,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    const totalCount = await prisma.lead.count({
+      where: leadsWhere,
+    });
+
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     const data = leadsPage.map((lead) => {
       const latestFU = lead.followUps[0];
       const nurturingEnabled =
@@ -264,6 +292,8 @@ export async function GET(req: NextRequest) {
       page,
       pageSize,
       hasNext,
+      totalCount,
+      totalPages,
     });
   } catch (err: any) {
     console.error("GET /api/leads error", err);
