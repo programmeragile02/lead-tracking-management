@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
       .get("subStatus")
       ?.trim()
       .toUpperCase();
+    const stageIdParam = searchParams.get("stageId");
 
     const teamLeaderIdParam = searchParams.get("teamLeaderId");
     const salesIdParam = searchParams.get("salesId");
@@ -142,6 +143,13 @@ export async function GET(req: NextRequest) {
       leadsWhere.AND = (leadsWhere.AND || []).concat({
         subStatus: { code: subStatusCodeParam },
       });
+    }
+
+    if (stageIdParam && stageIdParam !== "ALL") {
+      leadsWhere.AND = [
+        ...(leadsWhere.AND || []),
+        { stageId: Number(stageIdParam) },
+      ];
     }
 
     const skip = (page - 1) * pageSize;

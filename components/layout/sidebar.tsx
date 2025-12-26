@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -17,8 +17,13 @@ interface SidebarProps {
 
 export function Sidebar({ role, collapsed = false }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
   const { user, loading } = useCurrentUser();
   const [openGroupId, setOpenGroupId] = useState<string | null>("");
+
+  const withQuery = (href: string) =>
+    queryString ? `${href}?${queryString}` : href;
 
   const navItems = NAV_ITEMS[role];
 
@@ -76,6 +81,8 @@ export function Sidebar({ role, collapsed = false }: SidebarProps) {
           const active = isItemActive(item);
           const hasChildren = !!item.children?.length;
 
+          const shouldPreserveQuery = item.href?.startsWith("/leads");
+
           // item tanpa submenu (link biasa)
           if (!hasChildren) {
             if (!item.href) return null;
@@ -84,7 +91,11 @@ export function Sidebar({ role, collapsed = false }: SidebarProps) {
             return (
               <Link
                 key={item.id}
-                href={item.href}
+                href={
+                  shouldPreserveQuery
+                    ? `${item.href}?${searchParams.toString()}`
+                    : item.href
+                }
                 className={cn(
                   "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
                   active
@@ -162,7 +173,11 @@ export function Sidebar({ role, collapsed = false }: SidebarProps) {
                     return (
                       <Link
                         key={child.id}
-                        href={child.href}
+                        href={
+                          shouldPreserveQuery
+                            ? `${child.href}?${searchParams.toString()}`
+                            : child.href
+                        }
                         className={cn(
                           "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-all",
                           childActive
@@ -204,7 +219,9 @@ export function Sidebar({ role, collapsed = false }: SidebarProps) {
               <p className="text-sm font-semibold text-foreground truncate">
                 {loading ? "Memuat..." : displayName}
               </p>
-              <p className="text-xs text-muted-foreground truncate">{displayRole}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {displayRole}
+              </p>
             </div>
           )}
         </div>

@@ -40,6 +40,7 @@ export function LeadListCard({
   importedFromExcel,
   salesName,
   teamLeaderName,
+  createdDate,
 }: LeadListCardProps) {
   const { user } = useCurrentUser();
   const { toast } = useToast();
@@ -123,7 +124,7 @@ export function LeadListCard({
       <div
         onClick={() => {
           if (canOpenDetail) {
-            router.push(`/leads/${leadId}`);
+            router.push(`/leads/${leadId}${window.location.search}`);
           }
         }}
         className={cn(
@@ -157,25 +158,32 @@ export function LeadListCard({
                 <p className="text-sm text-muted-foreground font-medium truncate">
                   {product} • {channel}
                 </p>
+
+                <p className="text-sm text-muted-foreground font-medium truncate">
+                  Lead Masuk:{" "}
+                  <span className="text-foreground">{createdDate}</span>
+                </p>
               </div>
 
               {/* RIGHT: Owner + meta */}
               <div className="flex flex-col items-end gap-2 shrink-0 text-right">
-                {/* UMUR LEAD */}
-                <div className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5 mt-1">
-                  <span className="text-[10px] text-muted-foreground mr-1">
-                    Umur
-                  </span>
-                  <span className="text-[11px] font-semibold text-foreground">
-                    {leadAge}
-                  </span>
-                </div>
+                <div className="flex flex-row items-center gap-1">
+                  {/* UMUR LEAD */}
+                  <div className="inline-flex items-center rounded-full border border-border bg-card px-2 py-0.5">
+                    <span className="text-[10px] text-muted-foreground mr-1">
+                      Umur
+                    </span>
+                    <span className="text-[11px] font-semibold text-foreground">
+                      {leadAge}
+                    </span>
+                  </div>
 
-                {importedFromExcel && (
-                  <span className="inline-flex items-center rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-border">
-                    Excel
-                  </span>
-                )}
+                  {importedFromExcel && (
+                    <span className="inline-flex items-center rounded-full bg-emerald-200 px-2 py-0.5 text-[10px] font-medium text-emerald-700 border border-border">
+                      Excel
+                    </span>
+                  )}
+                </div>
 
                 {/* OWNER / ASSIGN SALES */}
                 {(isTeamLeader || isManager) && salesName && (

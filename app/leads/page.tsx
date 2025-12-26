@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LeadListCard } from "@/components/leads/lead-list-card";
-import { Calendar1, Search, SlidersHorizontal } from "lucide-react";
+import { Calendar1, Download, Search, SlidersHorizontal } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useLeadFilters } from "@/hooks/use-lead-filters";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -188,13 +189,23 @@ function formatMonthLabel(month: string) {
 export default function LeadsPage() {
   const { toast } = useToast();
 
+  const { filters, setFilters } = useLeadFilters();
+
+  const {
+    status: activeStatusCode,
+    subStatus: activeSubStatusCode,
+    stage: activeStageId,
+    month: activeMonth,
+    page,
+    teamLeader: activeTeamLeaderId,
+    sales: activeSalesId,
+  } = filters;
+
   const [search, setSearch] = useState("");
-  const [activeStatusCode, setActiveStatusCode] = useState<string>("ALL"); // ALL / HOT / WARM / ...
-  const [activeSubStatusCode, setActiveSubStatusCode] = useState<string>("ALL");
-  const [activeTeamLeaderId, setActiveTeamLeaderId] = useState("ALL");
-  const [activeSalesId, setActiveSalesId] = useState("ALL");
-  const [page, setPage] = useState(1);
-  const [activeMonth, setActiveMonth] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   setActiveStageId("ALL");
+  // }, [activeStatusCode, activeSubStatusCode]);
 
   // ambil master status
   const { data: statusResp } = useSWR<LeadStatusApiResponse>(
@@ -210,6 +221,15 @@ export default function LeadsPage() {
     fetcher
   );
   const subStatuses = subStatusResp?.data ?? [];
+
+  const { data: stageResp } = useSWR(
+    activeSubStatusCode !== "ALL"
+      ? `/api/lead-filters/stages?statusCode=${activeStatusCode}&subStatusCode=${activeSubStatusCode}`
+      : null,
+    fetcher
+  );
+
+  const stages = stageResp?.data ?? [];
 
   // URL API leads dengan query & filter status
   const searchQuery = search.trim()
@@ -237,7 +257,9 @@ export default function LeadsPage() {
     ? `&month=${encodeURIComponent(activeMonth)}`
     : "";
 
-  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${searchQuery}${monthQuery}${
+  const stageQuery = activeStageId !== "ALL" ? `&stageId=${activeStageId}` : "";
+
+  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${stageQuery}${searchQuery}${monthQuery}${
     hierarchyQuery ? `&${hierarchyQuery}` : ""
   }`;
 
@@ -378,9 +400,11 @@ export default function LeadsPage() {
                     : "bg-secondary text-muted-foreground"
                 )}
                 onClick={() => {
-                  setActiveTeamLeaderId("ALL");
-                  setActiveSalesId("ALL");
-                  setPage(1);
+                  setFilters({
+                    teamLeader: "ALL",
+                    sales: "ALL",
+                    page: 1,
+                  });
                 }}
               >
                 <span>Semua TL</span>
@@ -410,9 +434,11 @@ export default function LeadsPage() {
                         : "bg-secondary text-muted-foreground"
                     )}
                     onClick={() => {
-                      setActiveTeamLeaderId(String(tl.id));
-                      setActiveSalesId("ALL");
-                      setPage(1);
+                      setFilters({
+                        teamLeader: tl.id,
+                        sales: "ALL",
+                        page: 1,
+                      });
                     }}
                   >
                     <span>{tl.name}</span>
@@ -444,8 +470,10 @@ export default function LeadsPage() {
                       : "bg-secondary text-muted-foreground"
                   )}
                   onClick={() => {
-                    setActiveSalesId("ALL");
-                    setPage(1);
+                    setFilters({
+                      sales: "ALL",
+                      page: 1,
+                    });
                   }}
                 >
                   <span>Semua Sales</span>
@@ -475,8 +503,10 @@ export default function LeadsPage() {
                           : "bg-secondary text-muted-foreground"
                       )}
                       onClick={() => {
-                        setActiveSalesId(String(s.id));
-                        setPage(1);
+                        setFilters({
+                          sales: s.id,
+                          page: 1,
+                        });
                       }}
                     >
                       <span>{s.name}</span>
@@ -506,7 +536,9 @@ export default function LeadsPage() {
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
-                  setPage(1);
+                  setFilters({
+                    page: 1,
+                  });
                 }}
               />
             </div>
@@ -538,8 +570,7 @@ export default function LeadsPage() {
                     "
                     value={activeMonth ?? ""}
                     onChange={(e) => {
-                      setActiveMonth(e.target.value || null);
-                      setPage(1);
+                      setFilters({ month: e.target.value, page: 1 });
                     }}
                   />
 
@@ -548,8 +579,10 @@ export default function LeadsPage() {
                     size="sm"
                     className="w-full"
                     onClick={() => {
-                      setActiveMonth(getCurrentMonth());
-                      setPage(1);
+                      setFilters({
+                        month: getCurrentMonth(),
+                        page: 1,
+                      });
                     }}
                   >
                     Bulan ini
@@ -561,11 +594,33 @@ export default function LeadsPage() {
             {user?.roleSlug === "sales" && (
               <ImportLeadsDialog
                 onImported={async () => {
-                  setPage(1);
+                  setFilters({ page: 1 });
                   await mutateLeads();
                 }}
               />
             )}
+
+            <Button
+              variant="default"
+              onClick={() => {
+                const params = new URLSearchParams();
+
+                if (filters.status !== "ALL")
+                  params.set("status", filters.status);
+                if (filters.subStatus !== "ALL")
+                  params.set("subStatus", filters.subStatus);
+                if (filters.stage !== "ALL") params.set("stage", filters.stage);
+                if (filters.teamLeader !== "ALL")
+                  params.set("teamLeader", filters.teamLeader);
+                if (filters.sales !== "ALL") params.set("sales", filters.sales);
+                if (filters.month) params.set("month", filters.month);
+
+                window.open(`/api/leads/export?${params.toString()}`, "_blank");
+              }}
+            >
+              <Download className="h-4 w-4" />
+              Export Excel
+            </Button>
           </div>
 
           {/* Filter status (pill) */}
@@ -580,8 +635,10 @@ export default function LeadsPage() {
                   : "bg-secondary text-muted-foreground"
               )}
               onClick={() => {
-                setActiveStatusCode("ALL");
-                setPage(1);
+                setFilters({
+                  status: "ALL",
+                  page: 1,
+                });
               }}
             >
               <span>Semua</span>
@@ -613,9 +670,11 @@ export default function LeadsPage() {
                       : "bg-secondary text-muted-foreground"
                   )}
                   onClick={() => {
-                    setActiveStatusCode(st.code);
-                    setActiveSubStatusCode("ALL");
-                    setPage(1);
+                    setFilters({
+                      status: st.code,
+                      subStatus: "ALL",
+                      page: 1,
+                    });
                   }}
                 >
                   <span>{st.name}</span>
@@ -646,8 +705,10 @@ export default function LeadsPage() {
                     : "bg-secondary text-muted-foreground"
                 )}
                 onClick={() => {
-                  setActiveSubStatusCode("ALL");
-                  setPage(1);
+                  setFilters({
+                    subStatus: "ALL",
+                    page: 1,
+                  });
                 }}
               >
                 <span>Semua</span>
@@ -678,8 +739,10 @@ export default function LeadsPage() {
                         : "bg-secondary text-muted-foreground"
                     )}
                     onClick={() => {
-                      setActiveSubStatusCode(ss.code);
-                      setPage(1);
+                      setFilters({
+                        subStatus: ss.code,
+                        page: 1,
+                      });
                     }}
                   >
                     <span>{ss.name}</span>
@@ -693,6 +756,67 @@ export default function LeadsPage() {
                     >
                       {count}
                     </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ====== STAGE FILTER ====== */}
+          {activeSubStatusCode !== "ALL" && stages.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1 pl-1">
+              {/* Semua Tahap */}
+              <button
+                type="button"
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center",
+                  activeStageId === "ALL"
+                    ? "bg-primary text-white border-primary"
+                    : "bg-secondary text-muted-foreground"
+                )}
+                onClick={() => {
+                  setFilters({
+                    stage: "ALL",
+                    page: 1,
+                  });
+                }}
+              >
+                <span>Semua Tahap</span>
+              </button>
+
+              {stages.map((stg: any) => {
+                const isActive = activeStageId === String(stg.id);
+
+                return (
+                  <button
+                    key={stg.id}
+                    type="button"
+                    className={cn(
+                      "px-3 py-1.5 rounded-full text-xs font-medium border inline-flex items-center",
+                      isActive
+                        ? "bg-primary text-white border-primary"
+                        : "bg-secondary text-muted-foreground"
+                    )}
+                    onClick={() => {
+                      setFilters({
+                        stage: stg.id,
+                        page: 1,
+                      });
+                    }}
+                  >
+                    <span>{stg.name}</span>
+
+                    {/* BADGE JUMLAH */}
+                    {/* <span
+                      className={cn(
+                        "ml-2 inline-flex h-4 min-w-[1.25rem] items-center justify-center rounded-full px-1 text-[10px]",
+                        isActive
+                          ? "bg-white/20 text-white"
+                          : "bg-muted-foreground text-secondary"
+                      )}
+                    >
+                      {stg.count}
+                    </span> */}
                   </button>
                 );
               })}
@@ -720,7 +844,15 @@ export default function LeadsPage() {
           ) : (
             leads.map((lead) => {
               const uiStatus = mapStatusCodeToUiStatus(lead.statusCode);
-              const createdLabel = formatRelativeCreatedAt(lead.createdAt);
+              const createdLabel = new Date(lead.createdAt).toLocaleDateString(
+                "id-ID",
+                {
+                  day: "2-digit",
+                  month: "long",
+                  year: "numeric",
+                }
+              );
+
               const ageLabel = computeLeadAgeLabel(lead.createdAt);
               const nextLabel = formatNextFollowUp(lead.nextActionAt);
               const indicator = computeIndicator(lead.nextActionAt);
@@ -757,7 +889,7 @@ export default function LeadsPage() {
                 variant="outline"
                 size="sm"
                 disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setFilters({ page: Math.max(1, page - 1) })}
               >
                 Sebelumnya
               </Button>
@@ -766,7 +898,7 @@ export default function LeadsPage() {
                 variant="outline"
                 size="sm"
                 disabled={!hasNext}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setFilters({ page: page + 1 })}
               >
                 Berikutnya
               </Button>

@@ -268,7 +268,7 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Upload className="h-4 w-4" />
-          Import Excel
+          Import Lead
         </Button>
       </DialogTrigger>
 

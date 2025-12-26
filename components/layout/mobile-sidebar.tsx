@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Sheet,
@@ -26,7 +26,12 @@ export function MobileSidebar({
   onOpenChange,
 }: MobileSidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
   const navItems = NAV_ITEMS[role];
+
+  const withQuery = (href: string) =>
+    queryString ? `${href}?${queryString}` : href;
 
   // state group yang kebuka (bisa lebih dari satu)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
@@ -58,6 +63,8 @@ export function MobileSidebar({
             const hasChildren = !!item.children?.length;
             const Icon = item.icon;
 
+            const shouldPreserveQuery = item.href?.startsWith("/leads");
+
             // item biasa (tanpa submenu)
             if (!hasChildren) {
               if (!item.href) return null;
@@ -65,7 +72,11 @@ export function MobileSidebar({
               return (
                 <Link
                   key={item.id}
-                  href={item.href}
+                  href={
+                    shouldPreserveQuery
+                      ? `${item.href}?${searchParams.toString()}`
+                      : item.href
+                  }
                   onClick={() => onOpenChange(false)}
                   className={cn(
                     "group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all",
@@ -134,7 +145,11 @@ export function MobileSidebar({
                       return (
                         <Link
                           key={child.id}
-                          href={child.href}
+                          href={
+                            shouldPreserveQuery
+                              ? `${child.href}?${searchParams.toString()}`
+                              : child.href
+                          }
                           onClick={() => onOpenChange(false)}
                           className={cn(
                             "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-all",
