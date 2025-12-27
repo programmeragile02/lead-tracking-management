@@ -259,7 +259,9 @@ export default function LeadsPage() {
 
   const stageQuery = activeStageId !== "ALL" ? `&stageId=${activeStageId}` : "";
 
-  const leadsUrl = `${LEADS_API}?page=${page}&${statusQuery}${subStatusQuery}${stageQuery}${searchQuery}${monthQuery}${
+  const sortQuery = filters.sort ? `&sort=${filters.sort}` : "";
+
+  const leadsUrl = `${LEADS_API}?page=${page}${sortQuery}&${statusQuery}${subStatusQuery}${stageQuery}${searchQuery}${monthQuery}${
     hierarchyQuery ? `&${hierarchyQuery}` : ""
   }`;
 
@@ -542,6 +544,44 @@ export default function LeadsPage() {
                 }}
               />
             </div>
+
+            {/* FILTER SORTING */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={filters.sort === "last_chat" ? "default" : "outline"}
+                  size="icon"
+                  title="Urutkan lead"
+                  className="w-11 h-11"
+                >
+                  <SlidersHorizontal className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+
+              <PopoverContent className="w-56 p-2">
+                <div className="space-y-1">
+                  <button
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm",
+                      filters.sort === "created" && "bg-primary text-white"
+                    )}
+                    onClick={() => setFilters({ sort: "created", page: 1 })}
+                  >
+                    🕒 Lead masuk terbaru
+                  </button>
+
+                  <button
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm",
+                      filters.sort === "last_chat" && "bg-primary text-white"
+                    )}
+                    onClick={() => setFilters({ sort: "last_chat", page: 1 })}
+                  >
+                    💬 Chat terakhir
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             {/* FILTER BULAN */}
             <Popover>

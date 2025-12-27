@@ -116,6 +116,14 @@ export async function POST(
     },
   });
 
+  // update lastmessage
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: {
+      lastMessageAt: new Date(),
+    },
+  });
+
   // realtime optimistic update
   await emitRealtime({
     room: `lead:${lead.id}`,
@@ -129,7 +137,7 @@ export async function POST(
   // 2) KIRIM VIA WA SERVICE (PASTI SALES)
   try {
     const sendResult = await sendWaMessage({
-      userId: salesId, 
+      userId: salesId,
       to: waTarget,
       body: message.trim(),
       meta: {

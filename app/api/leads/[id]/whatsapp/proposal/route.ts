@@ -142,6 +142,14 @@ export async function POST(
     },
   });
 
+  // update lastmessage
+  await prisma.lead.update({
+    where: { id: lead.id },
+    data: {
+      lastMessageAt: new Date(),
+    },
+  });
+
   await emitRealtime({
     room: `lead:${lead.id}`,
     event: "wa_outbound_created",

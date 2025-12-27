@@ -301,27 +301,6 @@ export async function POST(req: NextRequest) {
     const sentAt =
       timestamp != null ? new Date(Number(timestamp) * 1000) : new Date();
 
-    // const inboundMsg = await prisma.leadMessage.create({
-    //   data: {
-    //     leadId: lead.id,
-    //     salesId: sales.id,
-    //     channel: "WHATSAPP",
-    //     direction: "INBOUND",
-    //     waMessageId: waMessageId || null,
-    //     waChatId: waChatId || null,
-    //     fromNumber,
-    //     toNumber,
-    //     content: body,
-    //     sentAt,
-    //   },
-    //   select: {
-    //     id: true,
-    //     leadId: true,
-    //     waMessageId: true,
-    //     createdAt: true,
-    //     sentAt: true,
-    //   },
-    // });
     const inboundMsg = await prisma.leadMessage.create({
       data: {
         leadId: lead.id,
@@ -334,6 +313,13 @@ export async function POST(req: NextRequest) {
         toNumber: toPhone,
         content: body,
         sentAt,
+      },
+    });
+
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: {
+        lastMessageAt: inboundMsg.createdAt,
       },
     });
 

@@ -563,7 +563,7 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
                 <span className="font-medium text-foreground">
                   {stats.validRows}
                 </span>{" "}
-                • Dilewate:{" "}
+                • Dilewati:{" "}
                 <span className="font-medium text-foreground">
                   {skipped.length}
                 </span>{" "}

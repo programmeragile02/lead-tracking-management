@@ -68,6 +68,8 @@ export async function GET(req: NextRequest) {
     const teamLeaderIdParam = searchParams.get("teamLeaderId");
     const salesIdParam = searchParams.get("salesId");
 
+    const sortParam = searchParams.get("sort"); // "created" | "last_chat"
+
     const teamLeaderId = teamLeaderIdParam ? Number(teamLeaderIdParam) : null;
 
     const salesId = salesIdParam ? Number(salesIdParam) : null;
@@ -154,6 +156,14 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * pageSize;
 
+    let orderBy: any[] = [];
+
+    if (sortParam === "last_chat") {
+      orderBy.push({ lastMessageAt: "desc" }, { createdAt: "desc" });
+    } else {
+      orderBy.push({ createdAt: "desc" });
+    }
+
     const leads = await prisma.lead.findMany({
       where: leadsWhere,
       include: {
@@ -179,7 +189,7 @@ export async function GET(req: NextRequest) {
           include: { type: true },
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy,
       skip,
       take: pageSize + 1,
     });

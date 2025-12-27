@@ -260,6 +260,9 @@ model Lead {
   importedById Int?
   importedBy   User? @relation("LeadImportedBy", fields: [importedById], references: [id])
 
+  // last messages
+  lastMessageAt DateTime?
+
   // FIELD DINAMIS
   customValues LeadCustomFieldValue[]
 
@@ -285,6 +288,11 @@ model Lead {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([lastMessageAt])
+  @@index([salesId, lastMessageAt])
+  @@index([salesId, statusId, lastMessageAt])
+  @@index([lastMessageAt, id])
 }
 
 model LeadCustomFieldDef {
