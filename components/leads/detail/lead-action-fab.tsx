@@ -18,6 +18,12 @@ import { cn } from "@/lib/utils";
 
 const actions = [
   {
+    id: "note",
+    label: "Catatan",
+    icon: FileText,
+    color: "bg-slate-600 hover:bg-slate-700",
+  },
+  {
     id: "sync",
     label: "Sinkronisasi Chat",
     icon: RotateCw,
@@ -76,6 +82,7 @@ type LeadActionFabProps = {
   onStatus: () => void;
   onStage: () => void;
   onSubStatus: () => void;
+  onNote: () => void;
 };
 
 export function LeadActionFab({
@@ -86,7 +93,8 @@ export function LeadActionFab({
   onAnalyzeAi,
   onStatus,
   onStage,
-  onSubStatus
+  onSubStatus,
+  onNote,
 }: LeadActionFabProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -124,6 +132,10 @@ export function LeadActionFab({
 
       case "substatus":
         onSubStatus();
+        break;
+
+      case "note":
+        onNote();
         break;
     }
   };

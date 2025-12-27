@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 
     const pageParam = searchParams.get("page");
     const page = Math.max(1, Number(pageParam || 1) || 1);
-    const pageSize = 10;
+    const pageSize = 15;
 
     const baseWhere: any = {};
 

@@ -18,6 +18,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useLeadFilters } from "@/hooks/use-lead-filters";
+import { getStatusClass } from "@/lib/lead-status";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -65,28 +66,7 @@ type LeadListApiResponse = {
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-// ---- helper format tanggal / status / indicator ----
-
-function mapStatusCodeToUiStatus(
-  code?: string | null
-): "hot" | "warm" | "cold" | "new" | "close_won" | "close_lost" {
-  const c = (code || "").toUpperCase();
-  switch (c) {
-    case "HOT":
-      return "hot";
-    case "WARM":
-      return "warm";
-    case "COLD":
-      return "cold";
-    case "CLOSE_WON":
-      return "close_won";
-    case "CLOSE_LOST":
-      return "close_lost";
-    case "NEW":
-    default:
-      return "new";
-  }
-}
+// ---- helper format tanggal / indicator ----
 
 function formatRelativeCreatedAt(iso: string): string {
   const d = new Date(iso);
@@ -874,7 +854,7 @@ export default function LeadsPage() {
         )}
 
         {/* Lead List */}
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {isLoading ? (
             <div className="text-sm text-gray-500">Memuat data lead...</div>
           ) : leads.length === 0 ? (
@@ -883,7 +863,8 @@ export default function LeadsPage() {
             </div>
           ) : (
             leads.map((lead) => {
-              const uiStatus = mapStatusCodeToUiStatus(lead.statusCode);
+              const statusLabel =
+                lead.statusName ?? lead.statusCode ?? "UNKNOWN";
               const createdLabel = new Date(lead.createdAt).toLocaleDateString(
                 "id-ID",
                 {
@@ -902,7 +883,8 @@ export default function LeadsPage() {
                   key={lead.id}
                   leadId={lead.id}
                   leadName={lead.name}
-                  status={uiStatus}
+                  statusCode={lead.statusCode}
+                  statusLabel={statusLabel}
                   product={lead.productName || "Tanpa produk"}
                   channel={lead.sourceName || "Tanpa sumber"}
                   createdDate={createdLabel}
@@ -918,31 +900,30 @@ export default function LeadsPage() {
               );
             })
           )}
+        </div>
+        <div className="flex items-center gap-2 pt-2">
+          <div className="text-sm text-muted-foreground">
+            Halaman {page} / {totalPages}
+          </div>
 
-          <div className="flex items-center gap-2 pt-2">
-            <div className="text-sm text-muted-foreground">
-              Halaman {page} / {totalPages}
-            </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setFilters({ page: Math.max(1, page - 1) })}
+            >
+              Sebelumnya
+            </Button>
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setFilters({ page: Math.max(1, page - 1) })}
-              >
-                Sebelumnya
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!hasNext}
-                onClick={() => setFilters({ page: page + 1 })}
-              >
-                Berikutnya
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!hasNext}
+              onClick={() => setFilters({ page: page + 1 })}
+            >
+              Berikutnya
+            </Button>
           </div>
         </div>
       </div>

@@ -83,6 +83,8 @@ model User {
   assignedLeadsTo   LeadAssignmentHistory[] @relation("LeadAssignTo")
   assignedLeadActions LeadAssignmentHistory[] @relation("LeadAssignedBy")
 
+  leadNotes LeadNote[]
+  
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -285,6 +287,8 @@ model Lead {
   aiInsights LeadAIInsight[] @relation("LeadAIInsightLead")
 
   assignmentHistories LeadAssignmentHistory[]
+
+  leadNotes LeadNote[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1016,4 +1020,27 @@ model LeadAssignmentHistory {
   @@index([leadId])
   @@index([fromSalesId])
   @@index([toSalesId])
+}
+
+model LeadNote {
+  id        Int      @id @default(autoincrement())
+
+  leadId    Int
+  lead      Lead     @relation(fields: [leadId], references: [id])
+
+  authorId  Int
+  author    User     @relation(fields: [authorId], references: [id])
+
+  content   String   @db.Text
+
+  // opsional, untuk fitur lanjutan
+  isPinned  Boolean  @default(false)
+  isPrivate Boolean  @default(false) // hanya bisa dilihat oleh pembuat
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId])
+  @@index([authorId])
+  @@map("lead_notes")
 }

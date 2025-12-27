@@ -46,6 +46,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { getStatusClass } from "@/lib/lead-status";
 import { cn } from "@/lib/utils";
 import { SubStatusModal } from "@/components/leads/detail/sub-status-modal";
+import { LeadNotesDrawer } from "@/components/leads/detail/notes/LeadNotesDrawer";
 
 type ChatFrom = "client" | "sales";
 type SentByRole = "sales" | "team-leader" | "manager" | null;
@@ -657,41 +658,52 @@ export default function LeadDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatMessages.length]);
 
-  const handleSend = async () => {
-    if (!chatInput.trim()) return;
+  async function handleSend(text?: string) {
+    const message = text ?? chatInput;
+
+    if (!message.trim()) return;
 
     if (waStatus !== "CONNECTED") {
       toast({
         variant: "destructive",
         title: "WhatsApp belum siap",
-        description: "Menghubungkan Whatsapp",
+        description: "Koneksi WhatsApp belum aktif.",
       });
       return;
     }
+
     try {
       setSending(true);
+
       const res = await fetch(`/api/leads/${leadId}/whatsapp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: chatInput }),
+        body: JSON.stringify({ message }),
       });
+
       const json = await res.json();
       if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Gagal mengirim pesan WhatsApp");
+        throw new Error(json.error || "Gagal mengirim pesan");
       }
-      setChatInput("");
+
+      setChatInput(""); // clear input
       await mutateMessages();
+
+      toast({
+        title: "Pesan terkirim",
+        duration: 3000,
+        description: `Pesan berhasil dikirim ke ${lead.name}`,
+      });
     } catch (err: any) {
-      console.error(err);
       toast({
         variant: "destructive",
         title: "Gagal mengirim pesan",
-        description: err?.message || "Terjadi kesalahan saat kirim WA.",
+        description: err?.message || "Terjadi kesalahan",
       });
     } finally {
       setSending(false);
     }
-  };
+  }
 
   const chatInputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -1523,6 +1535,11 @@ export default function LeadDetailPage() {
       setAiLoading(true);
       setAiError(null);
 
+      toast({
+        title: "Memulai Analisis AI Chat",
+        description: "Mohon tunggu sebentar...",
+      });
+
       const res = await fetch(`/api/leads/${leadId}/whatsapp/ai-analysis`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1542,8 +1559,8 @@ export default function LeadDetailPage() {
       toast({
         title: "Analisis AI siap",
         description: json.cached
-          ? "Menggunakan hasil cache (tidak memotong limit)."
-          : "Hasil analisis terbaru berhasil dibuat.",
+          ? "Menggunakan hasil cache (tidak memotong limit)"
+          : "Hasil analisis terbaru berhasil dibuat",
       });
     } catch (err: any) {
       console.error(err);
@@ -1651,6 +1668,8 @@ export default function LeadDetailPage() {
   const [subStatusUpdating, setSubStatusUpdating] = useState(false);
   const [subStatusModalOpen, setSubStatusModalOpen] = useState(false);
 
+  const [noteOpen, setNoteOpen] = useState(false);
+
   const isAnyModalOpen =
     scheduleModalOpen ||
     proposalModalOpen ||
@@ -1662,7 +1681,8 @@ export default function LeadDetailPage() {
     priceModalOpen ||
     statusModalOpen ||
     stageModalOpen ||
-    subStatusModalOpen;
+    subStatusModalOpen ||
+    noteOpen;
 
   useEffect(() => {
     if (isAnyModalOpen) {
@@ -1722,7 +1742,7 @@ export default function LeadDetailPage() {
 
       await Promise.all([
         mutateDetail(),
-        mutateActivities(), // 🔥 biar langsung muncul di timeline
+        mutateActivities(), // biar langsung muncul di timeline
       ]);
 
       toast({
@@ -1738,6 +1758,10 @@ export default function LeadDetailPage() {
     } finally {
       setSubStatusUpdating(false);
     }
+  }
+
+  function handleSendAiMessage(text: string) {
+    handleSend(text);
   }
 
   return (
@@ -2253,6 +2277,7 @@ export default function LeadDetailPage() {
                     aiError={aiError}
                     onAnalyze={handleAnalyzeChat}
                     onCopy={copyToClipboard}
+                    onSend={handleSendAiMessage}
                     priorityBadgeClass={priorityBadgeClass}
                   />
                 </TabsContent>
@@ -2354,6 +2379,7 @@ export default function LeadDetailPage() {
           onStatus={() => setStatusModalOpen(true)}
           onStage={() => setStageModalOpen(true)}
           onSubStatus={() => setSubStatusModalOpen(true)}
+          onNote={() => setNoteOpen(true)}
         />
       )}
 
@@ -2391,6 +2417,12 @@ export default function LeadDetailPage() {
           onMarkDone={markStageDone}
         />
       </StageModal>
+
+      <LeadNotesDrawer
+        open={noteOpen}
+        onClose={() => setNoteOpen(false)}
+        leadId={Number(leadId)}
+      />
     </DashboardLayout>
   );
 }
@@ -2424,84 +2456,3 @@ function formatFileSize(bytes: number) {
   const value = bytes / Math.pow(k, i);
   return `${value.toFixed(1)} ${sizes[i]}`;
 }
-
-// function StageTimeline({
-//   stages,
-//   currentStageId,
-//   onMarkDone,
-//   savingStageId,
-// }: {
-//   stages: StageWithMeta[];
-//   currentStageId?: number;
-//   onMarkDone: (stageId: number, mode?: "NORMAL" | "SKIPPED") => void;
-//   savingStageId: number | null;
-// }) {
-//   if (!stages.length) {
-//     return (
-//       <p className="text-[11px] text-muted-foreground">
-//         Belum ada definisi tahapan.
-//       </p>
-//     );
-//   }
-
-//   return (
-//     <div className="space-y-2">
-//       {stages.map((s) => {
-//         const isDone = !!s.doneAt;
-//         const isSkipped = isDone && s.mode === "SKIPPED";
-//         const isActive = s.id === currentStageId;
-
-//         return (
-//           <button
-//             key={s.id}
-//             type="button"
-//             className="flex w-full items-center justify-between rounded-md border bg-background px-2 py-2 hover:bg-muted/60"
-//             onClick={() => {
-//               if (isDone) return;
-//               onMarkDone(s.id, "NORMAL");
-//             }}
-//             disabled={savingStageId === s.id}
-//           >
-//             <div className="flex items-center gap-2">
-//               {isDone ? (
-//                 <CheckCircle2
-//                   className={`h-4 w-4 ${
-//                     isSkipped ? "text-slate-400" : "text-emerald-500"
-//                   }`}
-//                 />
-//               ) : (
-//                 <Circle
-//                   className={`h-4 w-4 ${
-//                     isActive ? "text-blue-500" : "text-muted-foreground"
-//                   }`}
-//                 />
-//               )}
-
-//               <div className="text-left">
-//                 <p className="text-sm font-medium">
-//                   {s.label}{" "}
-//                   {isActive ? (
-//                     <span className="text-xs text-blue-500">(aktif)</span>
-//                   ) : null}
-//                 </p>
-
-//                 <p className="text-[11px] text-muted-foreground">
-//                   {isDone
-//                     ? `Selesai: ${formatDateTime(s.doneAt!)}`
-//                     : s.startedAt
-//                     ? `Mulai: ${formatDateTime(s.startedAt)}`
-//                     : "Belum dimulai"}
-//                   {isSkipped ? " • SKIPPED" : ""}
-//                 </p>
-//               </div>
-//             </div>
-
-//             {savingStageId === s.id ? (
-//               <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-//             ) : null}
-//           </button>
-//         );
-//       })}
-//     </div>
-//   );
-// }

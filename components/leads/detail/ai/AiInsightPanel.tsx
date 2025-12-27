@@ -28,6 +28,8 @@ interface Props {
   onCopy: (text: string) => void;
 
   priorityBadgeClass: (p: AiPriority) => string;
+
+  onSend: (text: string) => void;
 }
 
 export function AiInsightPanel({
@@ -36,6 +38,7 @@ export function AiInsightPanel({
   aiError,
   onCopy,
   priorityBadgeClass,
+  onSend,
 }: Props) {
   return (
     <div className="mt-3 rounded-md border bg-secondary p-3">
@@ -48,7 +51,7 @@ export function AiInsightPanel({
 
       {aiCached && (
         <p className="text-[11px] text-muted-foreground">
-          * Hasil dari cache (chat belum berubah).
+          * Hasil dari cache (chat belum berubah)
         </p>
       )}
 
@@ -129,14 +132,24 @@ export function AiInsightPanel({
                       {r.tone}
                     </Badge>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 px-2 text-[11px]"
-                      onClick={() => onCopy(r.text)}
-                    >
-                      Copy
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 text-[11px] cursor-pointer"
+                        onClick={() => onCopy(r.text)}
+                      >
+                        Copy
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        className="h-7 px-2 text-[11px] cursor-pointer"
+                        onClick={() => onSend(r.text)}
+                      >
+                        Kirim ke whatsapp
+                      </Button>
+                    </div>
                   </div>
 
                   <p className="mt-2 text-[12px] whitespace-pre-line leading-relaxed">

@@ -8,11 +8,13 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Switch } from "../ui/switch";
 import { AssignLeadDialog } from "./assign-lead-dialog";
+import { getStatusClass } from "@/lib/lead-status";
 
 interface LeadListCardProps {
   leadId: number | string;
   leadName: string;
-  status: "hot" | "warm" | "cold" | "new" | "close_won" | "close_lost";
+  statusCode?: string | null;
+  statusLabel?: string | null;
   product: string;
   channel: string;
   createdDate: string;
@@ -29,7 +31,8 @@ interface LeadListCardProps {
 export function LeadListCard({
   leadId,
   leadName,
-  status,
+  statusCode,
+  statusLabel,
   product,
   channel,
   leadAge,
@@ -49,24 +52,6 @@ export function LeadListCard({
   const isSales = user?.roleSlug === "sales";
   const isTeamLeader = user?.roleSlug === "team-leader";
   const isManager = user?.roleSlug === "manager";
-
-  const statusColors = {
-    new: "bg-amber-500 text-white border-amber-600",
-    hot: "bg-red-500 text-white border-red-600",
-    warm: "bg-orange-500 text-white border-orange-600",
-    cold: "bg-blue-500 text-white border-blue-600",
-    close_won: "bg-green-500 text-white border-green-600",
-    close_lost: "bg-gray-500 text-white border-gray-600",
-  };
-
-  const statusLabels = {
-    hot: "Hot",
-    warm: "Warm",
-    cold: "Cold",
-    new: "Baru",
-    close_lost: "Tutup",
-    close_won: "Sukses",
-  };
 
   const indicatorColors = {
     overdue: "bg-primary",
@@ -147,11 +132,11 @@ export function LeadListCard({
                   </h4>
                   <Badge
                     className={cn(
-                      "text-xs font-semibold border",
-                      statusColors[status]
+                      "text-xs font-semibold",
+                      getStatusClass(statusCode)
                     )}
                   >
-                    {statusLabels[status]}
+                    {statusLabel ?? statusCode}
                   </Badge>
                 </div>
 
