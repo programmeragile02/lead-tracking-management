@@ -85,14 +85,28 @@ export async function POST(
         const myNumber = session?.phoneNumber;
         const fromDigits = (m.from || "").replace(/[^\d]/g, "");
 
-        const direction =
-          myNumber && fromDigits.endsWith(myNumber)
-            ? MessageDirection.OUTBOUND
-            : MessageDirection.INBOUND;
+        if (!myNumber) {
+          console.warn("[WA] myNumber kosong, skip message", m.waMessageId);
+          continue;
+        }
+
+        const direction = m.fromMe
+          ? MessageDirection.OUTBOUND
+          : MessageDirection.INBOUND;
 
         // fromNumber / toNumber: simpan angka saja biar konsisten
-        const fromNumber = (m.from || "").replace(/[^\d]/g, "") || null;
-        const toNumber = (m.to || "").replace(/[^\d]/g, "") || null;
+        let fromNumber: string | null = null;
+        let toNumber: string | null = null;
+
+        if (m.fromMe) {
+          // pesan dikirim oleh SALES
+          fromNumber = myNumber;
+          toNumber = (m.to || "").replace(/[^\d]/g, "");
+        } else {
+          // pesan dari LEAD
+          fromNumber = (m.from || "").replace(/[^\d]/g, "");
+          toNumber = myNumber;
+        }
 
         try {
           await tx.leadMessage.create({
