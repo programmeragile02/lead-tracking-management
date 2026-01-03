@@ -28,10 +28,10 @@ export async function POST(
 
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
-    select: { id: true, salesId: true },
+    select: { id: true, salesId: true, isExcluded: true },
   });
 
-  if (!lead || !lead.salesId) {
+  if (!lead || !lead.salesId || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, error: "Lead has no sales assigned" },
       { status: 400 }

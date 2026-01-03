@@ -62,7 +62,7 @@ export async function POST(
     },
   });
 
-  if (!lead) {
+  if (!lead || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, error: "lead_not_found" },
       { status: 404 }
@@ -147,6 +147,7 @@ export async function POST(
     where: { id: lead.id },
     data: {
       lastMessageAt: new Date(),
+      lastOutboundAt: new Date(),
     },
   });
 

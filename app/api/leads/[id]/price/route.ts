@@ -115,10 +115,11 @@ export async function PUT(
         priceOffering: true,
         priceNegotiation: true,
         priceClosing: true,
+        isExcluded: true,
       },
     });
 
-    if (!existingLead) {
+    if (!existingLead || existingLead.isExcluded) {
       return NextResponse.json(
         { ok: false, error: "Lead tidak ditemukan" },
         { status: 404 }

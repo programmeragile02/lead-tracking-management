@@ -35,7 +35,7 @@ export function ExcludedContactTable({
     });
 
     toast({
-      title: "Kontak dinonaktifkan",
+      title: "Kontak dihapus",
       description: row.phone,
     });
 
@@ -50,7 +50,6 @@ export function ExcludedContactTable({
             <th className="px-4 py-3 text-left">Nama</th>
             <th className="px-4 py-3 text-left">Nomor WhatsApp</th>
             <th className="px-4 py-3 text-left">Catatan</th>
-            <th className="px-4 py-3 text-center">Aktif</th>
             <th className="px-4 py-3 text-right">Aksi</th>
           </tr>
         </thead>
@@ -61,12 +60,6 @@ export function ExcludedContactTable({
               <td className="px-4 py-3">{row.phone}</td>
               <td className="px-4 py-3 text-muted-foreground">
                 {row.note ?? "-"}
-              </td>
-              <td className="px-4 py-3 text-center">
-                <Switch
-                  checked={row.isActive}
-                  onCheckedChange={() => toggleActive(row)}
-                />
               </td>
               <td className="px-4 py-3 text-right space-x-1">
                 <Button variant="ghost" size="icon" onClick={() => onEdit(row)}>

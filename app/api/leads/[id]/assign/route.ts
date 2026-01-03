@@ -68,10 +68,11 @@ export async function POST(
       id: true,
       name: true,
       salesId: true,
+      isExcluded: true,
     },
   });
 
-  if (!lead) {
+  if (!lead || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, message: "Lead tidak ditemukan" },
       { status: 404 }

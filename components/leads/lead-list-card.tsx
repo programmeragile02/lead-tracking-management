@@ -9,6 +9,13 @@ import { useState } from "react";
 import { Switch } from "../ui/switch";
 import { AssignLeadDialog } from "./assign-lead-dialog";
 import { getStatusClass } from "@/lib/lead-status";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Ban, MoreVertical } from "lucide-react";
 
 interface LeadListCardProps {
   leadId: number | string;
@@ -26,6 +33,8 @@ interface LeadListCardProps {
   importedFromExcel?: boolean;
   salesName?: string | null;
   teamLeaderName?: string | null;
+  onExclude?: (leadId: number) => void;
+  isUnreplied?: boolean;
 }
 
 export function LeadListCard({
@@ -44,6 +53,8 @@ export function LeadListCard({
   salesName,
   teamLeaderName,
   createdDate,
+  onExclude,
+  isUnreplied,
 }: LeadListCardProps) {
   const { user } = useCurrentUser();
   const { toast } = useToast();
@@ -138,6 +149,12 @@ export function LeadListCard({
                   >
                     {statusLabel ?? statusCode}
                   </Badge>
+
+                  {isUnreplied && (
+                    <span className="ml-2 rounded-full bg-red-100 text-red-600 px-2 py-0.5 text-xs font-medium">
+                      Chat belum dibalas
+                    </span>
+                  )}
                 </div>
 
                 <p className="text-sm text-muted-foreground font-medium truncate">
@@ -168,6 +185,30 @@ export function LeadListCard({
                       Excel
                     </span>
                   )}
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="p-1 rounded hover:bg-muted"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                    </DropdownMenuTrigger>
+
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        className="text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onExclude?.(leadId);
+                        }}
+                      >
+                        <Ban className="w-4 h-4 mr-2" />
+                        Kecualikan Lead
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
 
                 {/* OWNER / ASSIGN SALES */}
@@ -251,6 +292,7 @@ export function LeadListCard({
           </div>
         </div>
       </div>
+
       <AssignLeadDialog
         open={assignOpen}
         onOpenChange={setAssignOpen}

@@ -39,7 +39,7 @@ export async function GET(
     },
   });
 
-  if (!lead) {
+  if (!lead || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, error: "Lead not found" },
       { status: 404 }

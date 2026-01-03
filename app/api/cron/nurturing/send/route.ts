@@ -174,7 +174,7 @@ export async function POST(req: NextRequest) {
         sales: { include: { whatsappSession: true } },
       },
     });
-    if (!lead) {
+    if (!lead || lead.isExcluded) {
       skipped++;
       continue;
     }

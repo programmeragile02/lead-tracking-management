@@ -34,9 +34,9 @@ export async function PUT(
   if (user.roleSlug === "sales") {
     const lead = await prisma.lead.findUnique({
       where: { id: leadId },
-      select: { salesId: true },
+      select: { salesId: true, isExcluded: true },
     });
-    if (!lead) {
+    if (!lead || lead.isExcluded) {
       return NextResponse.json(
         { ok: false, error: "Lead tidak ditemukan" },
         { status: 404 }

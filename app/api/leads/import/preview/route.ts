@@ -15,6 +15,7 @@ type PreviewRow = {
   name: string;
   phone: string | null;
   address: string | null;
+  city: string | null;
   productName: string | null;
 
   productId: number | null;
@@ -133,6 +134,7 @@ export async function POST(req: NextRequest) {
       where: {
         salesId: user.id,
         phone: { not: null },
+        isExcluded: false
       },
       select: { phone: true },
     });

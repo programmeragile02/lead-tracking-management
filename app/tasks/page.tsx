@@ -669,9 +669,10 @@ function TaskCalendar({
         {!isLoading &&
           tasksForSelectedDate.map((t) => {
             const d = new Date(t.nextActionAt);
-            const timeStr = d.toLocaleTimeString("id-ID", {
-              hour: "2-digit",
-              minute: "2-digit",
+            const dateStr = d.toLocaleDateString("id-ID", {
+              day: "2-digit",
+              month: "long",
+              year: "numeric",
             });
 
             return (
@@ -698,7 +699,7 @@ function TaskCalendar({
                   </p>
                   <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
                     <Clock className="h-3 w-3" />
-                    <span>{timeStr}</span>
+                    <span>{dateStr}</span>
                   </p>
                 </div>
               </button>

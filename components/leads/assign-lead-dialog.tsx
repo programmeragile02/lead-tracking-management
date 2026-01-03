@@ -78,7 +78,7 @@ export function AssignLeadDialog({
       setToSalesId("");
       setReason("");
 
-      // 🔥 trigger refresh list
+      // trigger refresh list
       onSuccess?.();
     } catch (e: any) {
       toast({

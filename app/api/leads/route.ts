@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     const teamLeaderIdParam = searchParams.get("teamLeaderId");
     const salesIdParam = searchParams.get("salesId");
 
-    const sortParam = searchParams.get("sort"); // "created" | "last_chat"
+    const sortParam = searchParams.get("sort"); // "created" | "last_chat" | "unreplied"
 
     const teamLeaderId = teamLeaderIdParam ? Number(teamLeaderIdParam) : null;
 
@@ -164,8 +164,58 @@ export async function GET(req: NextRequest) {
       orderBy.push({ createdAt: "desc" });
     }
 
+    if (sortParam === "unreplied") {
+      orderBy = [
+        {
+          lastInboundAt: "desc",
+        },
+        {
+          lastOutboundAt: "asc",
+        },
+        {
+          createdAt: "desc",
+        },
+      ];
+    }
+
+    const baseCountWhere: any = {
+      isExcluded: false,
+    };
+
+    // role filter
+    if (currentUser.roleSlug === "sales") {
+      baseCountWhere.salesId = currentUser.id;
+    }
+
+    if (currentUser.roleSlug === "team-leader") {
+      baseCountWhere.sales = { teamLeaderId: currentUser.id };
+    }
+
+    if (currentUser.roleSlug === "manager") {
+      if (teamLeaderId) {
+        baseCountWhere.sales = { teamLeaderId };
+      }
+      if (salesId) {
+        baseCountWhere.salesId = salesId;
+      }
+    }
+
+    // filter bulan (boleh dipakai juga di badge)
+    if (monthParam) {
+      const range = getMonthRange(monthParam);
+      if (range) {
+        baseCountWhere.createdAt = {
+          gte: range.start,
+          lt: range.end,
+        };
+      }
+    }
+
     const leads = await prisma.lead.findMany({
-      where: leadsWhere,
+      where: {
+        ...leadsWhere,
+        isExcluded: false,
+      },
       include: {
         product: true,
         source: true,
@@ -199,14 +249,14 @@ export async function GET(req: NextRequest) {
 
     // badge counts
     const grouped = await prisma.lead.groupBy({
-      where: baseWhere,
+      where: baseCountWhere,
       by: ["statusId"],
       _count: { _all: true },
     });
 
     const groupedSubStatus = await prisma.lead.groupBy({
       where: {
-        ...baseWhere,
+        ...baseCountWhere,
         ...(statusCodeParam && statusCodeParam !== "ALL"
           ? { status: { code: statusCodeParam } }
           : {}),
@@ -272,7 +322,10 @@ export async function GET(req: NextRequest) {
     }
 
     const totalCount = await prisma.lead.count({
-      where: leadsWhere,
+      where: {
+        ...leadsWhere,
+        isExcluded: false,
+      },
     });
 
     const totalPages = Math.ceil(totalCount / pageSize);
@@ -281,6 +334,12 @@ export async function GET(req: NextRequest) {
       const latestFU = lead.followUps[0];
       const nurturingEnabled =
         lead.nurturingState?.status === NurturingStatus.ACTIVE;
+
+      // chat lead belum dibalas
+      const isUnreplied =
+        lead.lastInboundAt &&
+        (!lead.lastOutboundAt ||
+          new Date(lead.lastInboundAt) > new Date(lead.lastOutboundAt));
 
       return {
         id: lead.id,
@@ -299,6 +358,7 @@ export async function GET(req: NextRequest) {
         followUpTypeCode: latestFU?.type?.code ?? null,
         nurturingEnabled,
         importedFromExcel: lead.importedFromExcel ?? false,
+        isUnreplied,
       };
     });
 

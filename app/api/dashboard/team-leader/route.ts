@@ -176,6 +176,7 @@ export async function GET(req: NextRequest) {
         NOT: {
           status: { code: { in: ["WARM", "CLOSE_WON", "CLOSE_LOST"] } },
         },
+        isExcluded: false,
       },
     });
 
@@ -186,6 +187,7 @@ export async function GET(req: NextRequest) {
         NOT: {
           status: { code: { in: ["WARM", "CLOSE_WON", "CLOSE_LOST"] } },
         },
+        isExcluded: false,
       },
     });
 
@@ -199,6 +201,7 @@ export async function GET(req: NextRequest) {
         NOT: {
           status: { code: { in: ["WARM", "CLOSE_WON", "CLOSE_LOST"] } },
         },
+        isExcluded: false,
       },
     });
 
@@ -218,6 +221,7 @@ export async function GET(req: NextRequest) {
         NOT: {
           status: { code: { in: ["CLOSE_WON", "CLOSE_LOST"] } },
         },
+        isExcluded: false,
       },
     });
 
@@ -227,6 +231,7 @@ export async function GET(req: NextRequest) {
         status: { code: "HOT" },
         NOT: { status: { code: { in: ["CLOSE_WON", "CLOSE_LOST"] } } },
         updatedAt: { gte: startOfToday },
+        isExcluded: false,
       },
     });
 
@@ -239,6 +244,7 @@ export async function GET(req: NextRequest) {
           gte: startOfYesterday,
           lt: startOfToday,
         },
+        isExcluded: false,
       },
     });
 
@@ -260,6 +266,7 @@ export async function GET(req: NextRequest) {
             nextActionAt: { lt: new Date() },
           },
         },
+        isExcluded: false,
       },
     });
 
@@ -272,6 +279,7 @@ export async function GET(req: NextRequest) {
             nextActionAt: { lt: new Date() },
           },
         },
+        isExcluded: false,
       },
     });
 
@@ -286,6 +294,7 @@ export async function GET(req: NextRequest) {
             },
           },
         },
+        isExcluded: false,
       },
     });
 
@@ -349,6 +358,7 @@ export async function GET(req: NextRequest) {
       where: {
         salesId: { in: salesIds },
         createdAt: { gte: monthStart, lt: nextMonth },
+        isExcluded: false,
       },
       _count: { _all: true },
     });
@@ -359,6 +369,7 @@ export async function GET(req: NextRequest) {
         salesId: { in: salesIds },
         status: { code: "CLOSE_WON" },
         updatedAt: { gte: monthStart, lt: nextMonth },
+        isExcluded: false
       },
       _count: { _all: true },
       _sum: { priceClosing: true },
@@ -410,6 +421,7 @@ export async function GET(req: NextRequest) {
             nextActionAt: { lt: nowDate },
           },
         },
+        isExcluded: false,
       },
       include: {
         product: true,
@@ -429,6 +441,7 @@ export async function GET(req: NextRequest) {
             code: { in: ["CLOSE_WON", "CLOSE_LOST"] },
           },
         },
+        isExcluded: false,
       },
       include: {
         product: true,
@@ -443,6 +456,7 @@ export async function GET(req: NextRequest) {
       where: {
         salesId: { in: salesIds },
         followUps: { none: {} },
+        isExcluded: false,
       },
       include: {
         product: true,

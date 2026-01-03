@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
           code: { notIn: ["COLD", "CLOSE_LOST", "CLOSE_WON"] },
         },
       },
+      isExcluded: false
     },
     include: {
       product: true,

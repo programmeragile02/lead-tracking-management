@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const sales = searchParams.get("sales");
   const month = searchParams.get("month");
 
-  const where: any = {};
+  const where: any = { isExcluded: false };
 
   if (status && status !== "ALL") where.status = { code: status };
   if (subStatus && subStatus !== "ALL") where.subStatus = { code: subStatus };

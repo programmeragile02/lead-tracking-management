@@ -85,6 +85,10 @@ model User {
 
   leadNotes LeadNote[]
   
+  leadSyncJobs LeadSyncJob[]
+
+  leadBlastJobs LeadBlastJob[]
+  
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -264,6 +268,11 @@ model Lead {
 
   // last messages
   lastMessageAt DateTime?
+  lastInboundAt  DateTime?
+  lastOutboundAt DateTime?
+
+  // flag dikecualikan / hide
+  isExcluded Boolean @default(false)
 
   // FIELD DINAMIS
   customValues LeadCustomFieldValue[]
@@ -289,6 +298,10 @@ model Lead {
   assignmentHistories LeadAssignmentHistory[]
 
   leadNotes LeadNote[]
+
+  leadSyncItems LeadSyncItem[]
+  
+  leadBlastItems LeadBlastItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -554,6 +567,8 @@ model LeadMessage {
 
   trackedLinks LeadTrackedLink[] @relation("LeadTrackedLinks_LeadMessage")
 
+  leadBlastItems LeadBlastItem[]
+  
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
 
@@ -1043,4 +1058,128 @@ model LeadNote {
   @@index([leadId])
   @@index([authorId])
   @@map("lead_notes")
+}
+
+enum SyncStatus {
+  PENDING   // belum mulai
+  RUNNING   // sedang diproses
+  DONE      // selesai semua
+  FAILED    // gagal total (misal error fatal)
+}
+
+model LeadSyncJob {
+  id         Int       @id @default(autoincrement())
+
+  // siapa yang menjalankan sync
+  salesId    Int
+  sales      User      @relation(fields: [salesId], references: [id])
+
+  status     SyncStatus @default(PENDING)
+
+  totalLeads Int       // total lead yang akan diproses
+  processed  Int       @default(0)
+  success    Int       @default(0)
+  failed     Int       @default(0)
+
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  // relasi ke item
+  items      LeadSyncItem[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([salesId])
+}
+
+model LeadSyncItem {
+  id        Int      @id @default(autoincrement())
+
+  jobId     Int
+  job       LeadSyncJob @relation(fields: [jobId], references: [id])
+
+  leadId    Int
+  lead      Lead @relation(fields: [leadId], references: [id])
+
+  status    String   // PENDING | SUCCESS | FAILED
+  message   String?  // error message / info
+
+  startedAt DateTime?
+  finishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([jobId, leadId])
+  @@index([jobId])
+  @@index([leadId])
+}
+
+enum BlastStatus {
+  PENDING   // baru dibuat
+  RUNNING   // sedang diproses
+  DONE      // selesai semua
+  FAILED    // error total
+}
+
+enum BlastItemStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model LeadBlastJob {
+  id          Int      @id @default(autoincrement())
+
+  // siapa yang memulai blast
+  createdById Int
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  // pesan template mentah (pakai placeholder)
+  message     String   @db.Text
+
+  // status eksekusi
+  status      BlastStatus @default(PENDING)
+
+  total       Int      @default(0)  // total lead target
+  processed   Int      @default(0)  // sudah diproses
+  success     Int      @default(0)
+  failed      Int      @default(0)
+
+  startedAt   DateTime?
+  finishedAt  DateTime?
+
+  // audit
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       LeadBlastItem[]
+
+  @@index([status])
+}
+
+model LeadBlastItem {
+  id        Int      @id @default(autoincrement())
+
+  jobId     Int
+  job       LeadBlastJob @relation(fields: [jobId], references: [id])
+
+  leadId    Int
+  lead      Lead     @relation(fields: [leadId], references: [id])
+
+  // lead message
+  leadMessageId Int?
+  leadMessage   LeadMessage? @relation(fields: [leadMessageId], references: [id])
+
+  // hasil pengiriman
+  status    BlastItemStatus @default(PENDING)
+  error     String?
+
+  sentAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([jobId, leadId])
+  @@index([status])
 }

@@ -60,6 +60,17 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       },
     });
 
+    if (typeof body.isActive === "boolean") {
+      await prisma.lead.updateMany({
+        where: {
+          phone: phone,
+        },
+        data: {
+          isExcluded: !body.isActive,
+        },
+      });
+    }
+
     if (updated.count === 0) {
       return NextResponse.json(
         { ok: false, error: "not_found" },
@@ -95,22 +106,35 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
   const { id } = await ctx.params;
 
-  const deleted = await prisma.salesExcludedContact.updateMany({
+  // Ambil data excluded terlebih dulu
+  const excluded = await prisma.salesExcludedContact.findFirst({
     where: {
       id: Number(id),
       salesId: user.id,
     },
-    data: {
-      isActive: false,
-    },
   });
 
-  if (deleted.count === 0) {
+  if (!excluded) {
     return NextResponse.json(
       { ok: false, error: "not_found" },
       { status: 404 }
     );
   }
+
+  // HAPUS record exclude
+  await prisma.salesExcludedContact.delete({
+    where: { id: excluded.id },
+  });
+
+  // AKTIFKAN KEMBALI LEAD YANG TERKENA EXCLUDE
+  await prisma.lead.updateMany({
+    where: {
+      phone: excluded.phone,
+    },
+    data: {
+      isExcluded: false,
+    },
+  });
 
   return NextResponse.json({ ok: true });
 }

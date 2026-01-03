@@ -79,7 +79,7 @@ export async function GET(
    */
   if (user.roleCode === "SALES") {
     const ownLead = await prisma.lead.findFirst({
-      where: { id: leadId, salesId: user.id },
+      where: { id: leadId, salesId: user.id, isExcluded: false },
       select: { id: true },
     });
 

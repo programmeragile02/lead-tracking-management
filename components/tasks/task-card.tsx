@@ -235,7 +235,7 @@ export function TaskCard({
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">
-                {dateStr}, {timeStr}
+                {dateStr}
               </span>
             </div>
 
@@ -299,7 +299,7 @@ export function TaskCard({
             <div className="space-y-1">
               <label className="text-xs font-medium">Jadwal baru</label>
               <Input
-                type="datetime-local"
+                type="date"
                 value={newNextAction}
                 onChange={(e) => setNewNextAction(e.target.value)}
               />

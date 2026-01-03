@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
           gte: startOfDay,
           lt: endOfDay,
         },
+        isExcluded: false,
       },
     });
 
@@ -98,6 +99,7 @@ export async function GET(req: NextRequest) {
           status: {
             code: "HOT",
           },
+          isExcluded: false,
         },
       }),
       prisma.lead.count({
@@ -106,6 +108,7 @@ export async function GET(req: NextRequest) {
           status: {
             code: "WARM",
           },
+          isExcluded: false,
         },
       }),
     ]);
@@ -155,6 +158,7 @@ export async function GET(req: NextRequest) {
           gte: startOfDay,
           lt: endOfDay,
         },
+        isExcluded: false
       },
       include: {
         source: {

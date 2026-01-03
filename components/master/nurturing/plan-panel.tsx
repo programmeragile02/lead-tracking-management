@@ -2,7 +2,13 @@
 
 import useSWR from "swr";
 import { useEffect, useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -102,8 +108,8 @@ function SortableStepRow({
             {step.order}. {step.topic.title}
           </div>
           <div className="text-xs text-muted-foreground">
-            {step.topic.category?.name ?? "Kategori"} • Template {step.slot} • Delay{" "}
-            {step.delayHours} jam
+            {step.topic.category?.name ?? "Kategori"} • Template {step.slot} •
+            Delay {step.delayHours / 24} hari
           </div>
         </div>
       </div>
@@ -156,7 +162,7 @@ export function PlanPanel() {
   // add step form
   const [topicId, setTopicId] = useState<string>("");
   const [slot, setSlot] = useState<"A" | "B">("A");
-  const [delayHours, setDelayHours] = useState<string>("24");
+  const [delayDays, setDelayDays] = useState("1");
   const [addingStep, setAddingStep] = useState(false);
 
   // dnd sensors
@@ -215,7 +221,7 @@ export function PlanPanel() {
           planId: Number(planId),
           topicId: Number(topicId),
           slot,
-          delayHours: Number(delayHours || 24),
+          delayHours: Number(delayDays || 1) * 24,
         }),
       });
       const json = await res.json();
@@ -225,7 +231,7 @@ export function PlanPanel() {
 
       setTopicId("");
       setSlot("A");
-      setDelayHours("24");
+      setDelayDays("1");
 
       planDetail.mutate();
     } catch (e: any) {
@@ -372,7 +378,7 @@ export function PlanPanel() {
         <CardHeader>
           <CardTitle className="text-base">Step Urutan Nurturing</CardTitle>
           <CardDescription>
-                Anda bisa mengurutkan step nurturing dengan drag & drop
+            Anda bisa mengurutkan step nurturing dengan drag & drop
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -414,11 +420,13 @@ export function PlanPanel() {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="text-sm font-medium">Delay (jam)</div>
+                  <div className="text-sm font-medium">Delay (hari)</div>
                   <Input
-                    value={delayHours}
-                    onChange={(e) => setDelayHours(e.target.value)}
-                    placeholder="24"
+                    type="number"
+                    min={1}
+                    value={delayDays}
+                    onChange={(e) => setDelayDays(e.target.value)}
+                    placeholder="1"
                   />
                 </div>
 

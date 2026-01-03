@@ -172,6 +172,7 @@ export async function POST(req: NextRequest) {
         where: {
           salesId: sales.id,
           phone: fromPhone,
+          isExcluded: false,
         },
       });
     }
@@ -186,6 +187,7 @@ export async function POST(req: NextRequest) {
               waChatId: fromWaChatId,
             },
           },
+          isExcluded: false,
         },
       });
     }
@@ -320,6 +322,7 @@ export async function POST(req: NextRequest) {
       where: { id: lead.id },
       data: {
         lastMessageAt: inboundMsg.createdAt,
+        lastInboundAt: inboundMsg.createdAt,
       },
     });
 

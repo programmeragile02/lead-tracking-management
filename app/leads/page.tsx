@@ -1,16 +1,28 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { LeadListCard } from "@/components/leads/lead-list-card";
-import { Calendar1, Download, Search, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowDownNarrowWide,
+  ArrowDownWideNarrow,
+  Calendar1,
+  Download,
+  Loader2,
+  Megaphone,
+  MoreVertical,
+  RefreshCcw,
+  Search,
+  SlidersHorizontal,
+  Upload,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ImportLeadsDialog } from "@/components/leads/import-leads-dialog";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { io as ioClient } from "socket.io-client";
+import { io as ioClient, Socket } from "socket.io-client";
 import { useToast } from "@/hooks/use-toast";
 import {
   Popover,
@@ -19,6 +31,15 @@ import {
 } from "@/components/ui/popover";
 import { useLeadFilters } from "@/hooks/use-lead-filters";
 import { getStatusClass } from "@/lib/lead-status";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { BlastModal } from "@/components/blast/BlastModal";
+import { BulkAssignDialog } from "@/components/leads/bulk-assign-lead-dialog";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -51,6 +72,7 @@ type LeadListItem = {
   followUpTypeCode: string | null;
   nurturingEnabled?: boolean;
   importedFromExcel?: boolean;
+  isUnreplied?: boolean;
 };
 
 type LeadListApiResponse = {
@@ -90,6 +112,7 @@ function formatRelativeCreatedAt(iso: string): string {
 
 function formatNextFollowUp(iso: string | null): string | undefined {
   if (!iso) return undefined;
+
   const d = new Date(iso);
   const now = new Date();
 
@@ -99,21 +122,15 @@ function formatNextFollowUp(iso: string | null): string | undefined {
   tomorrow.setDate(tomorrow.getDate() + 1);
   const isTomorrow = d.toDateString() === tomorrow.toDateString();
 
-  const timeStr = d.toLocaleTimeString("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  if (isToday) return "Hari ini";
+  if (isTomorrow) return "Besok";
 
-  if (isToday) return `Hari ini, ${timeStr}`;
-  if (isTomorrow) return `Besok, ${timeStr}`;
-
-  const dateStr = d.toLocaleDateString("id-ID", {
+  return d.toLocaleDateString("id-ID", {
     weekday: "short",
     day: "2-digit",
     month: "short",
+    year: "numeric",
   });
-
-  return `${dateStr}, ${timeStr}`;
 }
 
 function computeIndicator(
@@ -313,12 +330,16 @@ export default function LeadsPage() {
   const salesCounts: Record<number, number> = salesCountResp?.data ?? {};
   const totalSales: number = salesCountResp?.total ?? 0;
 
+  const socketRef = useRef<Socket | null>(null);
+
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || socketRef.current) return;
 
     const s = ioClient(SOCKET_URL, {
       transports: ["websocket"],
     });
+
+    socketRef.current = s;
 
     // join room user
     s.emit("join", { userId: user.id });
@@ -358,6 +379,44 @@ export default function LeadsPage() {
       }
     });
 
+    s.on("lead.bulk.assigned", (data) => {
+      toast({
+        title: "Lead berhasil dialihkan",
+        description: `${data.count} lead dialihkan`,
+      });
+    });
+
+    // === SYNC PROGRESS ===
+    s.on("sync:start", (data) => {
+      setSyncJob({
+        jobId: data.jobId,
+        total: data.total,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        status: "RUNNING",
+      });
+    });
+
+    s.on("sync:progress", (data) => {
+      setSyncJob((prev) => ({
+        ...prev,
+        processed: data.processed,
+        success: data.success,
+        failed: data.failed,
+      }));
+    });
+
+    s.on("sync:done", (data) => {
+      setSyncJob((prev) => ({
+        ...prev,
+        status: "DONE",
+        processed: data.total,
+        success: data.success,
+        failed: data.failed,
+      }));
+    });
+
     return () => {
       s.emit("leave", { userId: user.id });
       s.disconnect();
@@ -366,11 +425,187 @@ export default function LeadsPage() {
 
   const totalPages = leadsResp?.totalPages ?? 1;
 
+  async function handleExcludeLead(leadId: number) {
+    try {
+      const res = await fetch(`/api/leads/${leadId}/exclude`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          note: "Dikecualikan dari daftar lead",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Gagal mengecualikan lead");
+
+      toast({
+        title: "Lead dikecualikan",
+        description: "Lead tidak akan muncul lagi di daftar",
+      });
+
+      // refresh list
+      mutateLeads();
+    } catch (err: any) {
+      toast({
+        title: "Gagal mengecualikan lead",
+        description: err.message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  const [syncJob, setSyncJob] = useState<{
+    jobId: number | null;
+    total: number;
+    processed: number;
+    success: number;
+    failed: number;
+    status: "IDLE" | "RUNNING" | "DONE";
+  }>({
+    jobId: null,
+    total: 0,
+    processed: 0,
+    success: 0,
+    failed: 0,
+    status: "IDLE",
+  });
+
+  async function startSync() {
+    try {
+      const res = await fetch("/api/leads/sync/start", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.error || "Gagal memulai sync");
+
+      toast({
+        title: "Sinkronisasi dimulai",
+        description: `Total ${data.total} lead akan diproses`,
+      });
+
+      setSyncJob({
+        jobId: data.jobId,
+        total: data.total,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        status: "RUNNING",
+      });
+
+      await fetch("/api/leads/sync/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId: data.jobId }),
+      });
+    } catch (e: any) {
+      toast({
+        title: "Gagal memulai sinkronisasi",
+        description: e.message,
+        variant: "destructive",
+      });
+    }
+  }
+
+  const [showBlastModal, setShowBlastModal] = useState(false);
+  const [blastMessage, setBlastMessage] = useState("");
+  const [isSendingBlast, setIsSendingBlast] = useState(false);
+
+  const handleCloseBlast = () => {
+    setShowBlastModal(false);
+  };
+
+  const [showBulkAssign, setShowBulkAssign] = useState(false);
+
+  const handleSubmitBlast = async () => {
+    if (!blastMessage.trim()) {
+      toast({
+        title: "Pesan kosong",
+        description: "Silakan isi pesan terlebih dahulu",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSendingBlast(true);
+
+      const res = await fetch("/api/blast", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: blastMessage,
+          filters: {
+            status: activeStatusCode,
+            subStatus: activeSubStatusCode,
+            stage: activeStageId,
+          },
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Gagal mengirim blast");
+      }
+
+      toast({
+        title: "Berhasil membuat blasting pesan",
+        description: `Pesan blast berhasil dijadwalkan dan dikirim ke ${data.total} lead`,
+      });
+
+      setShowBlastModal(false);
+      setBlastMessage("");
+    } catch (err: any) {
+      toast({
+        title: "Gagal membuat pesan blast",
+        description: err.message ?? "Terjadi kesalahan",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingBlast(false);
+    }
+  };
+
   return (
     <DashboardLayout title="Lead">
       <div className="space-y-4">
         {/* Search + Filter Bar */}
         <div className="top-0 z-10 bg-background space-y-3 pt-1">
+          {syncJob.status !== "IDLE" && (
+            <div className="rounded-lg border p-4 bg-muted">
+              <div className="flex justify-between items-center mb-2">
+                <div className="font-medium">
+                  Sinkronisasi Chat Sedang Berjalan
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {syncJob.processed} / {syncJob.total}
+                </div>
+              </div>
+
+              <div className="w-full h-2 bg-muted rounded overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: `${Math.round(
+                      (syncJob.processed / Math.max(syncJob.total, 1)) * 100
+                    )}%`,
+                  }}
+                />
+              </div>
+
+              <div className="mt-1 text-xs text-muted-foreground">
+                ✅ {syncJob.success} sukses · ❌ {syncJob.failed} gagal
+              </div>
+            </div>
+          )}
+
           {user?.roleSlug === "manager" && teamLeaders.length > 0 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {/* Semua TL */}
@@ -529,12 +764,12 @@ export default function LeadsPage() {
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant={filters.sort === "last_chat" ? "default" : "outline"}
+                  variant={filters.sort === "created" ? "outline" : "default"}
                   size="icon"
                   title="Urutkan lead"
                   className="w-11 h-11"
                 >
-                  <SlidersHorizontal className="h-4 w-4" />
+                  <ArrowDownWideNarrow className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
 
@@ -558,6 +793,16 @@ export default function LeadsPage() {
                     onClick={() => setFilters({ sort: "last_chat", page: 1 })}
                   >
                     💬 Chat terakhir
+                  </button>
+
+                  <button
+                    className={cn(
+                      "w-full text-left px-3 py-2 rounded-md text-sm",
+                      filters.sort === "unreplied" && "bg-primary text-white"
+                    )}
+                    onClick={() => setFilters({ sort: "unreplied", page: 1 })}
+                  >
+                    🔴 Belum dibalas
                   </button>
                 </div>
               </PopoverContent>
@@ -611,36 +856,172 @@ export default function LeadsPage() {
               </PopoverContent>
             </Popover>
 
-            {user?.roleSlug === "sales" && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default">
+                  Aksi
+                  <MoreVertical className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" className="w-52">
+                {/* IMPORT */}
+                {user?.roleSlug === "sales" && (
+                  <ImportLeadsDialog
+                    onImported={async () => {
+                      setFilters({ page: 1 });
+                      await mutateLeads();
+                    }}
+                    trigger={
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        Import Lead
+                      </DropdownMenuItem>
+                    }
+                  />
+                )}
+
+                {/* EXPORT */}
+                <DropdownMenuItem
+                  onClick={() => {
+                    const params = new URLSearchParams();
+
+                    if (filters.status !== "ALL")
+                      params.set("status", filters.status);
+                    if (filters.subStatus !== "ALL")
+                      params.set("subStatus", filters.subStatus);
+                    if (filters.stage !== "ALL")
+                      params.set("stage", filters.stage);
+                    if (filters.teamLeader !== "ALL")
+                      params.set("teamLeader", filters.teamLeader);
+                    if (filters.sales !== "ALL")
+                      params.set("sales", filters.sales);
+                    if (filters.month) params.set("month", filters.month);
+
+                    window.open(
+                      `/api/leads/export?${params.toString()}`,
+                      "_blank"
+                    );
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Excel
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
+                {/* SYNC */}
+                {/* dikomen dulu */}
+                {/* {user?.roleSlug === "sales" && (
+                  <DropdownMenuItem
+                    onClick={startSync}
+                    disabled={syncJob.status === "RUNNING"}
+                  >
+                    {syncJob.status === "RUNNING" ? (
+                      <p className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Memproses...
+                      </p>
+                    ) : (
+                      <p className="flex items-center gap-2">
+                        <RefreshCcw className="h-4 w-4" />
+                        Sinkronkan Chat
+                      </p>
+                    )}
+                  </DropdownMenuItem>
+                )} */}
+
+                {/* BLAST */}
+                {user?.roleSlug === "sales" && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (!activeStatusCode || activeStatusCode === "ALL") {
+                        toast({
+                          title: "Pilih status terlebih dahulu",
+                          description:
+                            "Silakan pilih status untuk pesan blast",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      if (!activeSubStatusCode || activeSubStatusCode === "ALL") {
+                        toast({
+                          title: "Pilih sub status terlebih dahulu",
+                          description:
+                            "Silakan pilih sub status untuk pesan blast",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setShowBlastModal(true);
+                    }}
+                  >
+                    <p className="flex items-center gap-2">
+                      <Megaphone className="h-4 w-4" />
+                      Kirim Pesan Blast
+                    </p>
+                  </DropdownMenuItem>
+                )}
+
+                {user?.roleSlug != "sales" && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      if (!activeSalesId || activeSalesId === "ALL") {
+                        toast({
+                          title: "Pilih sales terlebih dahulu",
+                          description:
+                            "Silakan pilih sales yang ingin dipindahkan lead-nya",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+
+                      if (!activeStatusCode || activeStatusCode === "ALL") {
+                        toast({
+                          title: "Pilih status terlebih dahulu",
+                          description:
+                            "Silakan pilih status yang ingin dipindahkan lead-nya",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setShowBulkAssign(true);
+                    }}
+                  >
+                    Assign Massal
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* {user?.roleSlug === "sales" && (
               <ImportLeadsDialog
                 onImported={async () => {
                   setFilters({ page: 1 });
                   await mutateLeads();
                 }}
               />
-            )}
+            )} */}
 
-            <Button
+            {/* <Button
               variant="default"
-              onClick={() => {
-                const params = new URLSearchParams();
-
-                if (filters.status !== "ALL")
-                  params.set("status", filters.status);
-                if (filters.subStatus !== "ALL")
-                  params.set("subStatus", filters.subStatus);
-                if (filters.stage !== "ALL") params.set("stage", filters.stage);
-                if (filters.teamLeader !== "ALL")
-                  params.set("teamLeader", filters.teamLeader);
-                if (filters.sales !== "ALL") params.set("sales", filters.sales);
-                if (filters.month) params.set("month", filters.month);
-
-                window.open(`/api/leads/export?${params.toString()}`, "_blank");
-              }}
+              onClick={startSync}
+              disabled={syncJob.status === "RUNNING"}
             >
-              <Download className="h-4 w-4" />
-              Export Excel
-            </Button>
+              {syncJob.status === "RUNNING" ? (
+                <p className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Memproses...
+                </p>
+              ) : (
+                <p>Sinkronkan Chat</p>
+              )}
+            </Button> */}
           </div>
 
           {/* Filter status (pill) */}
@@ -854,11 +1235,11 @@ export default function LeadsPage() {
         )}
 
         {/* Lead List */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="space-y-4">
           {isLoading ? (
             <div className="text-sm text-gray-500">Memuat data lead...</div>
           ) : leads.length === 0 ? (
-            <div className="border border-dashed rounded-xl p-6 text-center text-gray-500 text-sm">
+            <div className="border col-span-2 border-dashed rounded-xl p-6 text-center text-gray-500 text-sm">
               Belum ada lead untuk filter & pencarian ini.
             </div>
           ) : (
@@ -896,6 +1277,8 @@ export default function LeadsPage() {
                   importedFromExcel={!!lead.importedFromExcel}
                   salesName={lead.salesName}
                   teamLeaderName={lead.teamLeaderName}
+                  onExclude={handleExcludeLead}
+                  isUnreplied={lead.isUnreplied}
                 />
               );
             })
@@ -927,6 +1310,37 @@ export default function LeadsPage() {
           </div>
         </div>
       </div>
+
+      {/* blast modal */}
+      <BlastModal
+        open={showBlastModal}
+        onClose={handleCloseBlast}
+        message={blastMessage}
+        setMessage={setBlastMessage}
+        filters={{
+          status: activeStatusCode,
+          subStatus: activeSubStatusCode,
+          stage: activeStageId,
+          total: leads.length,
+        }}
+        onSubmit={handleSubmitBlast}
+      />
+
+      <BulkAssignDialog
+        open={showBulkAssign}
+        onOpenChange={setShowBulkAssign}
+        filters={{
+          status: activeStatusCode,
+          subStatus: activeSubStatusCode,
+          stage: activeStageId,
+          salesId: activeSalesId,
+        }}
+        salesName={
+          salesList.find((s) => String(s.id) === String(activeSalesId))?.name
+        }
+        totalLeads={leads.length}
+        onSuccess={() => mutateLeads()}
+      />
     </DashboardLayout>
   );
 }

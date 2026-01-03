@@ -26,12 +26,13 @@ interface Props {
 
   followUpTypeCode: string;
   setFollowUpTypeCode: (v: string) => void;
+
   followUpDate: string;
   setFollowUpDate: (v: string) => void;
-  followUpTime: string;
-  setFollowUpTime: (v: string) => void;
+
   followUpChannel: "wa" | "call" | "zoom" | "visit";
   setFollowUpChannel: (v: any) => void;
+
   followUpNote: string;
   setFollowUpNote: (v: string) => void;
 
@@ -47,7 +48,7 @@ export function FollowUpScheduleDialog(props: Props) {
         <DialogHeader>
           <DialogTitle>Atur Tindak Lanjut</DialogTitle>
           <DialogDescription>
-            Tentukan jenis tindak lanjut, jadwal, dan Aksi untuk lead ini.
+            Tentukan jenis tindak lanjut, jadwal, dan Aksi untuk lead ini
           </DialogDescription>
         </DialogHeader>
 
@@ -81,15 +82,6 @@ export function FollowUpScheduleDialog(props: Props) {
                 className="mt-1 h-9"
                 value={props.followUpDate}
                 onChange={(e) => props.setFollowUpDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Jam</p>
-              <Input
-                type="time"
-                className="mt-1 h-9"
-                value={props.followUpTime}
-                onChange={(e) => props.setFollowUpTime(e.target.value)}
               />
             </div>
           </div>

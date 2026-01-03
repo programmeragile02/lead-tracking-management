@@ -47,6 +47,7 @@ import { getStatusClass } from "@/lib/lead-status";
 import { cn } from "@/lib/utils";
 import { SubStatusModal } from "@/components/leads/detail/sub-status-modal";
 import { LeadNotesDrawer } from "@/components/leads/detail/notes/LeadNotesDrawer";
+import { StageInsightCard } from "@/components/leads/detail/stage-insight-card";
 
 type ChatFrom = "client" | "sales";
 type SentByRole = "sales" | "team-leader" | "manager" | null;
@@ -485,7 +486,6 @@ export default function LeadDetailPage() {
   const [followUpTypeCode, setFollowUpTypeCode] = useState<string>("");
 
   const [followUpDate, setFollowUpDate] = useState("");
-  const [followUpTime, setFollowUpTime] = useState("");
   const [followUpChannel, setFollowUpChannel] = useState<
     "wa" | "call" | "zoom" | "visit"
   >("wa");
@@ -528,7 +528,6 @@ export default function LeadDetailPage() {
       const hh = `${d.getHours()}`.padStart(2, "0");
       const mm = `${d.getMinutes()}`.padStart(2, "0");
       setFollowUpDate(`${y}-${m}-${day}`);
-      setFollowUpTime(`${hh}:${mm}`);
     }
   }, [lastFollowUp?.id, followUpTypes]);
 
@@ -555,7 +554,7 @@ export default function LeadDetailPage() {
 
   async function handleSaveFollowUp() {
     if (!leadId) return;
-    if (!followUpTypeCode || !followUpDate || !followUpTime) {
+    if (!followUpTypeCode || !followUpDate) {
       toast({
         variant: "destructive",
         title: "Data belum lengkap",
@@ -572,7 +571,6 @@ export default function LeadDetailPage() {
         body: JSON.stringify({
           typeCode: followUpTypeCode,
           date: followUpDate,
-          time: followUpTime,
           channel: followUpChannel,
           note: followUpNote || undefined,
         }),
@@ -838,7 +836,7 @@ export default function LeadDetailPage() {
       if (fu.doneAt) {
         waktuText = `Dilakukan: ${formatDateTime(fu.doneAt)}`;
       } else if (fu.nextActionAt) {
-        waktuText = `Jadwal: ${formatDateTime(fu.nextActionAt)}`;
+        waktuText = `Jadwal: ${formatDate(fu.nextActionAt)}`;
       }
 
       list.push({
@@ -1764,9 +1762,77 @@ export default function LeadDetailPage() {
     handleSend(text);
   }
 
+  // ===== STAGE ANALYSIS STATE =====
+  const [analysisResult, setAnalysisResult] = useState<{
+    suggestedStage: string;
+    confidence: number;
+    reasons: string[];
+  } | null>(null);
+
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisDismissed, setAnalysisDismissed] = useState(false);
+  const [dismissedInsight, setDismissedInsight] = useState(false);
+  const [analyzingStage, setAnalyzingStage] = useState(false);
+
+  async function handleAnalyzeStage() {
+    if (!leadId) return;
+
+    try {
+      setIsAnalyzing(true);
+      setAnalysisDismissed(false);
+
+      const res = await fetch(`/api/leads/${leadId}/analyze-stage`, {
+        method: "POST",
+      });
+
+      const json = await res.json();
+
+      if (!res.ok || !("suggestedStage" in json)) {
+        throw new Error(json?.error || "Analisis gagal");
+      }
+
+      setAnalysisResult({
+        suggestedStage: json.suggestedStage,
+        confidence: json.confidence ?? 0,
+        reasons: json.reasons ?? [],
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan analisis tahap");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }
+
+  async function handleMoveToStage(stageCode: string) {
+    const stage = stages.find((s) => s.code === stageCode);
+    if (!stage) return;
+
+    try {
+      await fetch(`/api/leads/${leadId}/stage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stageId: stage.id }),
+      });
+
+      toast({
+        title: "Tahapan diperbarui",
+        description: `Lead dipindahkan ke tahap ${stage.label}`,
+      });
+
+      setDismissedInsight(true);
+      await mutateDetail();
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Gagal memindahkan tahap",
+      });
+    }
+  }
+
   return (
     <DashboardLayout title="Detail Leads">
-      <div className="flex min-h-[100dvh] flex-col">
+      <div className="flex min-h-dvh flex-col">
         <main className="mx-auto flex w-full flex-1 flex-col gap-4 px-3 pb-20 pt-3 sm:px-4 md:pb-8">
           {/* SALES INFO */}
           <Badge
@@ -1870,7 +1936,6 @@ export default function LeadDetailPage() {
           </section>
 
           {/* 4 CARD ATAS */}
-          {/* ===== INFO STRIP ===== */}
           <section className="rounded-xl border p-3 bg-secondary">
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <InfoItem
@@ -1899,7 +1964,7 @@ export default function LeadDetailPage() {
                     ? lastFollowUp.doneAt
                       ? "Selesai"
                       : lastFollowUp.nextActionAt
-                      ? formatDateTime(lastFollowUp.nextActionAt)
+                      ? formatDate(lastFollowUp.nextActionAt)
                       : lastFollowUp.typeName || "-"
                     : "Belum ada"
                 }
@@ -1956,7 +2021,7 @@ export default function LeadDetailPage() {
                             <>
                               Dijadwalkan{" "}
                               <span className="font-medium text-foreground">
-                                {formatDateTime(lastFollowUp.nextActionAt)}
+                                {formatDate(lastFollowUp.nextActionAt)}
                               </span>{" "}
                               ·{" "}
                               {followUpChannelLabel(
@@ -2029,6 +2094,7 @@ export default function LeadDetailPage() {
                   </div>
                 </div>
               </div>
+
               <Tabs defaultValue="whatsapp">
                 <TabsList className="mb-3 w-full justify-start overflow-x-auto">
                   <TabsTrigger value="overview" className="text-xs sm:text-sm">
@@ -2042,6 +2108,12 @@ export default function LeadDetailPage() {
                   </TabsTrigger>
                   <TabsTrigger value="ai" className="text-xs sm:text-sm">
                     AI Analysis
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="analysis-tahapan"
+                    className="text-xs sm:text-sm"
+                  >
+                    Analisis Tahapan
                   </TabsTrigger>
                 </TabsList>
 
@@ -2282,6 +2354,82 @@ export default function LeadDetailPage() {
                   />
                 </TabsContent>
 
+                <TabsContent value="analysis-tahapan" className="space-y-4">
+                  {/* BUTTON ANALISIS */}
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handleAnalyzeStage}
+                      disabled={isAnalyzing}
+                      className="flex items-center gap-2"
+                    >
+                      {isAnalyzing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Menganalisis...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          Analisis Tahapan
+                        </>
+                      )}
+                    </Button>
+
+                    <span className="text-xs text-muted-foreground">
+                      Analisis berdasarkan histori chat & aktivitas
+                    </span>
+                  </div>
+
+                  {/* HASIL ANALISIS */}
+                  {analysisResult && !analysisDismissed && (
+                    <div className="rounded-lg border bg-muted p-4 space-y-3">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                        <div>
+                          <p className="font-medium">
+                            Rekomendasi Tahapan:
+                            <span className="ml-1 font-bold text-primary">
+                              {analysisResult.suggestedStage}
+                            </span>
+                          </p>
+
+                          <p className="text-sm text-muted-foreground mt-1">
+                            Keyakinan sistem:{" "}
+                            <b>
+                              {Math.round(analysisResult.confidence * 100)}%
+                            </b>
+                          </p>
+                        </div>
+                      </div>
+
+                      <ul className="list-disc ml-5 text-sm text-muted-foreground">
+                        {analysisResult.reasons.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
+                      </ul>
+
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            handleMoveToStage(analysisResult.suggestedStage)
+                          }
+                        >
+                          Terapkan Tahap
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setAnalysisDismissed(true)}
+                        >
+                          Abaikan
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+
                 {/* MODAL TAMBAH AKTIVITAS MANUAL */}
                 <ActivityDialog
                   open={activityModalOpen}
@@ -2352,8 +2500,6 @@ export default function LeadDetailPage() {
                   setFollowUpTypeCode={setFollowUpTypeCode}
                   followUpDate={followUpDate}
                   setFollowUpDate={setFollowUpDate}
-                  followUpTime={followUpTime}
-                  setFollowUpTime={setFollowUpTime}
                   followUpChannel={followUpChannel}
                   setFollowUpChannel={setFollowUpChannel}
                   followUpNote={followUpNote}
@@ -2455,4 +2601,12 @@ function formatFileSize(bytes: number) {
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   const value = bytes / Math.pow(k, i);
   return `${value.toFixed(1)} ${sizes[i]}`;
+}
+
+function formatDate(iso: string) {
+  return new Date(iso).toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }

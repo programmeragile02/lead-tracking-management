@@ -41,9 +41,10 @@ export async function POST(
 
   const lead = await prisma.lead.findUnique({
     where: { id: leadId },
-    select: { id: true, salesId: true },
+    select: { id: true, salesId: true, isExcluded: true },
   });
-  if (!lead) {
+
+  if (!lead || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, error: "Lead not found" },
       { status: 404 }

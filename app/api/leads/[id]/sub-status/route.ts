@@ -28,10 +28,11 @@ export async function POST(
       id: true,
       statusId: true,
       salesId: true,
+      isExcluded: true,
     },
   });
 
-  if (!lead) {
+  if (!lead || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, message: "Lead not found" },
       { status: 404 }

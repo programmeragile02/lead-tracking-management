@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
   // ----- STATISTIK LEAD UNTUK USER INI -----
   const totalLeads = await prisma.lead.count({
-    where: { salesId: user.id },
+    where: { salesId: user.id, isExcluded: false },
   });
 
   // closing = lead yang punya priceClosing (asumsi close won)

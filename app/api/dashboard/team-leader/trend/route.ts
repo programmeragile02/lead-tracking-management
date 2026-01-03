@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
       where: {
         salesId: { in: salesIds },
         createdAt: { gte: monthStart, lt: monthEnd },
+        isExcluded: false
       },
       select: { createdAt: true },
     });
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
         salesId: { in: salesIds },
         status: { code: "CLOSE_WON" },
         updatedAt: { gte: monthStart, lt: monthEnd },
+        isExcluded: false
       },
       select: {
         updatedAt: true,

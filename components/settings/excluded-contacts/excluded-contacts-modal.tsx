@@ -97,14 +97,6 @@ export function ExcludedContactModal({
             onChange={(e) => setForm({ ...form, note: e.target.value })}
           />
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm">Aktifkan pengecualian</span>
-            <Switch
-              checked={form.isActive}
-              onCheckedChange={(v) => setForm({ ...form, isActive: v })}
-            />
-          </div>
-
           <Button className="w-full" onClick={submit}>
             Simpan
           </Button>

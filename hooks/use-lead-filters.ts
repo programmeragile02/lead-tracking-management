@@ -11,7 +11,7 @@ export type LeadFilterState = {
   page: number;
   teamLeader?: string;
   sales?: string;
-  sort?: "created" | "last_chat";
+  sort?: "created" | "last_chat" | "unreplied";
 };
 
 export function useLeadFilters() {
@@ -28,7 +28,7 @@ export function useLeadFilters() {
       page: Number(searchParams.get("page") || 1),
       teamLeader: searchParams.get("teamLeader") ?? "ALL",
       sales: searchParams.get("sales") ?? "ALL",
-      sort: (searchParams.get("sort") as "created" | "last_chat") ?? "created",
+      sort: (searchParams.get("sort") as "created" | "last_chat" | "unreplied") ?? "created",
     };
   }, [searchParams]);
 

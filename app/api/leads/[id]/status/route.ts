@@ -45,14 +45,14 @@ export async function POST(
   const [lead, targetStatus] = await Promise.all([
     prisma.lead.findUnique({
       where: { id: leadId },
-      select: { id: true, salesId: true },
+      select: { id: true, salesId: true, isExcluded: true },
     }),
     prisma.leadStatus.findUnique({
       where: { id: statusId },
     }),
   ]);
 
-  if (!lead) {
+  if (!lead || lead.isExcluded) {
     return NextResponse.json(
       { ok: false, error: "Lead not found" },
       { status: 404 }

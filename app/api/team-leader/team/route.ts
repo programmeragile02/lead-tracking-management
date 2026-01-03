@@ -116,6 +116,7 @@ export async function GET(req: NextRequest) {
       where: {
         salesId: { in: salesIds },
         createdAt: { gte: monthStart, lt: nextMonth },
+        isExcluded: false,
       },
       _count: { _all: true },
     });
@@ -124,6 +125,7 @@ export async function GET(req: NextRequest) {
       by: ["salesId"],
       where: {
         salesId: { in: salesIds },
+        isExcluded: false,
       },
       _count: { _all: true },
     });
@@ -134,6 +136,7 @@ export async function GET(req: NextRequest) {
         salesId: { in: salesIds },
         status: { code: "CLOSE_WON" },
         updatedAt: { gte: monthStart, lt: nextMonth },
+        isExcluded: false,
       },
       _count: { _all: true },
       _sum: { priceClosing: true },
@@ -223,6 +226,7 @@ export async function GET(req: NextRequest) {
             nextActionAt: { lt: now },
           },
         },
+        isExcluded: false,
       },
       select: { id: true, salesId: true },
     });
@@ -236,6 +240,7 @@ export async function GET(req: NextRequest) {
             code: { in: ["CLOSE_WON", "CLOSE_LOST"] },
           },
         },
+        isExcluded: false,
       },
       select: { id: true, salesId: true },
     });
@@ -244,6 +249,7 @@ export async function GET(req: NextRequest) {
       where: {
         salesId: { in: salesIds },
         followUps: { none: {} },
+        isExcluded: false,
       },
       select: { id: true, salesId: true },
     });

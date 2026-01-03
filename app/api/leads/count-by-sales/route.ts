@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
   }
 
   const rows = await prisma.lead.groupBy({
-    where: whereLead,
+    where: { ...whereLead, isExcluded: false },
     by: ["salesId"],
     _count: { _all: true },
   });

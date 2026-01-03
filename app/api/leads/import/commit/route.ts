@@ -138,6 +138,7 @@ export async function POST(req: NextRequest) {
       where: {
         salesId: user.id,
         phone: { not: null },
+        isExcluded: false
       },
       select: {
         phone: true,

@@ -110,8 +110,13 @@ function fmtCreatedAt(iso: string | null) {
 /* =========================
  * COMPONENT
  * ========================= */
-export function ImportLeadsDialog(props: { onImported?: () => void }) {
-  const { onImported } = props;
+export function ImportLeadsDialog({
+  onImported,
+  trigger,
+}: {
+  onImported?: () => void;
+  trigger?: React.ReactNode;
+}) {
   const { toast } = useToast();
 
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -266,10 +271,12 @@ export function ImportLeadsDialog(props: { onImported?: () => void }) {
       }}
     >
       <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Upload className="h-4 w-4" />
-          Import Lead
-        </Button>
+        {trigger ?? (
+          <Button className="gap-2">
+            <Upload className="h-4 w-4" />
+            Import Lead
+          </Button>
+        )}
       </DialogTrigger>
 
       <DialogContent className="max-w-3xl px-0 overflow-hidden">

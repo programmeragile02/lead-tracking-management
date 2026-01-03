@@ -14,7 +14,7 @@ export function normalizePhone(input: any): string | null {
   return d;
 }
 
-export function parseDecimalNullable(input: any): string | null {
+export function parseDecimalNullable(input: any): number | null {
   if (input === null || input === undefined || input === "") return null;
 
   let cleaned = String(input)
@@ -29,25 +29,20 @@ export function parseDecimalNullable(input: any): string | null {
   const hasDot = cleaned.includes(".");
 
   if (hasComma && hasDot) {
-    if (cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")) {
-      // 12.000.000,50
-      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
-    } else {
-      // 12,000,000.50
-      cleaned = cleaned.replace(/,/g, "");
-    }
+    // 1.234.567,89
+    cleaned = cleaned.replace(/\./g, "").replace(",", ".");
   } else if (hasComma && !hasDot) {
-    // 12000000,50
+    // 1200000,50
     cleaned = cleaned.replace(",", ".");
   } else {
-    // 12.000.000 (anggap ribuan)
+    // 1.234.567
     cleaned = cleaned.replace(/\./g, "");
   }
 
-  const n = Number(cleaned);
-  if (!Number.isFinite(n)) return null;
+  const num = Number(cleaned);
+  if (!Number.isFinite(num)) return null;
 
-  return n.toFixed(2); // prisma Decimal aman pakai string
+  return num; // ←: number, bukan string
 }
 
 function keyCode(v: any) {
