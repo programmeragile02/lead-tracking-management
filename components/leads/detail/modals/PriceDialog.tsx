@@ -25,6 +25,11 @@ interface Props {
   onChangeKind: (v: "OFFERING" | "NEGOTIATION" | "CLOSING") => void;
   onChangeInput: (v: string) => void;
   onSave: () => void;
+
+  priceDate: string;
+  priceTime: string;
+  onChangeDate: (v: string) => void;
+  onChangeTime: (v: string) => void;
 }
 
 export function PriceDialog(props: Props) {
@@ -70,6 +75,30 @@ export function PriceDialog(props: Props) {
             >
               Closing
             </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">
+                Tanggal harga
+              </label>
+              <Input
+                type="date"
+                value={props.priceDate}
+                onChange={(e) => props.onChangeDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-muted-foreground">
+                Jam (opsional)
+              </label>
+              <Input
+                type="time"
+                value={props.priceTime}
+                onChange={(e) => props.onChangeTime(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

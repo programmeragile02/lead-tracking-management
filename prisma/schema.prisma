@@ -237,9 +237,14 @@ model Lead {
   photoUrl  String?
 
   // harga penawaran / nego / closing
-  priceOffering    Decimal? @db.Decimal(12, 2)
-  priceNegotiation Decimal? @db.Decimal(12, 2)
-  priceClosing     Decimal? @db.Decimal(12, 2)
+  priceOffering       Decimal? @db.Decimal(12, 2)
+  priceOfferingAt     DateTime?
+
+  priceNegotiation    Decimal? @db.Decimal(12, 2)
+  priceNegotiationAt  DateTime?
+
+  priceClosing        Decimal? @db.Decimal(12, 2)
+  priceClosingAt      DateTime?
 
   // tahap "kontak awal" dst
   stageId  Int?

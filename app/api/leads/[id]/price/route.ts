@@ -10,6 +10,12 @@ const FIELD_LABEL: Record<PriceField, string> = {
   priceClosing: "Harga Closing",
 };
 
+const PRICE_TIME_FIELD: Record<PriceField, string> = {
+  priceOffering: "priceOfferingAt",
+  priceNegotiation: "priceNegotiationAt",
+  priceClosing: "priceClosingAt",
+};
+
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -35,6 +41,7 @@ export async function PUT(
     const body = (await req.json().catch(() => null)) as {
       field?: string;
       value?: any;
+      date?: string;
     } | null;
 
     if (!body) {
@@ -66,7 +73,7 @@ export async function PUT(
       return NextResponse.json(
         {
           ok: false,
-          error: "Nominal harga tidak boleh kosong.",
+          error: "Nominal harga tidak boleh kosong",
         },
         { status: 400 }
       );
@@ -82,7 +89,7 @@ export async function PUT(
       return NextResponse.json(
         {
           ok: false,
-          error: "Nominal harga harus berupa angka.",
+          error: "Nominal harga harus berupa angka",
         },
         { status: 400 }
       );
@@ -92,11 +99,31 @@ export async function PUT(
       return NextResponse.json(
         {
           ok: false,
-          error: "Nominal harga tidak boleh negatif.",
+          error: "Nominal harga tidak boleh negatif",
         },
         { status: 400 }
       );
     }
+
+    let happenedAt: Date;
+
+    if (!body.date) {
+      return NextResponse.json(
+        { ok: false, error: "Tanggal harga wajib diisi" },
+        { status: 400 }
+      );
+    }
+
+    const parsedDate = new Date(body.date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json(
+        { ok: false, error: "Format tanggal tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    happenedAt = parsedDate;
 
     // Ambil lead + info status sekarang
     const existingLead = await prisma.lead.findUnique({
@@ -160,9 +187,10 @@ export async function PUT(
       }
     }
 
-    // ==== Update lead (harga + optional status) ====
+    // ==== Update lead (harga + optional status + date) ====
     const dataToUpdate: any = {
       [field]: value,
+      [PRICE_TIME_FIELD[field]]: happenedAt,
     };
 
     if (newStatusId) {

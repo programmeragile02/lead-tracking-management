@@ -43,6 +43,7 @@ const DEFAULT_WELCOME_TEMPLATE =
   "Halo kak, terima kasih sudah menghubungi {{perusahaan}}. Saya {{nama_sales}}. Ada yang bisa saya bantu terkait kebutuhan kakak?";
 
 export async function POST(req: NextRequest) {
+  // Security
   if (WEBHOOK_KEY) {
     const headerKey = req.headers.get("x-wa-webhook-key");
     if (headerKey !== WEBHOOK_KEY) {
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
     waDisplayName,
   } = payload;
 
+  // validasi field
   if (!userId || !from || !to || !body) {
     return NextResponse.json(
       { ok: false, error: "missing_fields" },
@@ -78,6 +80,19 @@ export async function POST(req: NextRequest) {
   const fromPhone = waPhone || extractPhoneFromWaChatId(fromWaChatId);
 
   const toPhone = typeof to === "string" ? extractPhoneFromWaChatId(to) : null;
+
+  // dedup di awal
+  if (waMessageId) {
+    const exists = await prisma.leadMessage.findUnique({
+      where: { waMessageId },
+      select: { id: true },
+    });
+
+    if (exists) {
+      console.log("[inbound] duplicate waMessageId → safe skip", waMessageId);
+      return NextResponse.json({ ok: true, duplicated: true });
+    }
+  }
 
   try {
     // 1) skip kalau pengirim ternyata sales lain
@@ -147,6 +162,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // default tahapan dan status
     const defaultStage = await prisma.leadStage.findFirst({
       where: {
         isActive: true,
@@ -203,11 +219,28 @@ export async function POST(req: NextRequest) {
     const now = new Date();
     let isNewLead = false;
 
+    /*
+     * Read plan dan delay hours nurturing diluar transaction biar tidak timeout
+     */
+    let plan: Awaited<ReturnType<typeof pickPlanForLead>> | null = null;
+    let delayHours: number | null = null;
+
     // 4) kalau belum ada, buat lead baru dari WA
     if (!lead) {
       const waSource = await prisma.leadSource.findFirst({
         where: { code: "WHATSAPP" },
       });
+
+      plan = await pickPlanForLead({
+        productId: null,
+        sourceId: waSource?.id ?? null,
+        statusCode: defaultStatus?.code ?? null,
+      });
+
+      if (plan) {
+        delayHours = await getFirstStepDelayHours(plan.id);
+      }
+
       const waName = sanitizeLeadName(waDisplayName);
 
       const created = await prisma.$transaction(async (tx) => {
@@ -239,19 +272,12 @@ export async function POST(req: NextRequest) {
         });
 
         // assign plan default (product null) jika ada
-        const plan = await pickPlanForLead({
-          productId: null,
-          sourceId: waSource?.id ?? null,
-          statusCode: defaultStatus?.code ?? null,
-        });
-
-        if (plan) {
-          const delay = await getFirstStepDelayHours(plan.id);
+        if (plan && delayHours != null) {
           await tx.leadNurturingState.update({
             where: { leadId: newLead.id },
             data: {
               planId: plan.id,
-              nextSendAt: new Date(now.getTime() + delay * 60 * 60 * 1000),
+              nextSendAt: new Date(now.getTime() + delayHours * 60 * 60 * 1000),
             } as any,
           });
         }
@@ -303,26 +329,31 @@ export async function POST(req: NextRequest) {
     const sentAt =
       timestamp != null ? new Date(Number(timestamp) * 1000) : new Date();
 
-    const inboundMsg = await prisma.leadMessage.create({
-      data: {
-        leadId: lead.id,
-        salesId: sales.id,
-        channel: "WHATSAPP",
-        direction: "INBOUND",
-        waMessageId: waMessageId || null,
-        waChatId: fromWaChatId,
-        fromNumber: fromPhone,
-        toNumber: toPhone,
-        content: body,
-        sentAt,
-      },
-    });
+    let inboundMsg = null;
+    try {
+      inboundMsg = await prisma.leadMessage.create({
+        data: {
+          leadId: lead.id,
+          salesId: sales.id,
+          channel: "WHATSAPP",
+          direction: "INBOUND",
+          waMessageId: waMessageId || null,
+          waChatId: fromWaChatId,
+          fromNumber: fromPhone,
+          toNumber: toPhone,
+          content: body,
+          sentAt,
+        },
+      });
+    } catch (e: any) {
+      if (e.code !== "P2002") throw e;
+    }
 
     await prisma.lead.update({
       where: { id: lead.id },
       data: {
-        lastMessageAt: inboundMsg.createdAt,
-        lastInboundAt: inboundMsg.createdAt,
+        lastMessageAt: inboundMsg?.createdAt ?? now,
+        lastInboundAt: inboundMsg?.createdAt ?? now,
       },
     });
 
@@ -333,14 +364,17 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const eventAt =
+      inboundMsg?.sentAt ?? inboundMsg?.createdAt ?? sentAt ?? new Date();
+
     await emitRealtime({
       room: `lead:${lead.id}`,
       event: "wa_inbound",
       payload: {
         leadId: lead.id,
-        messageId: inboundMsg.id,
-        waMessageId: inboundMsg.waMessageId,
-        at: (inboundMsg.sentAt ?? inboundMsg.createdAt).toISOString(),
+        messageId: inboundMsg?.id,
+        waMessageId: inboundMsg?.waMessageId,
+        at: eventAt.toISOString(),
       },
     });
 

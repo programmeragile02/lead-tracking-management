@@ -215,6 +215,14 @@ type WaClientStatus =
   | "DISCONNECTED"
   | "ERROR";
 
+type PriceState = {
+  value: string; // formatted rupiah
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+};
+
+type OverviewPriceKind = "OFFERING" | "NEGOTIATION" | "CLOSING";
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function formatCurrencyIDR(value?: number | string | null) {
@@ -1199,10 +1207,23 @@ export default function LeadDetailPage() {
   const [overviewCity, setOverviewCity] = useState("");
   const [overviewProductId, setOverviewProductId] = useState<string>("");
 
+  const [overviewStatusId, setOverviewStatusId] = useState<number | null>(null);
+  const [overviewSubStatusId, setOverviewSubStatusId] = useState<number | null>(
+    null
+  );
+
   // field dinamis, disimpan per fieldId
   const [overviewCustomValues, setOverviewCustomValues] = useState<
     Record<number, string>
   >({});
+
+  const [overviewPrices, setOverviewPrices] = useState<
+    Record<OverviewPriceKind, { value: string; date: string }>
+  >({
+    OFFERING: { value: "", date: "" },
+    NEGOTIATION: { value: "", date: "" },
+    CLOSING: { value: "", date: "" },
+  });
 
   useEffect(() => {
     if (!lead) return;
@@ -1213,6 +1234,35 @@ export default function LeadDetailPage() {
     setOverviewAddress(lead.address || "");
     setOverviewCity(lead.city || "");
     setOverviewProductId(lead.productId ? String(lead.productId) : "");
+    setOverviewStatusId(lead.statusId ?? null);
+    setOverviewSubStatusId(lead.subStatusId ?? null);
+
+    setOverviewPrices({
+      OFFERING: {
+        value: lead.priceOffering
+          ? formatRupiahInput(String(lead.priceOffering))
+          : "",
+        date: lead.priceOfferingAt
+          ? formatDateTimeLocal(lead.priceOfferingAt)
+          : "",
+      },
+      NEGOTIATION: {
+        value: lead.priceNegotiation
+          ? formatRupiahInput(String(lead.priceNegotiation))
+          : "",
+        date: lead.priceNegotiationAt
+          ? formatDateTimeLocal(lead.priceNegotiationAt)
+          : "",
+      },
+      CLOSING: {
+        value: lead.priceClosing
+          ? formatRupiahInput(String(lead.priceClosing))
+          : "",
+        date: lead.priceClosingAt
+          ? formatDateTimeLocal(lead.priceClosingAt)
+          : "",
+      },
+    });
 
     // field dinamis
     const map: Record<number, string> = {};
@@ -1237,6 +1287,32 @@ export default function LeadDetailPage() {
         value: overviewCustomValues[f.id] ?? "",
       }));
 
+      const pricesPayload = {
+        offering:
+          overviewPrices.OFFERING.value && overviewPrices.OFFERING.date
+            ? {
+                value: parseRupiahToNumber(overviewPrices.OFFERING.value),
+                date: `${overviewPrices.OFFERING.date}:00`,
+              }
+            : undefined,
+
+        negotiation:
+          overviewPrices.NEGOTIATION.value && overviewPrices.NEGOTIATION.date
+            ? {
+                value: parseRupiahToNumber(overviewPrices.NEGOTIATION.value),
+                date: `${overviewPrices.NEGOTIATION.date}:00`,
+              }
+            : undefined,
+
+        closing:
+          overviewPrices.CLOSING.value && overviewPrices.CLOSING.date
+            ? {
+                value: parseRupiahToNumber(overviewPrices.CLOSING.value),
+                date: `${overviewPrices.CLOSING.date}:00`,
+              }
+            : undefined,
+      };
+
       const res = await fetch(`/api/leads/${leadId}/overview`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1246,7 +1322,10 @@ export default function LeadDetailPage() {
           address: overviewAddress,
           city: overviewCity,
           productId: overviewProductId ? Number(overviewProductId) : null,
+          statusId: overviewStatusId ? Number(overviewStatusId) : null,
+          subStatusId: overviewSubStatusId ? Number(overviewSubStatusId) : null,
           customValues: customValuesPayload,
+          prices: pricesPayload,
         }),
       });
 
@@ -1288,8 +1367,12 @@ export default function LeadDetailPage() {
   // harga
   const [priceModalOpen, setPriceModalOpen] = useState(false);
   const [priceKind, setPriceKind] = useState<PriceKind>("OFFERING");
-  const [priceInput, setPriceInput] = useState("");
   const [savingPrice, setSavingPrice] = useState(false);
+  const [priceState, setPriceState] = useState<Record<PriceKind, PriceState>>({
+    OFFERING: { value: "", date: "", time: "" },
+    NEGOTIATION: { value: "", date: "", time: "" },
+    CLOSING: { value: "", date: "", time: "" },
+  });
 
   function getLeadPriceForKind(kind: PriceKind) {
     if (!lead) return "";
@@ -1317,29 +1400,59 @@ export default function LeadDetailPage() {
       if (lead.priceNegotiation != null) initialKind = "CLOSING";
 
       setPriceKind(initialKind);
-      setPriceInput(getLeadPriceForKind(initialKind));
+
+      setPriceState({
+        OFFERING: {
+          value: getLeadPriceForKind("OFFERING"),
+          date: lead.priceOfferingAt
+            ? formatDateISO(lead.priceOfferingAt)
+            : formatDateISO(new Date().toISOString()),
+          time: lead.priceOfferingAt
+            ? formatTimeISO(lead.priceOfferingAt)
+            : formatTimeISO(new Date().toISOString()),
+        },
+        NEGOTIATION: {
+          value: getLeadPriceForKind("NEGOTIATION"),
+          date: lead.priceNegotiationAt
+            ? formatDateISO(lead.priceNegotiationAt)
+            : formatDateISO(new Date().toISOString()),
+          time: lead.priceNegotiationAt
+            ? formatTimeISO(lead.priceNegotiationAt)
+            : formatTimeISO(new Date().toISOString()),
+        },
+        CLOSING: {
+          value: getLeadPriceForKind("CLOSING"),
+          date: lead.priceClosingAt
+            ? formatDateISO(lead.priceClosingAt)
+            : formatDateISO(new Date().toISOString()),
+          time: lead.priceClosingAt
+            ? formatTimeISO(lead.priceClosingAt)
+            : formatTimeISO(new Date().toISOString()),
+        },
+      });
     }
     setPriceModalOpen(true);
   }
 
   function handleChangePriceKind(next: PriceKind) {
     setPriceKind(next);
-    setPriceInput(getLeadPriceForKind(next));
   }
 
   async function handleSavePrice() {
     if (!leadId) return;
 
-    if (!priceInput.trim()) {
+    const current = priceState[priceKind];
+
+    if (!current.value.trim()) {
       toast({
         variant: "destructive",
         title: "Nominal belum diisi",
-        description: "Isi nominal harga terlebih dahulu.",
+        description: "Isi nominal harga terlebih dahulu",
       });
       return;
     }
 
-    const numeric = parseRupiahToNumber(priceInput);
+    const numeric = parseRupiahToNumber(current.value);
     if (!numeric) {
       // kalau mau 0 dianggap valid, ceknya bisa diubah (numeric < 0 misalnya)
       toast({
@@ -1360,12 +1473,15 @@ export default function LeadDetailPage() {
     try {
       setSavingPrice(true);
 
+      const isoDateTime = `${current.date}T${current.time || "00:00"}:00`;
+
       const res = await fetch(`/api/leads/${leadId}/price`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           field,
           value: numeric,
+          date: isoDateTime,
         }),
       });
 
@@ -2080,14 +2196,17 @@ export default function LeadDetailPage() {
                         <PriceItem
                           label="Penawaran"
                           value={formatCurrencyIDR(lead?.priceOffering)}
+                          subValue={formatPriceDate(lead?.priceOfferingAt)}
                         />
                         <PriceItem
-                          label="Nego"
+                          label="Negosiasi"
                           value={formatCurrencyIDR(lead?.priceNegotiation)}
+                          subValue={formatPriceDate(lead?.priceNegotiationAt)}
                         />
                         <PriceItem
                           label="Closing"
                           value={formatCurrencyIDR(lead?.priceClosing)}
+                          subValue={formatPriceDate(lead?.priceClosingAt)}
                         />
                       </div>
                     </div>
@@ -2150,6 +2269,13 @@ export default function LeadDetailPage() {
                     overviewCustomValues={overviewCustomValues}
                     setCustomValue={setCustomValue}
                     isSales={isSales}
+                    overviewPrices={overviewPrices}
+                    setOverviewPrices={setOverviewPrices}
+                    statuses={statuses}
+                    overviewStatusId={overviewStatusId}
+                    setOverviewStatusId={setOverviewStatusId}
+                    overviewSubStatusId={overviewSubStatusId}
+                    setOverviewSubStatusId={setOverviewSubStatusId}
                   />
                 </TabsContent>
 
@@ -2485,10 +2611,38 @@ export default function LeadDetailPage() {
                   open={priceModalOpen}
                   onOpenChange={setPriceModalOpen}
                   priceKind={priceKind}
-                  priceInput={priceInput}
+                  priceInput={priceState[priceKind].value}
+                  priceDate={priceState[priceKind].date}
+                  priceTime={priceState[priceKind].time}
                   saving={savingPrice}
                   onChangeKind={setPriceKind}
-                  onChangeInput={(v) => setPriceInput(formatRupiahInput(v))}
+                  onChangeInput={(v) =>
+                    setPriceState((prev) => ({
+                      ...prev,
+                      [priceKind]: {
+                        ...prev[priceKind],
+                        value: formatRupiahInput(v),
+                      },
+                    }))
+                  }
+                  onChangeDate={(v) =>
+                    setPriceState((prev) => ({
+                      ...prev,
+                      [priceKind]: {
+                        ...prev[priceKind],
+                        date: v,
+                      },
+                    }))
+                  }
+                  onChangeTime={(v) =>
+                    setPriceState((prev) => ({
+                      ...prev,
+                      [priceKind]: {
+                        ...prev[priceKind],
+                        time: v,
+                      },
+                    }))
+                  }
                   onSave={handleSavePrice}
                 />
 
@@ -2609,4 +2763,44 @@ function formatDate(iso: string) {
     month: "long",
     year: "numeric",
   });
+}
+
+function formatDateISO(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function formatTimeISO(iso: string) {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(
+    d.getMinutes()
+  ).padStart(2, "0")}`;
+}
+
+function formatPriceDate(iso?: string | null) {
+  if (!iso) return "—";
+
+  const d = new Date(iso);
+  return d.toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatDateTimeLocal(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(
+    2,
+    "0"
+  )}:${String(d.getMinutes()).padStart(2, "0")}`;
 }

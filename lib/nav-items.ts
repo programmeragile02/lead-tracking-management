@@ -41,7 +41,7 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
       icon: Home,
     },
     { id: "leads", label: "Lead", href: "/leads", icon: Users },
-    { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
+    { id: "tasks", label: "Follow Up", href: "/tasks", icon: CheckSquare },
     {
       id: "wa-me",
       label: "WhatsApp Synchronise",

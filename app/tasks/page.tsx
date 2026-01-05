@@ -58,7 +58,7 @@ type FilterTab = "all" | "today" | "overdue" | "upcoming" | "done";
 type ViewMode = "list" | "calendar";
 
 export default function TasksPage() {
-  const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
+  const [activeFilter, setActiveFilter] = useState<FilterTab>("today");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
   const { data, isLoading } = useSWR<ApiData>("/api/tasks", fetcher);
@@ -107,7 +107,7 @@ export default function TasksPage() {
   }, [tasks, activeFilter]);
 
   return (
-    <DashboardLayout title="Tugas">
+    <DashboardLayout title="Follow Up">
       <div className="space-y-4">
         {/* Header: Switch Daftar / Kalender */}
         <div className="flex items-center justify-center md:justify-between">
@@ -148,12 +148,6 @@ export default function TasksPage() {
             {/* Filter Chips */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               <FilterChip
-                label="Semua"
-                active={activeFilter === "all"}
-                onClick={() => setActiveFilter("all")}
-                count={tasks.length}
-              />
-              <FilterChip
                 label="Hari Ini"
                 active={activeFilter === "today"}
                 onClick={() => setActiveFilter("today")}
@@ -177,17 +171,25 @@ export default function TasksPage() {
                 onClick={() => setActiveFilter("done")}
                 count={doneCount}
               />
+              <FilterChip
+                label="Semua"
+                active={activeFilter === "all"}
+                onClick={() => setActiveFilter("all")}
+                count={tasks.length}
+              />
             </div>
 
             {/* Task List */}
             <div className="space-y-3">
               {isLoading && (
-                <p className="text-sm text-muted-foreground">Memuat tugas...</p>
+                <p className="text-sm text-muted-foreground">
+                  Memuat follow up...
+                </p>
               )}
 
               {!isLoading && filteredTasks.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Belum ada tugas untuk filter ini.
+                  Belum ada follow up untuk filter ini.
                 </p>
               )}
 
@@ -593,7 +595,7 @@ function TaskCalendar({
                       </div>
                     )}
 
-                    {/* Badge kecil jumlah total tugas di sudut */}
+                    {/* Badge kecil jumlah total follow up di sudut */}
                     {dayTasks.length > 0 && (
                       <span
                         className={cn(
@@ -619,7 +621,7 @@ function TaskCalendar({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold">
-              Tugas tanggal{" "}
+              Follow Up tanggal{" "}
               {selectedDate
                 ? selectedDate.toLocaleDateString("id-ID", {
                     day: "2-digit",
@@ -629,7 +631,9 @@ function TaskCalendar({
                 : "-"}
             </p>
             <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground mt-1">
-              <span>{selectedSummary?.counts.total ?? 0} tugas terjadwal</span>
+              <span>
+                {selectedSummary?.counts.total ?? 0} Follow Up terjadwal
+              </span>
               {selectedSummary && selectedSummary.counts.total > 0 && (
                 <>
                   {selectedSummary.counts.overdue > 0 && (
@@ -657,12 +661,12 @@ function TaskCalendar({
         </div>
 
         {isLoading && (
-          <p className="text-sm text-muted-foreground">Memuat tugas...</p>
+          <p className="text-sm text-muted-foreground">Memuat follow up...</p>
         )}
 
         {!isLoading && tasksForSelectedDate.length === 0 && (
           <p className="text-sm text-muted-foreground">
-            Belum ada tugas di tanggal ini.
+            Belum ada follow up di tanggal ini.
           </p>
         )}
 

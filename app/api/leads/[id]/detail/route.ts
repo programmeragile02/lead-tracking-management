@@ -82,7 +82,14 @@ export async function GET(
     prisma.leadStatus.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
+      include: {
+        subStatuses: {
+          where: { isActive: true },
+          orderBy: { order: "asc" },
+        },
+      },
     }),
+
     prisma.leadStage.findMany({
       where: { isActive: true },
       orderBy: { order: "asc" },
@@ -185,7 +192,7 @@ function computeProfileCompletion(lead: any): number {
   check(lead.statusId);
   check(lead.stageId);
 
-  for (const cv of lead.customValues ?? []) check(cv.value);
+  // for (const cv of lead.customValues ?? []) check(cv.value);
 
   if (!total) return 0;
   return Math.round((filled / total) * 100);
