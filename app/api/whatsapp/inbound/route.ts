@@ -7,6 +7,7 @@ import {
   pickPlanForLead,
   getFirstStepDelayHours,
 } from "@/lib/nurturing-assign";
+import { createAutoFollowUps } from "@/lib/auto-followup";
 
 const WEBHOOK_KEY = process.env.WA_WEBHOOK_KEY || "";
 
@@ -41,6 +42,20 @@ function sanitizeLeadName(name?: string | null) {
 
 const DEFAULT_WELCOME_TEMPLATE =
   "Halo kak, terima kasih sudah menghubungi {{perusahaan}}. Saya {{nama_sales}}. Ada yang bisa saya bantu terkait kebutuhan kakak?";
+
+const OPT_OUT_KEYWORDS = [
+  "nonaktif",
+  "stop",
+  "unsubscribe",
+  "jangan kirim",
+  "tidak mau",
+  "hapus saya",
+];
+
+function isOptOutMessage(text: string) {
+  const t = text.toLowerCase().trim();
+  return OPT_OUT_KEYWORDS.some((k) => t.includes(k));
+}
 
 export async function POST(req: NextRequest) {
   // Security
@@ -255,6 +270,27 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        // create auto follow up
+        const autoFUCreated = await createAutoFollowUps({
+          tx,
+          leadId: newLead.id,
+          salesId: sales.id,
+          startAt: newLead.createdAt,
+        });
+
+        if (autoFUCreated) {
+          await tx.leadActivity.create({
+            data: {
+              leadId: newLead.id,
+              title: "Auto Follow Up dibuat",
+              description:
+                "FU1 (+1 hari), FU2 (+3 hari dari FU1), FU3 (+6 hari dari FU2)",
+              happenedAt: new Date(),
+              createdById: sales.id,
+            },
+          });
+        }
+
         // state default: PAUSED (karena inbound = engagement)
         await tx.leadNurturingState.create({
           data: {
@@ -315,7 +351,12 @@ export async function POST(req: NextRequest) {
 
       lead = created;
       isNewLead = true;
-      console.log("[inbound] lead created from WA:", lead.id, fromPhone);
+      console.log("================================");
+      console.log("[inbound] lead created from WA");
+      console.log("[inbound] lead id:", lead.id);
+      console.log("[inbound] no whatsapp:", fromPhone);
+      console.log("[inbound] sales id:", sales.id);
+      console.log("================================");
     }
 
     if (!lead) {
@@ -330,6 +371,8 @@ export async function POST(req: NextRequest) {
       timestamp != null ? new Date(Number(timestamp) * 1000) : new Date();
 
     let inboundMsg = null;
+    let didSendOptOutConfirm = false;
+
     try {
       inboundMsg = await prisma.leadMessage.create({
         data: {
@@ -349,13 +392,157 @@ export async function POST(req: NextRequest) {
       if (e.code !== "P2002") throw e;
     }
 
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: {
-        lastMessageAt: inboundMsg?.createdAt ?? now,
-        lastInboundAt: inboundMsg?.createdAt ?? now,
-      },
-    });
+    // ===============================
+    // CEK OPT-OUT NURTURING (BERBASIS FLAG)
+    // ===============================
+    if (isOptOutMessage(body)) {
+      // cari pesan nurturing terakhir
+      const lastNurturingMsg = await prisma.leadMessage.findFirst({
+        where: {
+          leadId: lead.id,
+          direction: "OUTBOUND",
+          channel: "WHATSAPP",
+          isNurturingMessage: true, // 🔑 KUNCI UTAMA
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      const nurturingState = await prisma.leadNurturingState.findUnique({
+        where: { leadId: lead.id },
+      });
+
+      const OPT_OUT_WINDOW_HOURS = 24;
+
+      const withinWindow =
+        inboundMsg &&
+        lastNurturingMsg &&
+        inboundMsg.createdAt > lastNurturingMsg.createdAt &&
+        inboundMsg.createdAt.getTime() - lastNurturingMsg.createdAt.getTime() <=
+          OPT_OUT_WINDOW_HOURS * 60 * 60 * 1000;
+
+      if (
+        nurturingState?.status === NurturingStatus.ACTIVE &&
+        lastNurturingMsg &&
+        withinWindow
+      ) {
+        const now = new Date();
+
+        // 1️ STOP nurturing permanen
+        await prisma.leadNurturingState.update({
+          where: { leadId: lead.id },
+          data: {
+            status: NurturingStatus.STOPPED,
+            manualPaused: true,
+            pauseReason: "MANUAL_TOGGLE",
+            pausedAt: now,
+            nextSendAt: null,
+          },
+        });
+
+        // 2️ SIMPAN HISTORY (TABEL KHUSUS)
+        await prisma.leadNurturingOptOut.create({
+          data: {
+            leadId: lead.id,
+            salesId: sales.id,
+            phone: fromPhone,
+            message: body,
+            channel: "WHATSAPP",
+          },
+        });
+
+        await prisma.leadActivity.create({
+          data: {
+            leadId: lead.id,
+            title: "Nurturing dinonaktifkan oleh lead",
+            description: [
+              "Lead membalas pesan nurturing dengan permintaan berhenti.",
+              "",
+              `Pesan lead:`,
+              `"${body}"`,
+              "",
+              `Channel: WhatsApp`,
+              `Sales: ${sales.name}`,
+            ].join("\n"),
+            happenedAt: new Date(),
+            createdById: sales.id,
+          },
+        });
+
+        // ===============================
+        // KIRIM PESAN KONFIRMASI OPT-OUT
+        // ===============================
+        let confirmMsg = null;
+
+        try {
+          await ensureWaClient(sales.id);
+
+          const text =
+            "Baik kak, kami tidak akan mengirimkan pesan lanjutan. Terima kasih 🙏";
+
+          const sendRes = await sendWaMessage({
+            userId: sales.id,
+            to: fromWaChatId,
+            body: text,
+            meta: {
+              kind: "NURTURING_OPT_OUT_CONFIRM",
+              leadId: lead.id,
+            },
+          });
+
+          // SIMPAN KE LEAD MESSAGE
+          confirmMsg = await prisma.leadMessage.create({
+            data: {
+              leadId: lead.id,
+              salesId: sales.id,
+              channel: "WHATSAPP",
+              direction: "OUTBOUND",
+              content: text,
+              waMessageId: sendRes?.waMessageId ?? null,
+              waChatId: fromWaChatId,
+              fromNumber: sales.whatsappSession?.phoneNumber ?? null,
+              toNumber: fromPhone,
+              sentAt: new Date(),
+              waStatus: "SENT",
+              isNurturingMessage: false,
+              type: "TEXT",
+            },
+          });
+        } catch (e) {
+          console.warn("Gagal kirim konfirmasi opt-out:", e);
+        }
+
+        if (confirmMsg) {
+          didSendOptOutConfirm = true;
+
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: {
+              lastOutboundAt: confirmMsg.sentAt ?? new Date(),
+              lastMessageAt: confirmMsg.sentAt ?? new Date(),
+            },
+          });
+        }
+      }
+    }
+
+    if (!didSendOptOutConfirm) {
+      // normal inbound
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          lastMessageAt: inboundMsg?.createdAt ?? now,
+          lastInboundAt: inboundMsg?.createdAt ?? now,
+        },
+      });
+    } else {
+      // opt-out case → jangan timpa lastMessageAt
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          lastInboundAt: inboundMsg?.createdAt ?? now,
+        },
+      });
+    }
 
     if (!lead.phone && fromPhone) {
       await prisma.lead.update({
@@ -402,25 +589,31 @@ export async function POST(req: NextRequest) {
     });
 
     // 6) inbound = engagement → PAUSE nurturing (update state, bukan Lead)
-    await prisma.leadNurturingState.upsert({
+    const nurturingState = await prisma.leadNurturingState.findUnique({
       where: { leadId: lead.id },
-      create: {
-        leadId: lead.id,
-        status: NurturingStatus.PAUSED,
-        manualPaused: false,
-        pauseReason: "INBOUND_RECENT",
-        pausedAt: now,
-        currentStep: 0,
-        startedAt: now,
-        nextSendAt: null,
-      } as any,
-      update: {
-        status: NurturingStatus.PAUSED,
-        manualPaused: false,
-        pauseReason: "INBOUND_RECENT",
-        pausedAt: now,
-      } as any,
     });
+
+    if (nurturingState?.status !== NurturingStatus.STOPPED) {
+      await prisma.leadNurturingState.upsert({
+        where: { leadId: lead.id },
+        create: {
+          leadId: lead.id,
+          status: NurturingStatus.PAUSED,
+          manualPaused: false,
+          pauseReason: "INBOUND_RECENT",
+          pausedAt: now,
+          currentStep: 0,
+          startedAt: now,
+          nextSendAt: null,
+        } as any,
+        update: {
+          status: NurturingStatus.PAUSED,
+          manualPaused: false,
+          pauseReason: "INBOUND_RECENT",
+          pausedAt: now,
+        } as any,
+      });
+    }
 
     // 7) welcome message jika lead baru
     if (isNewLead) {

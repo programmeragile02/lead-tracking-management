@@ -29,4 +29,9 @@ setInterval(() => {
   call("/api/cron/nurturing/send");
 }, 5 * 60 * 1000);
 
+// check no response → tiap 15 menit
+setInterval(() => {
+  call("/api/cron/lead/no-response");
+}, 15 * 60 * 1000);
+
 console.log("🕒 Leadtrack cron runner started");

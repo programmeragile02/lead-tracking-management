@@ -6,6 +6,20 @@ type OverviewPricePayload = {
   date: string; // ISO
 };
 
+// helper
+function normalizeWibDate(input?: string) {
+  if (!input) return null;
+
+  // kalau sudah ISO valid → langsung pakai
+  const parsed = new Date(input);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  // fallback: date-only → inject WIB noon
+  return new Date(`${input}T12:00:00+07:00`);
+}
+
 export async function PUT(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
@@ -86,17 +100,31 @@ export async function PUT(
       };
 
       // Harga
-      if (prices?.offering) {
+      if (prices?.offering && prices.offering.value) {
         dataToUpdate.priceOffering = prices.offering.value;
-        dataToUpdate.priceOfferingAt = new Date(prices.offering.date);
+
+        const d = normalizeWibDate(prices.offering.date);
+        if (d && !Number.isNaN(d.getTime())) {
+          dataToUpdate.priceOfferingAt = d;
+        }
       }
-      if (prices?.negotiation) {
+
+      if (prices?.negotiation && prices.negotiation.value) {
         dataToUpdate.priceNegotiation = prices.negotiation.value;
-        dataToUpdate.priceNegotiationAt = new Date(prices.negotiation.date);
+
+        const d = normalizeWibDate(prices.negotiation.date);
+        if (d && !Number.isNaN(d.getTime())) {
+          dataToUpdate.priceNegotiationAt = d;
+        }
       }
-      if (prices?.closing) {
+
+      if (prices?.closing && prices.closing.value) {
         dataToUpdate.priceClosing = prices.closing.value;
-        dataToUpdate.priceClosingAt = new Date(prices.closing.date);
+
+        const d = normalizeWibDate(prices.closing.date);
+        if (d && !Number.isNaN(d.getTime())) {
+          dataToUpdate.priceClosingAt = d;
+        }
       }
 
       await tx.lead.update({

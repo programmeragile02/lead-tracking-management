@@ -25,6 +25,46 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FollowUpBanner } from "./follow-up-banner";
+import { ChatDateSeparator } from "./chat-date-separator";
+
+interface LeadFollowUpItem {
+  id: number;
+  typeId: number | null;
+  typeCode: string | null;
+  typeName: string | null;
+  channel: "WHATSAPP" | "CALL" | "ZOOM" | "VISIT";
+  note?: string | null;
+  doneAt: string | null;
+  nextActionAt?: string | null;
+  createdAt: string;
+  sales?: {
+    id: number;
+    name: string;
+  } | null;
+}
+
+function toDateKey(iso: string) {
+  const d = new Date(iso);
+  d.setHours(0, 0, 0, 0);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  return `${y}-${m}-${day}`;
+}
+
+function canShowFollowUpOnDay(followUpIso: string, chatIso: string) {
+  const fu = new Date(followUpIso);
+  const chat = new Date(chatIso);
+
+  fu.setHours(0, 0, 0, 0);
+  chat.setHours(0, 0, 0, 0);
+
+  // hanya tampil kalau hari FU <= hari chat
+  return fu.getTime() <= chat.getTime();
+}
 
 export function WhatsAppChatCard(props: {
   displayName: string;
@@ -58,6 +98,18 @@ export function WhatsAppChatCard(props: {
   waStatus?: "INIT" | "PENDING_QR" | "CONNECTED" | "DISCONNECTED" | "ERROR";
   waSalesId?: number | null;
   sales: boolean;
+
+  followUps?: {
+    id: number;
+    name: string;
+    date: string;
+    status: "OVERDUE" | "TODAY" | "UPCOMING" | "DONE";
+    isDone: boolean;
+  }[];
+
+  onMarkFollowUpDone?: (id: number) => void;
+
+  followUpsByDate?: Map<string, LeadFollowUpItem[]>;
 }) {
   const {
     displayName,
@@ -78,6 +130,9 @@ export function WhatsAppChatCard(props: {
     waStatus,
     waSalesId,
     sales,
+    followUps,
+    onMarkFollowUpDone,
+    followUpsByDate,
   } = props;
 
   // Controlled dropdown per message id
@@ -106,27 +161,6 @@ export function WhatsAppChatCard(props: {
               </p>
             </div>
           </div>
-
-          {/* Right */}
-          {/* <Button
-            size="sm"
-            variant="outline"
-            className="h-8 px-3 text-sm border-[#2A3942] bg-[#111B21] text-[#E9EDEF] hover:bg-[#1F2C33]"
-            onClick={onSyncChat}
-            disabled={syncingChat || !leadHasPhone}
-            title={
-              !leadHasPhone
-                ? "Lead belum punya nomor WA"
-                : "Ambil histori chat dari WhatsApp"
-            }
-          >
-            {syncingChat ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            {syncingChat ? "Sync..." : "Sync Chat"}
-          </Button> */}
         </div>
       </CardHeader>
 
@@ -194,14 +228,110 @@ export function WhatsAppChatCard(props: {
                 Memuat percakapan...
               </div>
             )}
-
             {!messagesLoading && chatMessages.length === 0 && (
               <div className="flex flex-1 items-center justify-center text-sm text-[#8696A0]">
-                Belum ada percakapan WhatsApp.
+                Belum ada percakapan WhatsApp
               </div>
             )}
 
-            {chatMessages.map((m) => {
+            {(() => {
+              let lastDateKey: string | null = null;
+
+              return chatMessages.map((m) => {
+                const isSales = m.from === "sales";
+                const isSupervisor =
+                  isSales && m.sentByRole && m.sentByRole !== "sales";
+
+                // ambil date key dari waktu chat
+                const chatDateKey = toDateKey(m.createdAtIso);
+                const isNewDay = chatDateKey !== lastDateKey;
+                lastDateKey = chatDateKey;
+
+                // ambil follow up untuk hari ini
+                const followUpsToday = isNewDay
+                  ? props.followUpsByDate?.get(chatDateKey) ?? []
+                  : [];
+
+                return (
+                  <div key={m.id}>
+                    {isNewDay && <ChatDateSeparator date={m.createdAtIso} />}
+
+                    {followUpsToday
+                      .filter(
+                        (fu) =>
+                          fu.nextActionAt &&
+                          canShowFollowUpOnDay(fu.nextActionAt, m.createdAtIso)
+                      )
+                      .map((fu) => {
+                        const status = fu.doneAt ? "DONE" : "OVERDUE";
+
+                        return (
+                          <FollowUpBanner
+                            key={`fu-${fu.id}`}
+                            date={fu.nextActionAt!}
+                            name={fu.typeName || "Follow Up"}
+                            status={status}
+                            isDone={Boolean(fu.doneAt)}
+                            onDone={
+                              !fu.doneAt
+                                ? () => props.onMarkFollowUpDone?.(fu.id)
+                                : undefined
+                            }
+                          />
+                        );
+                      })}
+
+                    {/* ===== CHAT BUBBLE ===== */}
+                    <div
+                      className={`flex ${
+                        isSales ? "justify-end" : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={[
+                          "relative max-w-[85%] px-3 py-2 shadow-sm",
+                          "text-sm leading-relaxed",
+                          isSales
+                            ? "bg-[#005C4B] text-[#E9EDEF] rounded-2xl rounded-br-sm"
+                            : "bg-[#202C33] text-[#E9EDEF] rounded-2xl rounded-bl-sm",
+                          isSales
+                            ? "after:content-[''] after:absolute after:-right-1 after:bottom-2 after:border-y-[7px] after:border-y-transparent after:border-l-[9px] after:border-l-[#005C4B]"
+                            : "after:content-[''] after:absolute after:-left-1 after:bottom-2 after:border-y-[7px] after:border-y-transparent after:border-r-[9px] after:border-r-[#202C33]",
+                        ].join(" ")}
+                      >
+                        {/* label supervisor */}
+                        {isSupervisor && (
+                          <div className="mb-1 text-[11px] text-[#CDE6E0] opacity-90">
+                            {m.sentByRole === "manager" && "Manager"}
+                            {m.sentByRole === "team-leader" && "Team Leader"}
+                            {m.sentByName ? ` ${m.sentByName}` : ""}
+                          </div>
+                        )}
+
+                        {m.text && (
+                          <p className="whitespace-pre-line">{m.text}</p>
+                        )}
+
+                        <div className="mt-1 flex items-center justify-end gap-1 text-[11px] text-[#8696A0]">
+                          <span>{m.time}</span>
+                          {isSales && (
+                            <MessageStatusIcon
+                              status={m.waStatus}
+                              className={
+                                m.waStatus === "READ"
+                                  ? "text-[#53BDEB]"
+                                  : "text-[#8696A0]"
+                              }
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+            {/* {chatMessages.map((m) => {
               const isSales = m.from === "sales";
 
               const isSupervisor =
@@ -256,7 +386,6 @@ export function WhatsAppChatCard(props: {
                       </a>
                     ) : null}
 
-                    {/* LABEL PENGIRIM (Manager / TL) */}
                     {isSupervisor && (
                       <div className="mb-1 text-[11px] text-[#CDE6E0] opacity-90">
                         {m.sentByRole === "manager" && "Manager"}
@@ -269,7 +398,6 @@ export function WhatsAppChatCard(props: {
                       <p className="whitespace-pre-line">{m.text}</p>
                     ) : null}
 
-                    {/* aksi bubble untuk pesan dari sales */}
                     {isSales && sales ? (
                       <div className="absolute -top-2 -right-2">
                         <DropdownMenu
@@ -318,7 +446,7 @@ export function WhatsAppChatCard(props: {
                   </div>
                 </div>
               );
-            })}
+            })} */}
           </div>
         </div>
       </CardContent>
@@ -359,7 +487,7 @@ export function WhatsAppChatCard(props: {
             <Textarea
               ref={chatInputRef}
               rows={1}
-              className="min-h-[44px] resize-none bg-[#2A3942] text-[#E9EDEF] placeholder:text-[#8696A0] border-none focus:ring-0 text-sm rounded-2xl"
+              className="min-h-11 resize-none bg-[#2A3942] text-[#E9EDEF] placeholder:text-[#8696A0] border-none focus:ring-0 text-sm rounded-2xl"
               placeholder="Ketik pesan"
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}

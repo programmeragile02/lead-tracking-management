@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
-import { NurturingPauseReason, NurturingStatus } from "@prisma/client";
+import {
+  FollowUpResultType,
+  NurturingPauseReason,
+  NurturingStatus,
+} from "@prisma/client";
+import {
+  getFirstStepDelayHours,
+  pickPlanForLead,
+} from "@/lib/nurturing-assign";
 
 export async function PUT(
   req: NextRequest,
@@ -27,6 +35,21 @@ export async function PUT(
       );
     }
 
+    // ===== BODY =====
+    const body = await req.json().catch(() => null);
+    const resultType = body?.resultType as FollowUpResultType | undefined;
+    const resultNote = body?.resultNote?.trim();
+
+    if (!resultType || !resultNote || resultNote.length < 5) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Hasil follow up dan catatan wajib diisi",
+        },
+        { status: 400 }
+      );
+    }
+
     const updated = await prisma.$transaction(async (tx) => {
       const followUp = await tx.leadFollowUp.findUnique({
         where: { id: fuId },
@@ -49,36 +72,45 @@ export async function PUT(
         throw new Error("FORBIDDEN");
       }
 
+      if (followUp.doneAt) {
+        throw new Error("ALREADY_DONE");
+      }
+
       const now = new Date();
 
       const updatedFollowUp = await tx.leadFollowUp.update({
         where: { id: fuId },
-        data: { doneAt: now },
+        data: {
+          doneAt: now,
+          resultType,
+          resultNote,
+        },
         include: {
           type: true,
           sales: { select: { id: true, name: true } },
         },
       });
 
-      // ---- Activity log ----
-      const doneStr = now.toLocaleString("id-ID", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-
+      // ===== ACTIVITY LOG =====
       const typeLabel =
-        updatedFollowUp.type?.name || updatedFollowUp.type?.code || "Follow up";
+        updatedFollowUp.type?.name || updatedFollowUp.type?.code || "Follow Up";
+
+      const resultLabelMap: Record<FollowUpResultType, string> = {
+        INTERESTED: "Tertarik",
+        NEED_FOLLOW_UP: "Perlu Follow Up Lanjutan",
+        NO_RESPONSE: "Tidak Ada Respon",
+        NOT_INTERESTED: "Tidak Tertarik",
+        CLOSING: "Closing",
+      };
 
       await tx.leadActivity.create({
         data: {
           leadId: followUp.leadId,
           title: "Follow up selesai",
           description: [
-            `Follow up "${typeLabel}" ditandai selesai melalui panel WhatsApp.`,
-            `Waktu selesai: ${doneStr}.`,
+            `Follow up "${typeLabel}" telah diselesaikan.`,
+            `Hasil: ${resultLabelMap[resultType]},`,
+            `Catatan: ${resultNote}`,
           ].join("\n"),
           happenedAt: now,
           createdById: user.id,
@@ -108,6 +140,71 @@ export async function PUT(
         } as any,
       });
 
+      // ===============================
+      // START NURTURING SETELAH FU KE-3
+      // ===============================
+      const doneCount = await tx.leadFollowUp.count({
+        where: {
+          leadId: followUp.leadId,
+          doneAt: { not: null },
+        },
+      });
+
+      if (doneCount === 3) {
+        const lead = await tx.lead.findUnique({
+          where: { id: followUp.leadId },
+          include: {
+            status: true,
+            nurturingState: true,
+          },
+        });
+
+        const leadStatusCode = (lead?.status?.code ?? "").toUpperCase();
+
+        // guard
+        if (
+          lead &&
+          !lead.nurturingState && // belum pernah mulai
+          !["CLOSE_WON", "CLOSE_LOST"].includes(leadStatusCode)
+        ) {
+          const plan = await pickPlanForLead({
+            productId: lead.productId ?? null,
+            sourceId: lead.sourceId ?? null,
+            statusCode: lead.status?.code ?? null,
+          });
+
+          if (plan) {
+            const delayHours = await getFirstStepDelayHours(plan.id);
+            const now = new Date();
+
+            await tx.leadNurturingState.create({
+              data: {
+                leadId: lead.id,
+                planId: plan.id,
+                status: NurturingStatus.ACTIVE,
+                startedAt: now,
+                currentStep: 0,
+                nextSendAt:
+                  delayHours != null
+                    ? new Date(now.getTime() + delayHours * 60 * 60 * 1000)
+                    : new Date(now.getTime() + 15 * 60 * 1000),
+              },
+            });
+
+            await tx.leadActivity.create({
+              data: {
+                leadId: lead.id,
+                title: "Nurturing dimulai otomatis",
+                description:
+                  "Nurturing otomatis dimulai setelah Follow Up ke-3 diselesaikan",
+                happenedAt: now,
+                createdById: user.id,
+              },
+            });
+          }
+        }
+      }
+
       return updatedFollowUp;
     });
 
@@ -119,6 +216,8 @@ export async function PUT(
         typeCode: updated.type?.code,
         typeName: updated.type?.name,
         channel: updated.channel,
+        resultType: updated.resultType,
+        resultNote: updated.resultNote,
         note: updated.note,
         doneAt: updated.doneAt,
         nextActionAt: updated.nextActionAt,
@@ -140,6 +239,12 @@ export async function PUT(
         return NextResponse.json(
           { ok: false, error: "Tidak boleh mengubah tindak lanjut ini" },
           { status: 403 }
+        );
+      }
+      if (err.message === "ALREADY_DONE") {
+        return NextResponse.json(
+          { ok: false, error: "Follow up ini sudah diselesaikan" },
+          { status: 409 }
         );
       }
     }

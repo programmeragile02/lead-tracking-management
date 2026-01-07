@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `lead_followups` ADD COLUMN `resultNote` TEXT NULL,
+    ADD COLUMN `resultType` ENUM('INTERESTED', 'NOT_INTERESTED', 'NO_RESPONSE', 'NEED_FOLLOW_UP', 'CLOSING') NULL;

@@ -57,7 +57,7 @@ export function OverviewPriceSection(props: {
                 }
               />
               <Input
-                type="datetime-local"
+                type="date"
                 value={overviewPrices.OFFERING.date}
                 onChange={(e) =>
                   setOverviewPrices((prev) => ({
@@ -98,7 +98,7 @@ export function OverviewPriceSection(props: {
                 }
               />
               <Input
-                type="datetime-local"
+                type="date"
                 value={overviewPrices.NEGOTIATION.date}
                 onChange={(e) =>
                   setOverviewPrices((prev) => ({
@@ -139,7 +139,7 @@ export function OverviewPriceSection(props: {
                 }
               />
               <Input
-                type="datetime-local"
+                type="date"
                 value={overviewPrices.CLOSING.date}
                 onChange={(e) =>
                   setOverviewPrices((prev) => ({
@@ -169,8 +169,6 @@ function formatPriceDate(iso?: string | null) {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 

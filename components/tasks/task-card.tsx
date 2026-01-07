@@ -17,8 +17,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useSWRConfig } from "swr";
+import { FollowUpDoneDialog } from "../leads/detail/modals/FollowUpDoneDialog";
 
 type TaskStatus = "overdue" | "today" | "upcoming" | "done";
+
+type FollowUpResultType =
+  | "INTERESTED"
+  | "NEED_FOLLOW_UP"
+  | "NO_RESPONSE"
+  | "NOT_INTERESTED"
+  | "CLOSING";
 
 interface TaskCardProps {
   followUpId: number;
@@ -33,6 +41,38 @@ interface TaskCardProps {
   isDone: boolean;
   doneAt?: string | null;
 }
+
+const FOLLOW_UP_RESULT_OPTIONS: {
+  value: FollowUpResultType;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "INTERESTED",
+    label: "Tertarik",
+    hint: "Lead menunjukkan ketertarikan",
+  },
+  {
+    value: "NEED_FOLLOW_UP",
+    label: "Perlu Follow Up Lanjutan",
+    hint: "Belum fix, perlu tindak lanjut lagi",
+  },
+  {
+    value: "NO_RESPONSE",
+    label: "Tidak Ada Respon",
+    hint: "Sudah dihubungi tapi tidak merespon",
+  },
+  {
+    value: "NOT_INTERESTED",
+    label: "Tidak Tertarik",
+    hint: "Lead menolak / tidak berminat",
+  },
+  {
+    value: "CLOSING",
+    label: "Closing",
+    hint: "Deal / closing berhasil",
+  },
+];
 
 export function TaskCard({
   followUpId,
@@ -71,6 +111,11 @@ export function TaskCard({
     return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
   })();
 
+  const [doneModalOpen, setDoneModalOpen] = useState(false);
+  const [doneResultType, setDoneResultType] = useState<FollowUpResultType | "">(
+    ""
+  );
+  const [doneResultNote, setDoneResultNote] = useState("");
   const [newNextAction, setNewNextAction] = useState(initDateTimeLocal);
   const [reason, setReason] = useState("");
 
@@ -156,40 +201,47 @@ export function TaskCard({
     }
   };
 
-  const handleMarkDone = async () => {
-    if (isDone) return; // sudah selesai, jangan dobel klik
+  async function handleSubmitDone() {
+    if (!doneResultType || doneResultNote.trim().length < 5) return;
 
     setMarkingDone(true);
     try {
-      const res = await fetch(`/api/followups/${followUpId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          markDone: true,
-        }),
-      });
+      const res = await fetch(
+        `/api/leads/${leadId}/followups/${followUpId}/done`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            resultType: doneResultType,
+            resultNote: doneResultNote.trim(),
+          }),
+        }
+      );
 
       const json = await res.json();
       if (!res.ok || !json.ok) {
-        throw new Error(json.error || "Gagal menandai selesai");
+        throw new Error(json.error || "Gagal menyimpan hasil follow up");
       }
 
       toast({
-        title: "Tugas selesai",
-        description: "Follow up ini sudah ditandai sebagai selesai.",
+        title: "Follow up selesai",
+        description: "Hasil follow up berhasil disimpan",
       });
 
+      setDoneModalOpen(false);
+
+      // refresh task + badge + kalender
       mutate("/api/tasks");
     } catch (err: any) {
       toast({
         variant: "destructive",
-        title: "Gagal menandai selesai",
-        description: err.message || "Terjadi kesalahan saat menyimpan.",
+        title: "Gagal",
+        description: err.message || "Terjadi kesalahan",
       });
     } finally {
       setMarkingDone(false);
     }
-  };
+  }
 
   return (
     <>
@@ -234,9 +286,7 @@ export function TaskCard({
           <div className="flex flex-col gap-1 text-sm">
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">
-                {dateStr}
-              </span>
+              <span className="font-medium">{dateStr}</span>
             </div>
 
             {isDone && doneStr && (
@@ -251,7 +301,11 @@ export function TaskCard({
             <Button
               variant={isDone ? "outline" : "outline"}
               size="sm"
-              onClick={handleMarkDone}
+              onClick={() => {
+                setDoneResultType("");
+                setDoneResultNote("");
+                setDoneModalOpen(true);
+              }}
               disabled={isDone || markingDone}
               className={cn(
                 "flex items-center gap-1",
@@ -332,6 +386,20 @@ export function TaskCard({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <FollowUpDoneDialog
+        open={doneModalOpen}
+        followUpLabel={followUpType}
+        followUpChannel="WhatsApp"
+        scheduledAt={dateStr}
+        resultType={doneResultType}
+        setResultType={setDoneResultType}
+        resultNote={doneResultNote}
+        setResultNote={setDoneResultNote}
+        saving={markingDone}
+        onClose={() => setDoneModalOpen(false)}
+        onSubmit={handleSubmitDone}
+        options={FOLLOW_UP_RESULT_OPTIONS}
+      />
     </>
   );
 }

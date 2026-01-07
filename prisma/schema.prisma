@@ -89,6 +89,8 @@ model User {
 
   leadBlastJobs LeadBlastJob[]
   
+  leadNurturingOptOuts LeadNurturingOptOut[]
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   deletedAt  DateTime?
@@ -311,6 +313,8 @@ model Lead {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  leadNurturingOptOuts LeadNurturingOptOut[]
+
   @@index([lastMessageAt])
   @@index([salesId, lastMessageAt])
   @@index([salesId, statusId, lastMessageAt])
@@ -396,6 +400,10 @@ model LeadFollowUpType {
   order       Int      @default(0)
   isActive    Boolean  @default(true)
 
+  /// @deprecated
+  /// Nurturing logic sudah dipindah ke:
+  /// - NurturingPlan
+  /// - NurturingPlanStep
   // PENGATURAN NURTURING OTOMATIS
   isNurturingStep   Boolean  @default(false)
   nurturingOrder    Int?                 // urutan nurturing: 1 = FO1, 2 = FO2, 3 = FO3, 4 = FO4, 5 = nurturing ringan
@@ -427,6 +435,14 @@ enum FollowUpChannel {
   VISIT
 }
 
+enum FollowUpResultType {
+  INTERESTED       // tertarik, prospek lanjut
+  NOT_INTERESTED   // menolak / tidak minat
+  NO_RESPONSE      // dihubungi tapi tidak respon
+  NEED_FOLLOW_UP   // belum fix, perlu FU lagi
+  CLOSING          // closing / deal
+}
+
 model LeadFollowUp {
   id          Int               @id @default(autoincrement())
 
@@ -441,6 +457,9 @@ model LeadFollowUp {
   type        LeadFollowUpType? @relation(fields: [typeId], references: [id])
 
   note        String?           // catatan follow up
+
+  resultType  FollowUpResultType?
+  resultNote  String? @db.Text   // penjelasan detail hasil follow up
   
   // null = masih JADWAL / belum dikerjakan
   // terisi = sudah DIKERJAKAN (ditandai selesai)
@@ -451,6 +470,9 @@ model LeadFollowUp {
 
   channel       FollowUpChannel   @default(WHATSAPP)
 
+  /// @deprecated
+  /// Nurturing follow-up sudah tidak direpresentasikan
+  /// di LeadFollowUp sejak adanya LeadNurturingState
   isAutoNurturing Boolean @default(false) // true kalau dikirim oleh mesin nurturing
 
   createdAt   DateTime @default(now())
@@ -570,6 +592,8 @@ model LeadMessage {
   deliveredAt DateTime?       // ACK 2
   readAt      DateTime?       // ACK 3
 
+  isNurturingMessage Boolean @default(false)
+
   trackedLinks LeadTrackedLink[] @relation("LeadTrackedLinks_LeadMessage")
 
   leadBlastItems LeadBlastItem[]
@@ -613,6 +637,9 @@ model GeneralSetting {
 
   /// berapa jam setelah sales diam nurturing boleh jalan lagi
   maxIdleHoursBeforeResume Int    @default(48)
+
+  // berapa jam setelah outbound terakhir -> lead dianggap no response
+  noResponseAfterHours Int @default(24)
 
   /// Pesan sambutan otomatis untuk lead baru dari WhatsApp
   welcomeMessageEnabled    Boolean @default(true)
@@ -1187,4 +1214,25 @@ model LeadBlastItem {
 
   @@unique([jobId, leadId])
   @@index([status])
+}
+
+model LeadNurturingOptOut {
+  id        Int @id @default(autoincrement())
+
+  leadId    Int
+  lead      Lead @relation(fields: [leadId], references: [id])
+
+  salesId   Int?
+  sales     User? @relation(fields: [salesId], references: [id])
+
+  phone     String?      // nomor WA yang balas
+  message   String       // isi pesan NONAKTIF
+  channel   String       // "WHATSAPP"
+
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+  @@index([salesId])
+  @@index([createdAt])
+  @@map("lead_nurturing_opt_outs")
 }

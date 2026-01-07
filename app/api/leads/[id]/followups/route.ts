@@ -55,7 +55,7 @@ export async function GET(
         type: true,
         sales: { select: { id: true, name: true } },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: "asc" },
     });
 
     const data = followUps.map((f) => ({

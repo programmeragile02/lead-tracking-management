@@ -4,6 +4,10 @@ import { getCurrentUser } from "@/lib/auth-server";
 
 export const dynamic = "force-dynamic";
 
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
 export async function GET(req: NextRequest) {
   const user = await getCurrentUser(req);
 
@@ -35,13 +39,12 @@ export async function GET(req: NextRequest) {
       nextActionAt: { not: null },
       lead: {
         salesId: user.id,
-        status: {
-          // sesuaikan dengan status final di sistemmu
-          // di sini aku exclude COLD / CLOSE_LOST / WON
-          is: {
-            code: { notIn: ["COLD", "CLOSE_LOST", "WON"] },
-          },
-        },
+        // status: {
+        //   // di sini exclude COLD / CLOSE_LOST / WON
+        //   is: {
+        //     code: { notIn: ["COLD", "CLOSE_LOST", "CLOSE_WON"] },
+        //   },
+        // },
       },
     },
     include: {
@@ -64,16 +67,20 @@ export async function GET(req: NextRequest) {
     .map((fu) => {
       const next = fu.nextActionAt as Date;
 
-      let status: "overdue" | "today" | "upcoming";
+      const nextDay = startOfDay(next);
 
-      if (next < now && fu.doneAt === null ) {
-        // termasuk yang jam-nya sudah lewat hari ini
+      let status: "overdue" | "today" | "upcoming" | "done";
+
+      if (fu.doneAt) {
+        status = "done";
+      } else if (nextDay < startOfToday) {
+        // HARI SUDAH LEWAT
         status = "overdue";
-      } else if (next >= now && next < startOfTomorrow && fu.doneAt === null) {
-        // hari ini tapi jamnya belum lewat
+      } else if (nextDay.getTime() === startOfToday.getTime()) {
+        // HARI INI (jam bebas)
         status = "today";
-      } else if (fu.doneAt === null) {
-        // besok dan seterusnya
+      } else {
+        // BESOK & SETERUSNYA
         status = "upcoming";
       }
 
@@ -112,7 +119,7 @@ export async function GET(req: NextRequest) {
           code: { notIn: ["COLD", "CLOSE_LOST", "CLOSE_WON"] },
         },
       },
-      isExcluded: false
+      isExcluded: false,
     },
     include: {
       product: true,

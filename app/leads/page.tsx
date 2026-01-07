@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { BlastModal } from "@/components/blast/BlastModal";
 import { BulkAssignDialog } from "@/components/leads/bulk-assign-lead-dialog";
+import { RecalculateFollowUpModal } from "@/components/tools/RecalculateFollowUpModal";
 
 const LEADS_API = "/api/leads";
 const LEAD_STATUS_API = "/api/lead-statuses";
@@ -133,16 +134,26 @@ function formatNextFollowUp(iso: string | null): string | undefined {
   });
 }
 
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
 function computeIndicator(
   nextActionAt: string | null
-): "overdue" | "due-today" | "updated" | "normal" {
+): "overdue" | "due-today" | "normal" {
   if (!nextActionAt) return "normal";
-  const d = new Date(nextActionAt);
-  const now = new Date();
 
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return "due-today";
-  if (d < now) return "overdue";
+  const actionDate = startOfDay(new Date(nextActionAt));
+  const today = startOfDay(new Date());
+
+  if (actionDate.getTime() === today.getTime()) {
+    return "due-today";
+  }
+
+  if (actionDate.getTime() < today.getTime()) {
+    return "overdue";
+  }
+
   return "normal";
 }
 
@@ -573,6 +584,8 @@ export default function LeadsPage() {
     }
   };
 
+  const [showRecalcModal, setShowRecalcModal] = useState(false);
+
   return (
     <DashboardLayout title="Lead">
       <div className="space-y-4">
@@ -942,14 +955,16 @@ export default function LeadsPage() {
                       if (!activeStatusCode || activeStatusCode === "ALL") {
                         toast({
                           title: "Pilih status terlebih dahulu",
-                          description:
-                            "Silakan pilih status untuk pesan blast",
+                          description: "Silakan pilih status untuk pesan blast",
                           variant: "destructive",
                         });
                         return;
                       }
 
-                      if (!activeSubStatusCode || activeSubStatusCode === "ALL") {
+                      if (
+                        !activeSubStatusCode ||
+                        activeSubStatusCode === "ALL"
+                      ) {
                         toast({
                           title: "Pilih sub status terlebih dahulu",
                           description:
@@ -996,32 +1011,24 @@ export default function LeadsPage() {
                     Assign Massal
                   </DropdownMenuItem>
                 )}
+
+                <DropdownMenuSeparator />
+
+                {/* REKALKULASI FOLLOW UP */}
+                {user?.roleSlug === "sales" && (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setShowRecalcModal(true);
+                    }}
+                  >
+                    <p className="flex items-center gap-2">
+                      <RefreshCcw className="h-4 w-4" />
+                      Rekalkulasi Follow Up
+                    </p>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
-
-            {/* {user?.roleSlug === "sales" && (
-              <ImportLeadsDialog
-                onImported={async () => {
-                  setFilters({ page: 1 });
-                  await mutateLeads();
-                }}
-              />
-            )} */}
-
-            {/* <Button
-              variant="default"
-              onClick={startSync}
-              disabled={syncJob.status === "RUNNING"}
-            >
-              {syncJob.status === "RUNNING" ? (
-                <p className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Memproses...
-                </p>
-              ) : (
-                <p>Sinkronkan Chat</p>
-              )}
-            </Button> */}
           </div>
 
           {/* Filter status (pill) */}
@@ -1340,6 +1347,14 @@ export default function LeadsPage() {
         }
         totalLeads={leads.length}
         onSuccess={() => mutateLeads()}
+      />
+
+      <RecalculateFollowUpModal
+        open={showRecalcModal}
+        onClose={() => setShowRecalcModal(false)}
+        onSuccess={() => {
+          mutateLeads();
+        }}
       />
     </DashboardLayout>
   );

@@ -119,6 +119,9 @@ async function buildTrackedLinkBlock(params: {
   return rows.join("\n\n");
 }
 
+const OPT_OUT_FOOTER =
+  "\n\n—\nJika tidak ingin menerima pesan lanjutan, balas *NONAKTIF*";
+
 export async function POST(req: NextRequest) {
   const key = req.headers.get("x-cron-key") || "";
   if (!CRON_KEY || key !== CRON_KEY) {
@@ -149,6 +152,7 @@ export async function POST(req: NextRequest) {
     select: {
       leadId: true,
       planId: true,
+      status: true,
       currentStep: true,
       lastMessageKey: true,
     },
@@ -175,6 +179,12 @@ export async function POST(req: NextRequest) {
       },
     });
     if (!lead || lead.isExcluded) {
+      skipped++;
+      continue;
+    }
+
+    // ===== Guard -1: nurturing sudah STOPPED permanen =====
+    if (st.status === NurturingStatus.STOPPED) {
       skipped++;
       continue;
     }
@@ -312,6 +322,7 @@ export async function POST(req: NextRequest) {
         type: LeadMessageType.TEXT,
         waStatus: WaMessageStatus.PENDING,
         toNumber: lead.phone,
+        isNurturingMessage: true,
       } as any,
     });
 
@@ -363,7 +374,8 @@ export async function POST(req: NextRequest) {
       edukasi_links: edukasiBlock,
     };
 
-    const content = renderTemplate(templateBody, vars).trim();
+    const rawContent = renderTemplate(templateBody, vars).trim();
+    const content = `${rawContent}${OPT_OUT_FOOTER}`.trim();
 
     // 4) update message content di DB biar isi tersimpan rapih
     await prisma.leadMessage.update({

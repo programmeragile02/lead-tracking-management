@@ -6,6 +6,7 @@ import {
   pickPlanForLead,
   getFirstStepDelayHours,
 } from "@/lib/nurturing-assign";
+import { createAutoFollowUps } from "@/lib/auto-followup";
 
 function toNumberOrNull(value: any): number | null {
   if (value === null || value === undefined) return null;
@@ -234,7 +235,7 @@ export async function GET(req: NextRequest) {
         },
         followUps: {
           where: { doneAt: null, nextActionAt: { not: null } },
-          orderBy: { nextActionAt: "desc" },
+          orderBy: { nextActionAt: "asc" },
           take: 1,
           include: { type: true },
         },
@@ -466,6 +467,20 @@ export async function POST(req: NextRequest) {
 
     const now = new Date();
 
+    // ============================
+    // PRE-COMPUTE NURTURING PLAN
+    // ============================
+    const plan = await pickPlanForLead({
+      productId,
+      sourceId,
+      statusCode: defaultStatus?.code ?? null,
+    });
+
+    let firstDelayHours: number | null = null;
+    if (plan) {
+      firstDelayHours = await getFirstStepDelayHours(plan.id);
+    }
+
     const lead = await prisma.$transaction(async (tx) => {
       const createdLead = await tx.lead.create({
         data: {
@@ -484,39 +499,42 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      // auto follow up
+      const autoFUCreated = await createAutoFollowUps({
+        tx,
+        leadId: createdLead.id,
+        salesId: currentUser.id,
+        startAt: createdLead.createdAt,
+      });
+
+      if (autoFUCreated) {
+        await tx.leadActivity.create({
+          data: {
+            leadId: createdLead.id,
+            title: "Auto Follow Up dibuat",
+            description:
+              "FU1 (+1 hari), FU2 (+3 hari dari FU1), FU3 (+6 hari dari FU2)",
+            happenedAt: new Date(),
+            createdById: currentUser.id,
+          },
+        });
+      }
+
       // state default: ACTIVE (auto start)
       await tx.leadNurturingState.create({
         data: {
           leadId: createdLead.id,
           status: NurturingStatus.ACTIVE,
           manualPaused: false,
-          pauseReason: null,
-          pausedAt: null,
           currentStep: 0,
-          nextSendAt: null,
           startedAt: now,
-          lastSentAt: null,
-          lastMessageKey: null,
+          nextSendAt:
+            plan && firstDelayHours != null
+              ? new Date(now.getTime() + firstDelayHours * 60 * 60 * 1000)
+              : null,
+          planId: plan?.id ?? null,
         } as any,
       });
-
-      // ASSIGN PLAN + set nextSendAt (biar siap jalan ketika diaktifkan)
-      const plan = await pickPlanForLead({
-        productId: createdLead.productId ?? null,
-        sourceId: createdLead.sourceId ?? null,
-        statusCode: defaultStatus?.code ?? null,
-      });
-
-      if (plan) {
-        const delay = await getFirstStepDelayHours(plan.id);
-        await tx.leadNurturingState.update({
-          where: { leadId: createdLead.id },
-          data: {
-            planId: plan.id,
-            nextSendAt: new Date(now.getTime() + delay * 60 * 60 * 1000),
-          } as any,
-        });
-      }
 
       return createdLead;
     });

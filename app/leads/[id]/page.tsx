@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { SubStatusModal } from "@/components/leads/detail/sub-status-modal";
 import { LeadNotesDrawer } from "@/components/leads/detail/notes/LeadNotesDrawer";
 import { StageInsightCard } from "@/components/leads/detail/stage-insight-card";
+import { FollowUpDoneDialog } from "@/components/leads/detail/modals/FollowUpDoneDialog";
 
 type ChatFrom = "client" | "sales";
 type SentByRole = "sales" | "team-leader" | "manager" | null;
@@ -223,6 +224,70 @@ type PriceState = {
 
 type OverviewPriceKind = "OFFERING" | "NEGOTIATION" | "CLOSING";
 
+type FollowUpResultType =
+  | "INTERESTED"
+  | "NEED_FOLLOW_UP"
+  | "NO_RESPONSE"
+  | "NOT_INTERESTED"
+  | "CLOSING";
+
+const FOLLOW_UP_RESULT_OPTIONS: {
+  value: FollowUpResultType;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    value: "INTERESTED",
+    label: "Tertarik",
+    hint: "Lead menunjukkan ketertarikan",
+  },
+  {
+    value: "NEED_FOLLOW_UP",
+    label: "Perlu Follow Up Lanjutan",
+    hint: "Belum fix, perlu tindak lanjut lagi",
+  },
+  {
+    value: "NO_RESPONSE",
+    label: "Tidak Ada Respon",
+    hint: "Sudah dihubungi tapi tidak merespon",
+  },
+  {
+    value: "NOT_INTERESTED",
+    label: "Tidak Tertarik",
+    hint: "Lead menolak / tidak berminat",
+  },
+  {
+    value: "CLOSING",
+    label: "Closing",
+    hint: "Deal / closing berhasil",
+  },
+];
+
+type FollowUpBannerUi = {
+  id: number;
+  name: string;
+  date: string;
+  status: "OVERDUE" | "TODAY" | "UPCOMING" | "DONE";
+  isDone: boolean;
+};
+
+function getFollowUpStatus(
+  fu: LeadFollowUpItem
+): "OVERDUE" | "TODAY" | "UPCOMING" | "DONE" {
+  if (fu.doneAt) return "DONE";
+  if (!fu.nextActionAt) return "UPCOMING";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const target = new Date(fu.nextActionAt);
+  target.setHours(0, 0, 0, 0);
+
+  if (target < today) return "OVERDUE";
+  if (target.getTime() === today.getTime()) return "TODAY";
+  return "UPCOMING";
+}
+
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 function formatCurrencyIDR(value?: number | string | null) {
@@ -344,7 +409,8 @@ export default function LeadDetailPage() {
   }
 
   const followUps = followUpsRes?.data ?? [];
-  const lastFollowUp = followUps[0] ?? null;
+  const activeFollowUp = followUps.find((fu) => !fu.doneAt) ?? null;
+  const lastFollowUp = activeFollowUp ?? followUps[0] ?? null;
 
   // ==== STATUS ====
   const [statusId, setStatusId] = useState<number | null>(null);
@@ -545,7 +611,11 @@ export default function LeadDetailPage() {
     return t?.name || code;
   }
 
-  function followUpChannelLabel(ch: "wa" | "call" | "zoom" | "visit" | string) {
+  function followUpChannelLabel(
+    ch?: "wa" | "call" | "zoom" | "visit" | string
+  ) {
+    if (!ch) return "-";
+
     switch (ch) {
       case "wa":
         return "WhatsApp";
@@ -556,7 +626,7 @@ export default function LeadDetailPage() {
       case "visit":
         return "Kunjungan";
       default:
-        return ch.toUpperCase();
+        return String(ch).toUpperCase();
     }
   }
 
@@ -613,6 +683,37 @@ export default function LeadDetailPage() {
     }
   }
 
+  const followUpBanners: FollowUpBannerUi[] = useMemo(() => {
+    return (
+      followUps
+        .filter((fu) => fu.nextActionAt || fu.doneAt)
+        .map((fu) => ({
+          id: fu.id,
+          name: fu.typeName || getFollowUpTypeLabel(fu.typeCode) || "Follow Up",
+          date: fu.nextActionAt || fu.doneAt || fu.createdAt,
+          status: getFollowUpStatus(fu),
+          isDone: Boolean(fu.doneAt),
+        }))
+        // optional: urutkan yang paling dekat ke atas
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    );
+  }, [followUps]);
+
+  const followUpByDate = useMemo(() => {
+    const map = new Map<string, LeadFollowUpItem[]>();
+
+    for (const fu of followUps) {
+      if (!fu.nextActionAt) continue;
+
+      const key = toDateKey(fu.nextActionAt);
+
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(fu);
+    }
+
+    return map;
+  }, [followUps]);
+
   // ==== CHAT WA ====
   const [chatInput, setChatInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -635,6 +736,7 @@ export default function LeadDetailPage() {
         sentByName: m.sentBy?.name ?? null,
         text: m.content,
         time: formatTime(timeBase),
+        createdAtIso: timeBase,
         waStatus: m.waStatus ?? "PENDING",
         type: m.type ?? "TEXT",
         mediaUrl: m.mediaUrl,
@@ -1243,24 +1345,24 @@ export default function LeadDetailPage() {
           ? formatRupiahInput(String(lead.priceOffering))
           : "",
         date: lead.priceOfferingAt
-          ? formatDateTimeLocal(lead.priceOfferingAt)
-          : "",
+          ? formatDateISO(lead.priceOfferingAt)
+          : formatDateISO(new Date().toISOString()),
       },
       NEGOTIATION: {
         value: lead.priceNegotiation
           ? formatRupiahInput(String(lead.priceNegotiation))
           : "",
         date: lead.priceNegotiationAt
-          ? formatDateTimeLocal(lead.priceNegotiationAt)
-          : "",
+          ? formatDateISO(lead.priceNegotiationAt)
+          : formatDateISO(new Date().toISOString()),
       },
       CLOSING: {
         value: lead.priceClosing
           ? formatRupiahInput(String(lead.priceClosing))
           : "",
         date: lead.priceClosingAt
-          ? formatDateTimeLocal(lead.priceClosingAt)
-          : "",
+          ? formatDateISO(lead.priceClosingAt)
+          : formatDateISO(new Date().toISOString()),
       },
     });
 
@@ -1287,30 +1389,41 @@ export default function LeadDetailPage() {
         value: overviewCustomValues[f.id] ?? "",
       }));
 
+      function buildWibDateFromDateOnly(date: string) {
+        // paksa ke tengah hari WIB agar tidak loncat hari
+        return `${date}T12:00:00+07:00`;
+      }
+
       const pricesPayload = {
-        offering:
-          overviewPrices.OFFERING.value && overviewPrices.OFFERING.date
-            ? {
-                value: parseRupiahToNumber(overviewPrices.OFFERING.value),
-                date: `${overviewPrices.OFFERING.date}:00`,
-              }
-            : undefined,
+        offering: overviewPrices.OFFERING.value
+          ? {
+              value: parseRupiahToNumber(overviewPrices.OFFERING.value),
+              date: buildWibDateFromDateOnly(
+                overviewPrices.OFFERING.date ||
+                  formatDateISO(new Date().toISOString())
+              ),
+            }
+          : undefined,
 
-        negotiation:
-          overviewPrices.NEGOTIATION.value && overviewPrices.NEGOTIATION.date
-            ? {
-                value: parseRupiahToNumber(overviewPrices.NEGOTIATION.value),
-                date: `${overviewPrices.NEGOTIATION.date}:00`,
-              }
-            : undefined,
+        negotiation: overviewPrices.NEGOTIATION.value
+          ? {
+              value: parseRupiahToNumber(overviewPrices.NEGOTIATION.value),
+              date: buildWibDateFromDateOnly(
+                overviewPrices.NEGOTIATION.date ||
+                  formatDateISO(new Date().toISOString())
+              ),
+            }
+          : undefined,
 
-        closing:
-          overviewPrices.CLOSING.value && overviewPrices.CLOSING.date
-            ? {
-                value: parseRupiahToNumber(overviewPrices.CLOSING.value),
-                date: `${overviewPrices.CLOSING.date}:00`,
-              }
-            : undefined,
+        closing: overviewPrices.CLOSING.value
+          ? {
+              value: parseRupiahToNumber(overviewPrices.CLOSING.value),
+              date: buildWibDateFromDateOnly(
+                overviewPrices.CLOSING.date ||
+                  formatDateISO(new Date().toISOString())
+              ),
+            }
+          : undefined,
       };
 
       const res = await fetch(`/api/leads/${leadId}/overview`, {
@@ -1510,8 +1623,22 @@ export default function LeadDetailPage() {
   }
 
   const [markingFollowUpDone, setMarkingFollowUpDone] = useState(false);
+  const [doneFollowUpId, setDoneFollowUpId] = useState<number | null>(null);
+  const [doneModalOpen, setDoneModalOpen] = useState(false);
 
-  async function handleMarkFollowUpDone(followUpId: number) {
+  const [doneResultType, setDoneResultType] = useState<FollowUpResultType | "">(
+    ""
+  );
+
+  const [doneResultNote, setDoneResultNote] = useState("");
+
+  async function handleMarkFollowUpDone(
+    followUpId: number,
+    payload?: {
+      resultType: FollowUpResultType;
+      resultNote: string;
+    }
+  ) {
     if (!leadId) return;
 
     try {
@@ -1522,6 +1649,7 @@ export default function LeadDetailPage() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
+          body: payload ? JSON.stringify(payload) : undefined,
         }
       );
 
@@ -1532,16 +1660,24 @@ export default function LeadDetailPage() {
 
       toast({
         title: "Tindak lanjut selesai",
-        description: "Follow up berhasil ditandai sebagai selesai.",
+        description: payload
+          ? "Hasil follow up berhasil disimpan"
+          : "Follow up berhasil ditandai sebagai selesai.",
       });
 
-      // refresh data follow up + aktivitas (timeline)
-      await Promise.all([mutateFollowUps(), mutateActivities()]);
+      setDoneModalOpen(false);
+      setDoneFollowUpId(null);
+
+      await Promise.all([
+        mutateFollowUps(),
+        mutateActivities(),
+        mutateDetail(),
+      ]);
     } catch (err: any) {
       console.error(err);
       toast({
         variant: "destructive",
-        title: "Gagal menandai tindak lanjut",
+        title: "Gagal menyimpan",
         description: err?.message || "Terjadi kesalahan.",
       });
     } finally {
@@ -1796,7 +1932,8 @@ export default function LeadDetailPage() {
     statusModalOpen ||
     stageModalOpen ||
     subStatusModalOpen ||
-    noteOpen;
+    noteOpen ||
+    doneModalOpen;
 
   useEffect(() => {
     if (isAnyModalOpen) {
@@ -2121,35 +2258,22 @@ export default function LeadDetailPage() {
 
                       {/* Meta */}
                       <p className="text-[11px] text-muted-foreground leading-snug">
-                        {lastFollowUp ? (
-                          lastFollowUp.doneAt ? (
-                            <>
-                              Terakhir{" "}
-                              <span className="font-medium text-foreground">
-                                {formatDateTime(lastFollowUp.doneAt)}
-                              </span>{" "}
-                              ·{" "}
-                              {followUpChannelLabel(
-                                lastFollowUp.channel.toLowerCase()
-                              )}
-                            </>
-                          ) : lastFollowUp.nextActionAt ? (
-                            <>
-                              Dijadwalkan{" "}
-                              <span className="font-medium text-foreground">
-                                {formatDate(lastFollowUp.nextActionAt)}
-                              </span>{" "}
-                              ·{" "}
-                              {followUpChannelLabel(
-                                lastFollowUp.channel.toLowerCase()
-                              )}
-                            </>
-                          ) : (
-                            "Sudah ada tindak lanjut, tanpa jadwal berikutnya"
-                          )
-                        ) : (
-                          "Belum ada jadwal tersimpan"
-                        )}
+                        {lastFollowUp
+                          ? lastFollowUp.nextActionAt && (
+                              <>
+                                Dijadwalkan{" "}
+                                <span className="font-medium text-foreground">
+                                  {formatDate(lastFollowUp.nextActionAt)}
+                                </span>{" "}
+                                ·{" "}
+                                {followUpChannelLabel(
+                                  lastFollowUp?.channel
+                                    ? lastFollowUp.channel.toLowerCase()
+                                    : undefined
+                                )}
+                              </>
+                            )
+                          : "Belum ada jadwal tersimpan"}
                       </p>
                     </div>
 
@@ -2159,22 +2283,23 @@ export default function LeadDetailPage() {
                         {isSales && (
                           <Button
                             size="sm"
-                            className="h-8 w-full text-xs"
-                            onClick={() =>
-                              handleMarkFollowUpDone(lastFollowUp.id)
-                            }
                             disabled={markingFollowUpDone}
+                            onClick={() => {
+                              if (!lastFollowUp) return;
+
+                              setDoneFollowUpId(lastFollowUp.id);
+                              setDoneResultType("");
+                              setDoneResultNote("");
+                              setDoneModalOpen(true);
+                            }}
                           >
                             {markingFollowUpDone ? (
                               <>
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
                                 Menyimpan
                               </>
                             ) : (
-                              <>
-                                <CheckCircle2 className="mr-1 h-3 w-3" />
-                                Tandai selesai
-                              </>
+                              "Tandai Selesai"
                             )}
                           </Button>
                         )}
@@ -2399,6 +2524,14 @@ export default function LeadDetailPage() {
                         waStatus={waStatus}
                         waSalesId={waSalesId}
                         sales={isSales}
+                        followUps={followUpBanners}
+                        followUpsByDate={followUpByDate}
+                        onMarkFollowUpDone={(id) => {
+                          setDoneFollowUpId(id);
+                          setDoneResultType("");
+                          setDoneResultNote("");
+                          setDoneModalOpen(true);
+                        }}
                       />
                     </div>
                   </div>
@@ -2723,6 +2856,36 @@ export default function LeadDetailPage() {
         onClose={() => setNoteOpen(false)}
         leadId={Number(leadId)}
       />
+
+      <FollowUpDoneDialog
+        open={doneModalOpen}
+        followUpLabel={
+          lastFollowUp?.typeName ?? getFollowUpTypeLabel(lastFollowUp?.typeCode)
+        }
+        followUpChannel={followUpChannelLabel(
+          lastFollowUp?.channel.toLowerCase()
+        )}
+        scheduledAt={
+          lastFollowUp?.nextActionAt
+            ? formatDate(lastFollowUp.nextActionAt)
+            : null
+        }
+        resultType={doneResultType}
+        setResultType={setDoneResultType}
+        resultNote={doneResultNote}
+        setResultNote={setDoneResultNote}
+        saving={markingFollowUpDone}
+        onClose={() => setDoneModalOpen(false)}
+        onSubmit={() => {
+          if (!doneFollowUpId) return;
+
+          handleMarkFollowUpDone(doneFollowUpId, {
+            resultType: doneResultType as FollowUpResultType,
+            resultNote: doneResultNote.trim(),
+          });
+        }}
+        options={FOLLOW_UP_RESULT_OPTIONS}
+      />
     </DashboardLayout>
   );
 }
@@ -2788,8 +2951,6 @@ function formatPriceDate(iso?: string | null) {
     day: "2-digit",
     month: "short",
     year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
   });
 }
 
@@ -2803,4 +2964,26 @@ function formatDateTimeLocal(iso?: string | null) {
     2,
     "0"
   )}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+function toDateKey(iso: string) {
+  const d = new Date(iso);
+  d.setHours(0, 0, 0, 0);
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+
+  return `${y}-${m}-${day}`;
+}
+
+function canShowFollowUpOnDay(followUpDateIso: string, chatDateIso: string) {
+  const fu = new Date(followUpDateIso);
+  const chat = new Date(chatDateIso);
+
+  // normalize ke hari
+  fu.setHours(0, 0, 0, 0);
+  chat.setHours(0, 0, 0, 0);
+
+  return fu.getTime() <= chat.getTime();
 }

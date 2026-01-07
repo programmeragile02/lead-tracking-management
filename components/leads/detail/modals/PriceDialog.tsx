@@ -79,8 +79,8 @@ export function PriceDialog(props: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[11px] text-muted-foreground">
-                Tanggal harga
+              <label className="text-[11px] md:text-xs text-muted-foreground">
+                Tanggal
               </label>
               <Input
                 type="date"
@@ -89,7 +89,7 @@ export function PriceDialog(props: Props) {
               />
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-1 hidden">
               <label className="text-[11px] text-muted-foreground">
                 Jam (opsional)
               </label>

@@ -7,6 +7,7 @@ import {
   parseDecimalNullable,
   parseExcelDateNullable,
 } from "@/lib/import-helpers";
+import { createAutoFollowUps } from "@/lib/auto-followup";
 
 export const runtime = "nodejs";
 
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
       where: {
         salesId: user.id,
         phone: { not: null },
-        isExcluded: false
+        isExcluded: false,
       },
       select: {
         phone: true,
@@ -293,6 +294,26 @@ export async function POST(req: NextRequest) {
           const lead = await tx.lead.create({ data });
 
           const salesId = lead.salesId ?? user.id;
+
+          // auto follow up
+          const autoFUCreated = await createAutoFollowUps({
+            tx,
+            leadId: lead.id,
+            salesId,
+            startAt: new Date(),
+          });
+
+          if (autoFUCreated) {
+            await tx.leadActivity.create({
+              data: {
+                leadId: lead.id,
+                title: "Auto Follow Up dibuat",
+                description: "FU1 (+1 hari), FU2 (+3 hari), FU3 (+6 hari)",
+                happenedAt: new Date(),
+                createdById: user.id,
+              },
+            });
+          }
 
           /* =========================
            * STAGE HISTORY

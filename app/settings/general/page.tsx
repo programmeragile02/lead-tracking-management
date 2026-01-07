@@ -13,6 +13,7 @@ type GeneralSettingResponse = {
   companyName: string;
   autoNurturingEnabled: boolean;
   maxIdleHoursBeforeResume: number;
+  noResponseAfterHours: number;
   welcomeMessageEnabled: boolean;
   welcomeMessageTemplate: string | null;
 };
@@ -35,6 +36,9 @@ export default function GeneralSettingPage() {
   const [welcomeMessageTemplate, setWelcomeMessageTemplate] = useState<string>(
     DEFAULT_WELCOME_TEMPLATE
   );
+
+  const [noResponseAfterHours, setNoResponseAfterHours] =
+    useState<string>("24");
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +75,11 @@ export default function GeneralSettingPage() {
           setWelcomeMessageTemplate(
             data.welcomeMessageTemplate || DEFAULT_WELCOME_TEMPLATE
           );
+          setNoResponseAfterHours(
+            data.noResponseAfterHours != null
+              ? String(data.noResponseAfterHours)
+              : "24"
+          );
         }
       } catch (err: any) {
         console.error(err);
@@ -104,6 +113,12 @@ export default function GeneralSettingPage() {
       const idleValue =
         !Number.isNaN(idleNumber) && idleNumber > 0 ? idleNumber : 48;
 
+      const noResponseNumber = Number(noResponseAfterHours);
+      const noResponseValue =
+        !Number.isNaN(noResponseNumber) && noResponseNumber > 0
+          ? noResponseNumber
+          : 24;
+
       const res = await fetch("/api/settings/general", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +126,7 @@ export default function GeneralSettingPage() {
           companyName,
           autoNurturingEnabled,
           maxIdleHoursBeforeResume: idleValue,
+          noResponseAfterHours: noResponseValue,
           welcomeMessageEnabled,
           welcomeMessageTemplate,
         }),
@@ -252,12 +268,64 @@ export default function GeneralSettingPage() {
                     <p className="text-xs text-muted-foreground">
                       Contoh: diisi <b>48</b> berarti ketika sales terakhir
                       follow up / chat, nurturing akan <b>pause</b>, lalu jika
-                      tidak ada aktivitas selama 48 jam, nurturing
-                      akan <b>resume otomatis</b> dan mengirim step berikutnya
+                      tidak ada aktivitas selama 48 jam, nurturing akan{" "}
+                      <b>resume otomatis</b> dan mengirim step berikutnya
                     </p>
                   </div>
 
                   {/* Tombol Simpan */}
+                  <div className="flex justify-end">
+                    <Button onClick={handleSave} disabled={saving}>
+                      {saving ? "Menyimpan..." : "Simpan Pengaturan"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* card lead tidak respon */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Pengaturan Lead Tidak Merespon
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading ? (
+                <div className="text-sm text-muted-foreground">
+                  Memuat pengaturan...
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Anggap Lead Tidak Merespon Setelah
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        className="w-32"
+                        value={noResponseAfterHours}
+                        onChange={(e) =>
+                          setNoResponseAfterHours(e.target.value)
+                        }
+                      />
+                      <span className="text-sm text-muted-foreground">jam</span>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                      Jika sales terakhir mengirim WhatsApp dan tidak ada
+                      balasan dari lead selama waktu ini, sistem akan otomatis
+                      mengatur
+                      <b> Sub Status = No Respon</b>.
+                      <br />
+                      Contoh: <b>24 jam</b>, <b>48 jam</b>, atau <b>72 jam</b>.
+                    </p>
+                  </div>
+
                   <div className="flex justify-end">
                     <Button onClick={handleSave} disabled={saving}>
                       {saving ? "Menyimpan..." : "Simpan Pengaturan"}
