@@ -80,6 +80,15 @@ export function OverviewTab(props: {
 
   overviewSubStatusId: number | null;
   setOverviewSubStatusId: (v: number | null) => void;
+
+  overviewCityId: number | null;
+  setOverviewCityId: (v: number | null) => void;
+
+  overviewProvinceName: string | null;
+  setOverviewProvinceName: (v: string | null) => void;
+
+  selectedCity: any | null;
+  setSelectedCity: (v: any | null) => void;
 }) {
   const {
     overviewEditing,
@@ -106,8 +115,17 @@ export function OverviewTab(props: {
     setOverviewPhone,
     overviewAddress,
     setOverviewAddress,
+
+    // legacy
     overviewCity,
     setOverviewCity,
+
+    // alur baru
+    overviewCityId,
+    setOverviewCityId,
+    overviewProvinceName,
+    setOverviewProvinceName,
+
     overviewProductId,
     setOverviewProductId,
 
@@ -127,6 +145,9 @@ export function OverviewTab(props: {
     overviewSubStatusId,
     setOverviewStatusId,
     setOverviewSubStatusId,
+
+    selectedCity,
+    setSelectedCity,
   } = props;
 
   return (
@@ -160,6 +181,12 @@ export function OverviewTab(props: {
             setOverviewAddress={setOverviewAddress}
             overviewCity={overviewCity}
             setOverviewCity={setOverviewCity}
+            overviewCityId={overviewCityId}
+            setOverviewCityId={setOverviewCityId}
+            overviewProvinceName={overviewProvinceName}
+            setOverviewProvinceName={setOverviewProvinceName}
+            selectedCity={selectedCity}
+            setSelectedCity={setSelectedCity}
           />
 
           <OverviewProductSection

@@ -15,7 +15,7 @@ type PreviewRow = {
   name: string;
   phone: string | null;
   address: string | null;
-  city: string | null;
+  // city: string | null;
   productName: string | null;
 
   productId: number | null;
@@ -42,7 +42,7 @@ const HEADER_MAP: Record<string, string> = {
   "Nama Lead *": "name",
   "No. WhatsApp": "phone",
   Alamat: "address",
-  Kota: "city",
+  // Kota: "city",
   "Nama Produk": "product_name",
   "Sumber Lead (Kode)": "source_code",
   "Tahap Lead (Kode)": "stage_code",
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
       }
 
       const address = String(row.address || "").trim() || null;
-      const city = String(row.city || "").trim() || null;
+      // const city = String(row.city || "").trim() || null;
 
       const productName = String(row.product_name || "").trim() || null;
       const productId = productName
@@ -278,7 +278,7 @@ export async function POST(req: NextRequest) {
           name,
           phone,
           address,
-          city,
+          // city,
           productName,
           productId,
           sourceId,

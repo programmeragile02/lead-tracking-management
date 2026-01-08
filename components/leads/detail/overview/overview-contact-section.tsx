@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { OverviewInfoItem } from "./overview-info-item";
 import { Inbox, MapPin, Phone, User } from "lucide-react";
+import { CitySearchSelect } from "./city-search-select";
+import { Badge } from "@/components/ui/badge";
 
 export function OverviewContactSection(props: {
   overviewEditing: boolean;
@@ -22,6 +24,12 @@ export function OverviewContactSection(props: {
   setOverviewAddress: (v: string) => void;
   overviewCity: string;
   setOverviewCity: (v: string) => void;
+  overviewCityId: number | null;
+  setOverviewCityId: (v: number | null) => void;
+  overviewProvinceName: string | null;
+  setOverviewProvinceName: (v: string | null) => void;
+  selectedCity: any | null;
+  setSelectedCity: (v: any | null) => void;
 }) {
   const {
     overviewEditing,
@@ -40,6 +48,12 @@ export function OverviewContactSection(props: {
     setOverviewAddress,
     overviewCity,
     setOverviewCity,
+    overviewCityId,
+    setOverviewCityId,
+    overviewProvinceName,
+    setOverviewProvinceName,
+    selectedCity,
+    setSelectedCity,
   } = props;
 
   return (
@@ -90,13 +104,25 @@ export function OverviewContactSection(props: {
           )}
         </OverviewInfoItem>
 
-        <OverviewInfoItem icon={MapPin} label="Kota">
+        <OverviewInfoItem icon={MapPin} label="Kota / Kabupaten">
           {overviewEditing ? (
-            <Input
-              className="h-9 text-xs sm:text-sm"
-              value={overviewCity}
-              onChange={(e) => setOverviewCity(e.target.value)}
-            />
+            <div className="space-y-2">
+              <CitySearchSelect
+                value={selectedCity}
+                onSelect={(city) => {
+                  setSelectedCity(city);
+                  setOverviewCityId(city.id); // id utama
+                  setOverviewCity(city.name); // legacy
+                  setOverviewProvinceName(city.province.name);
+                }}
+              />
+
+              {overviewProvinceName && (
+                <Badge variant="secondary">
+                  Provinsi: {overviewProvinceName}
+                </Badge>
+              )}
+            </div>
           ) : (
             displayCity
           )}

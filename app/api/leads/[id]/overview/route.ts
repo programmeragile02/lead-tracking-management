@@ -40,7 +40,9 @@ export async function PUT(
       name,
       phone,
       address,
-      city,
+      city, // legacy
+      cityId,
+      provinceId,
       productId,
       customValues,
       prices,
@@ -51,6 +53,8 @@ export async function PUT(
       phone?: string | null;
       address?: string | null;
       city?: string | null;
+      cityId?: number | null;
+      provinceId?: number | null;
       productId?: number | null;
       customValues?: { fieldId: number; value: string }[];
       prices?: {
@@ -95,6 +99,9 @@ export async function PUT(
         name: name.trim(),
         phone: phone?.trim() || null,
         address: address?.trim() || null,
+        cityId: cityId ?? null,
+        provinceId: provinceId ?? null,
+        // legacy backup
         city: city?.trim() || null,
         productId: productId ? Number(productId) : null,
       };
@@ -124,6 +131,17 @@ export async function PUT(
         const d = normalizeWibDate(prices.closing.date);
         if (d && !Number.isNaN(d.getTime())) {
           dataToUpdate.priceClosingAt = d;
+        }
+      }
+
+      if (cityId) {
+        const cityExists = await tx.city.findUnique({
+          where: { id: cityId },
+          select: { id: true },
+        });
+
+        if (!cityExists) {
+          throw new Error("Kota / kabupaten tidak valid");
         }
       }
 

@@ -35,6 +35,11 @@ interface LeadListCardProps {
   teamLeaderName?: string | null;
   onExclude?: (leadId: number) => void;
   isUnreplied?: boolean;
+  lastNote?: {
+    content: string;
+    authorName: string;
+    createdAt: string;
+  } | null;
 }
 
 export function LeadListCard({
@@ -55,6 +60,7 @@ export function LeadListCard({
   createdDate,
   onExclude,
   isUnreplied,
+  lastNote,
 }: LeadListCardProps) {
   const { user } = useCurrentUser();
   const { toast } = useToast();
@@ -165,6 +171,16 @@ export function LeadListCard({
                   Lead Masuk:{" "}
                   <span className="text-foreground">{createdDate}</span>
                 </p>
+                {lastNote ? (
+                  <p className="text-sm text-muted-foreground font-medium truncate">
+                    Catatan Terakhir:{" "}
+                    <span className="text-foreground">{lastNote.content}</span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground font-medium truncate">
+                    Catatan Terakhir: <span className="text-foreground">-</span>
+                  </p>
+                )}
               </div>
 
               {/* RIGHT: Owner + meta */}

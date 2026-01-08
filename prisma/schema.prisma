@@ -234,7 +234,15 @@ model Lead {
   // FIELD PATEN
   name      String
   address   String?
+
+  // legacy city
   city      String?
+  // city baru dari master
+  cityId Int?
+  cityRel City? @relation(fields: [cityId], references: [id])
+  provinceId Int?
+  province   Province? @relation(fields: [provinceId], references: [id])
+
   phone     String?
   photoUrl  String?
 
@@ -1235,4 +1243,56 @@ model LeadNurturingOptOut {
   @@index([salesId])
   @@index([createdAt])
   @@map("lead_nurturing_opt_outs")
+}
+
+model Province {
+  id        Int      @id @default(autoincrement())
+
+  /// Kode resmi Kemendagri/BPS
+  /// contoh: "32" = Jawa Barat
+  code      String   @unique
+  name      String   // "Jawa Barat"
+  isActive    Boolean  @default(true)
+
+  cities    City[]
+
+  leads Lead[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("provinces")
+}
+
+enum CityType {
+  KOTA
+  KABUPATEN
+}
+
+
+model City {
+  id          Int      @id @default(autoincrement())
+
+  /// Kode resmi Kemendagri/BPS
+  /// contoh:
+  /// - "32.73" = Kota Bandung
+  /// - "32.04" = Kabupaten Bandung
+  code        String   @unique
+
+  provinceId Int
+  province   Province @relation(fields: [provinceId], references: [id])
+
+  name        String   // "Bandung"
+  type        CityType // KOTA | KABUPATEN
+
+  isActive    Boolean  @default(true)
+
+  leads       Lead[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([provinceId])
+  @@index([name])
+  @@map("cities")
 }

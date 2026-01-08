@@ -864,7 +864,11 @@ export default function LeadDetailPage() {
   const displayPhone = lead?.phone || "-";
   const displaySource = lead?.source?.name || "Tanpa sumber";
   const displayAddress = lead?.address || "-";
-  const displayCity = lead?.city || "-";
+  const displayCity = lead?.city
+    ? lead.city
+    : lead?.cityRel
+    ? `${lead.cityRel.type === "KABUPATEN" ? "Kab." : ""} ${lead.cityRel.name}`
+    : "-";
   const displayProductName = lead?.product?.name || "Belum dipilih";
 
   const [updatingProduct, setUpdatingProduct] = useState(false);
@@ -1314,6 +1318,16 @@ export default function LeadDetailPage() {
     null
   );
 
+  // lokasi
+  const [selectedCity, setSelectedCity] = useState<any | null>(null);
+  const [overviewCityId, setOverviewCityId] = useState<number | null>(null);
+  const [overviewProvinceId, setOverviewProvinceId] = useState<number | null>(
+    null
+  );
+  const [overviewProvinceName, setOverviewProvinceName] = useState<
+    string | null
+  >(null);
+
   // field dinamis, disimpan per fieldId
   const [overviewCustomValues, setOverviewCustomValues] = useState<
     Record<number, string>
@@ -1338,6 +1352,9 @@ export default function LeadDetailPage() {
     setOverviewProductId(lead.productId ? String(lead.productId) : "");
     setOverviewStatusId(lead.statusId ?? null);
     setOverviewSubStatusId(lead.subStatusId ?? null);
+    setOverviewCityId(lead.cityId ?? null);
+    setOverviewProvinceId(lead.provinceId ?? null);
+    setOverviewProvinceName(lead.province?.name ?? null);
 
     setOverviewPrices({
       OFFERING: {
@@ -1373,6 +1390,26 @@ export default function LeadDetailPage() {
     }
     setOverviewCustomValues(map);
   }, [lead, dynamicFields]);
+
+  useEffect(() => {
+    if (!overviewCityId) {
+      setSelectedCity(null);
+      return;
+    }
+
+    fetch(`/api/public/cities/${overviewCityId}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.ok) {
+          setSelectedCity(json.data);
+          setOverviewProvinceId(json.data.province.id);
+          setOverviewProvinceName(json.data.province.name);
+        }
+      })
+      .catch(() => {
+        setSelectedCity(null);
+      });
+  }, [overviewCityId]);
 
   function setCustomValue(fieldId: number, value: string) {
     setOverviewCustomValues((prev) => ({ ...prev, [fieldId]: value }));
@@ -1433,7 +1470,9 @@ export default function LeadDetailPage() {
           name: overviewName,
           phone: overviewPhone,
           address: overviewAddress,
-          city: overviewCity,
+          city: overviewCity, // legacy
+          cityId: overviewCityId, // utama
+          provinceId: overviewProvinceId, // auto dari city
           productId: overviewProductId ? Number(overviewProductId) : null,
           statusId: overviewStatusId ? Number(overviewStatusId) : null,
           subStatusId: overviewSubStatusId ? Number(overviewSubStatusId) : null,
@@ -2158,31 +2197,66 @@ export default function LeadDetailPage() {
               {/* Checklist */}
               <div className="flex flex-wrap gap-2 text-xs sm:text-sm">
                 <Badge
+                  variant={lead?.name ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.name ? "✔" : "✖"} Nama
+                </Badge>
+
+                <Badge
                   variant={lead?.phone ? "secondary" : "outline"}
                   className="flex items-center gap-1.5"
                 >
-                  {lead?.phone ? "✔" : "○"} WhatsApp
+                  {lead?.phone ? "✔" : "✖"} No WhatsApp
                 </Badge>
 
                 <Badge
                   variant={lead?.address ? "secondary" : "outline"}
                   className="flex items-center gap-1.5"
                 >
-                  {lead?.address ? "✔" : "○"} Alamat
+                  {lead?.address ? "✔" : "✖"} Alamat
+                </Badge>
+
+                <Badge
+                  variant={lead?.cityId ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.cityId ? "✔" : "✖"} Kota
                 </Badge>
 
                 <Badge
                   variant={lead?.productId ? "secondary" : "outline"}
                   className="flex items-center gap-1.5"
                 >
-                  {lead?.productId ? "✔" : "○"} Produk
+                  {lead?.productId ? "✔" : "✖"} Produk
                 </Badge>
 
                 <Badge
                   variant={lead?.statusId ? "secondary" : "outline"}
                   className="flex items-center gap-1.5"
                 >
-                  {lead?.statusId ? "✔" : "○"} Status
+                  {lead?.statusId ? "✔" : "✖"} Status
+                </Badge>
+
+                <Badge
+                  variant={lead?.subStatusId ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.subStatusId ? "✔" : "✖"} Sub Status
+                </Badge>
+
+                <Badge
+                  variant={lead?.stageId ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.stageId ? "✔" : "✖"} Tahapan
+                </Badge>
+
+                <Badge
+                  variant={lead?.sourceId ? "secondary" : "outline"}
+                  className="flex items-center gap-1.5"
+                >
+                  {lead?.sourceId ? "✔" : "✖"} Sumber lead
                 </Badge>
               </div>
             </div>
@@ -2401,6 +2475,12 @@ export default function LeadDetailPage() {
                     setOverviewStatusId={setOverviewStatusId}
                     overviewSubStatusId={overviewSubStatusId}
                     setOverviewSubStatusId={setOverviewSubStatusId}
+                    overviewCityId={overviewCityId}
+                    setOverviewCityId={setOverviewCityId}
+                    overviewProvinceName={overviewProvinceName}
+                    setOverviewProvinceName={setOverviewProvinceName}
+                    selectedCity={selectedCity}
+                    setSelectedCity={setSelectedCity}
                   />
                 </TabsContent>
 

@@ -239,6 +239,17 @@ export async function GET(req: NextRequest) {
           take: 1,
           include: { type: true },
         },
+        leadNotes: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            content: true,
+            createdAt: true,
+            author: {
+              select: { name: true },
+            },
+          },
+        },
       },
       orderBy,
       skip,
@@ -342,6 +353,14 @@ export async function GET(req: NextRequest) {
         (!lead.lastOutboundAt ||
           new Date(lead.lastInboundAt) > new Date(lead.lastOutboundAt));
 
+      const lastNote = lead.leadNotes?.[0]
+        ? {
+            content: lead.leadNotes[0].content,
+            authorName: lead.leadNotes[0].author.name,
+            createdAt: lead.leadNotes[0].createdAt.toISOString(),
+          }
+        : null;
+
       return {
         id: lead.id,
         name: lead.name,
@@ -360,6 +379,7 @@ export async function GET(req: NextRequest) {
         nurturingEnabled,
         importedFromExcel: lead.importedFromExcel ?? false,
         isUnreplied,
+        lastNote,
       };
     });
 

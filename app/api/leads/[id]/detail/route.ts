@@ -35,6 +35,11 @@ export async function GET(
       subStatus: true,
       stage: true,
       sales: { select: { id: true, name: true, email: true } },
+      cityRel: {
+        include: {
+          province: true,
+        },
+      },
       customValues: { include: { field: { include: { options: true } } } },
     },
   });
@@ -191,6 +196,8 @@ function computeProfileCompletion(lead: any): number {
   check(lead.sourceId);
   check(lead.statusId);
   check(lead.stageId);
+  check(lead.cityId)
+  check(lead.subStatusId)
 
   // for (const cv of lead.customValues ?? []) check(cv.value);
 

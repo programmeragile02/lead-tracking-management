@@ -20,9 +20,9 @@ function isPublicPath(pathname: string) {
 }
 
 function isAllowed(pathname: string, role: RoleSlug): boolean {
-  // Laporan: manager + team-leader
+  // Laporan: manager + team-leader + sales
   if (pathname.startsWith("/reports")) {
-    return role === "manager" || role === "team-leader";
+    return role === "manager" || role === "team-leader" || role === "sales";
   }
 
   // Manager area khusus

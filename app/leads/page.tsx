@@ -74,6 +74,11 @@ type LeadListItem = {
   nurturingEnabled?: boolean;
   importedFromExcel?: boolean;
   isUnreplied?: boolean;
+  lastNote?: {
+    content: string;
+    authorName: string;
+    createdAt: string;
+  } | null;
 };
 
 type LeadListApiResponse = {
@@ -1286,6 +1291,7 @@ export default function LeadsPage() {
                   teamLeaderName={lead.teamLeaderName}
                   onExclude={handleExcludeLead}
                   isUnreplied={lead.isUnreplied}
+                  lastNote={lead.lastNote}
                 />
               );
             })

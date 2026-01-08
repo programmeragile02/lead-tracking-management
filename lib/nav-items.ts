@@ -17,9 +17,9 @@ import {
   Phone,
   ChartColumnIncreasing,
   ChartBarIncreasing,
-  PhoneOff,
   UserRoundX,
   SquareArrowRight,
+  Map,
 } from "lucide-react";
 
 export type AppRole = "sales" | "team-leader" | "manager";
@@ -42,6 +42,19 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
     },
     { id: "leads", label: "Lead", href: "/leads", icon: Users },
     { id: "tasks", label: "Follow Up", href: "/tasks", icon: CheckSquare },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: ChartColumnIncreasing,
+      children: [
+        {
+          id: "statistik-kota",
+          label: "Statistik Kota",
+          href: "/reports/leads-by-city",
+          icon: ChartBarIncreasing,
+        },
+      ],
+    },
     {
       id: "wa-me",
       label: "WhatsApp Synchronise",
@@ -94,6 +107,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           href: "/reports/followups",
           icon: ChartBarIncreasing,
         },
+        {
+          id: "statistik-kota",
+          label: "Statistik Kota",
+          href: "/reports/leads-by-city",
+          icon: ChartBarIncreasing,
+        },
       ],
     },
     // { id: "leads", label: "Lead", href: "/leads", icon: Users },
@@ -127,6 +146,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           label: "Pegawai",
           href: "/master/pegawai",
           icon: BookUser,
+        },
+        {
+          id: "master-wilayah",
+          label: "Provinsi / Kota",
+          href: "/master/region",
+          icon: Map,
         },
         {
           id: "master-products",
@@ -206,6 +231,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           id: "laporan-followup",
           label: "Laporan Tindak Lanjut",
           href: "/reports/followups",
+          icon: ChartBarIncreasing,
+        },
+        {
+          id: "statistik-kota",
+          label: "Statistik Kota",
+          href: "/reports/leads-by-city",
           icon: ChartBarIncreasing,
         },
         { id: "reports", label: "Laporan", href: "/reports", icon: BarChart3 },
