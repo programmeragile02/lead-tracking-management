@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-please-change";
 const secretKey = new TextEncoder().encode(JWT_SECRET);
 
-export type RoleSlug = "manager" | "team-leader" | "sales";
+export type RoleSlug = "manager" | "team-leader" | "sales" | "superadmin";
 
 export type AuthUser = {
   id: number;

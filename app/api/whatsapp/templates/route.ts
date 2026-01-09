@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
 
 function canManageGlobal(roleCode?: string | null) {
-  return roleCode === "MANAGER";
+  return roleCode === "SUPERADMIN";
 }
 
 export async function GET(req: NextRequest) {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     const mode = url.searchParams.get("mode") || "picker";
 
     // =========================
-    // MODE: GLOBAL ADMIN (Manager)
+    // MODE: GLOBAL ADMIN (Superadmin)
     // =========================
     if (mode === "global_admin") {
       if (!canManageGlobal(user.roleCode)) {
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // CREATE GLOBAL (Manager)
+    // CREATE GLOBAL (Superadmin)
     if (mode === "global_admin") {
       if (!canManageGlobal(user.roleCode)) {
         return NextResponse.json(

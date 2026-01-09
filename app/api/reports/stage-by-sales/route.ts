@@ -15,6 +15,11 @@ function parsePeriod(period: string | null): { start: Date; end: Date } | null {
   return { start, end };
 }
 
+function getWeekOfMonth(date: Date) {
+  const day = date.getUTCDate();
+  return Math.ceil(day / 7); // W1–W5
+}
+
 export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser(req);
@@ -122,38 +127,46 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    // groupBy history per stageId x salesId
-    const rows = await prisma.leadStageHistory.groupBy({
-      by: ["stageId", "salesId"],
-      _count: { _all: true },
+    const histories = await prisma.leadStageHistory.findMany({
       where: {
         salesId: { in: salesFilterIds },
         createdAt: { gte: start, lt: end },
       },
+      select: {
+        stageId: true,
+        salesId: true,
+        createdAt: true,
+      },
     });
 
-    // bentuk matrix: matrix[stageId][salesId] = count
-    const matrix: Record<string, Record<string, number>> = {};
-    const totalsPerSales: Record<string, number> = {};
+    const matrix: Record<string, Record<string, Record<number, number>>> = {};
 
-    for (const r of rows) {
-      if (!r.salesId) continue;
-      const sId = String(r.salesId);
-      const stId = String(r.stageId);
+    const weeksSet = new Set<number>();
 
-      if (!matrix[stId]) matrix[stId] = {};
-      matrix[stId][sId] = r._count._all;
+    for (const h of histories) {
+      if (!h.salesId) continue;
 
-      totalsPerSales[sId] = (totalsPerSales[sId] ?? 0) + r._count._all;
+      const stageId = String(h.stageId);
+      const salesId = String(h.salesId);
+      const week = getWeekOfMonth(h.createdAt);
+
+      weeksSet.add(week);
+
+      if (!matrix[stageId]) matrix[stageId] = {};
+      if (!matrix[stageId][salesId]) matrix[stageId][salesId] = {};
+      matrix[stageId][salesId][week] =
+        (matrix[stageId][salesId][week] ?? 0) + 1;
     }
+
+    const weeks = [1, 2, 3, 4, 5];
 
     return NextResponse.json({
       ok: true,
       data: {
         stages,
+        weeks,
         sales: salesUsers,
         matrix,
-        totalsPerSales,
       },
     });
   } catch (err) {

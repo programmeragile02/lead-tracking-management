@@ -1,20 +1,20 @@
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { OrgTree } from "@/components/organization/org-tree";
+import { SourceReport } from "@/components/reports/lead-by-source/source-report";
 
-export default function OrgPage() {
+export default function LeadSourceReportPage() {
   return (
-    <DashboardLayout title="Struktur Organisasi">
+    <DashboardLayout title="Statistik Sumber Lead">
       <div className="space-y-4">
         <div>
           <h2 className="text-2xl font-bold text-foreground">
-            Struktur Organisasi
+            Statistik Lead Berdasarkan Sumber Lead
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Visualisasi hirarki pegawai dari Manager, Team Leader, hingga Sales
+            Analisis lead terbanyak dari sumber lead mana saja
           </p>
         </div>
 
-        <OrgTree />
+        <SourceReport />
       </div>
     </DashboardLayout>
   );

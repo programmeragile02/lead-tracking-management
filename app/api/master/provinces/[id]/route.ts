@@ -7,7 +7,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser(req);
-  if (!user || user.roleCode !== "MANAGER") {
+  if (!user || user.roleCode !== "SUPERADMIN") {
     return NextResponse.json(
       { ok: false, error: "Forbidden" },
       { status: 403 }
@@ -46,7 +46,7 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   const user = await getCurrentUser(req);
-  if (!user || user.roleCode !== "MANAGER") {
+  if (!user || user.roleCode !== "SUPERADMIN") {
     return NextResponse.json(
       { ok: false, error: "Forbidden" },
       { status: 403 }

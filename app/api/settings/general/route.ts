@@ -13,11 +13,11 @@ const DEFAULT_WELCOME_TEMPLATE =
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
-    if (!user || user.roleSlug !== "manager") {
+    if (!user || user.roleSlug !== "superadmin") {
       return NextResponse.json(
         {
           ok: false,
-          message: "Hanya manager yang boleh melihat pengaturan ini",
+          message: "Hanya superadmin yang boleh melihat pengaturan ini",
         },
         { status: 403 }
       );
@@ -76,11 +76,11 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
-    if (!user || user.roleSlug !== "manager") {
+    if (!user || user.roleSlug !== "superadmin") {
       return NextResponse.json(
         {
           ok: false,
-          message: "Hanya manager yang boleh mengubah pengaturan ini",
+          message: "Hanya superadmin yang boleh mengubah pengaturan ini",
         },
         { status: 403 }
       );

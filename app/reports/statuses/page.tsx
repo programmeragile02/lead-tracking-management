@@ -34,7 +34,8 @@ type ReportResponse = {
   data: {
     statuses: Status[];
     sales: SalesUser[];
-    matrix: Record<string, Record<string, number>>;
+    weeks: number[]; // [1,2,3,4,5]
+    matrix: Record<string, Record<string, Record<number, number>>>;
     totalsPerSales: Record<string, number>;
   };
   error?: string;
@@ -100,6 +101,50 @@ export default function StatusReportPage() {
   const sales = reportRes?.data?.sales ?? [];
   const matrix = reportRes?.data?.matrix ?? {};
   const totalsPerSales = reportRes?.data?.totalsPerSales ?? {};
+  const weeks = reportRes?.data?.weeks ?? [];
+
+  const totalsPerWeekPerSales = useMemo(() => {
+    const result: Record<string, Record<number, number>> = {};
+
+    sales.forEach((s) => {
+      result[String(s.id)] = {};
+      weeks.forEach((w) => {
+        result[String(s.id)][w] = 0;
+      });
+    });
+
+    statuses.forEach((st) => {
+      const row = matrix[String(st.id)] ?? {};
+      sales.forEach((s) => {
+        const weeksData = row[String(s.id)] ?? {};
+        weeks.forEach((w) => {
+          result[String(s.id)][w] += weeksData[w] ?? 0;
+        });
+      });
+    });
+
+    return result;
+  }, [statuses, sales, weeks, matrix]);
+
+  const totalsPerSalesWeekly = useMemo(() => {
+    const result: Record<string, number> = {};
+
+    sales.forEach((s) => {
+      result[String(s.id)] = 0;
+    });
+
+    statuses.forEach((st) => {
+      const row = matrix[String(st.id)] ?? {};
+      sales.forEach((s) => {
+        const weeksData = row[String(s.id)] ?? {};
+        weeks.forEach((w) => {
+          result[String(s.id)] += weeksData[w] ?? 0;
+        });
+      });
+    });
+
+    return result;
+  }, [statuses, sales, weeks, matrix]);
 
   const safeTotals = useMemo(() => {
     const totals: Record<string, number> = { ...totalsPerSales };
@@ -119,28 +164,49 @@ export default function StatusReportPage() {
     if (!statuses.length || !sales.length) return;
     const XLSX = await import("xlsx");
 
-    const headerRow = ["Status Lead", ...sales.map((s) => s.name)];
+    const headerRow = [
+      "Status",
+      ...sales.flatMap((s) => weeks.map((w) => `${s.name} W${w}`)),
+    ];
+
     const rows: (string | number)[][] = [headerRow];
 
     statuses.forEach((st) => {
-      const rowData: (string | number)[] = [`${st.name} (${st.code})`];
-      const row = matrix[String(st.id)] ?? {};
+      const row: (string | number)[] = [`${st.name} (${st.code})`];
+      const rowData = matrix[String(st.id)] ?? {};
+
       sales.forEach((s) => {
-        const val = row[String(s.id)] ?? 0;
-        rowData.push(val);
+        const weeksData = rowData[String(s.id)] ?? {};
+        weeks.forEach((w) => {
+          row.push(weeksData[w] ?? 0);
+        });
       });
-      rows.push(rowData);
+
+      rows.push(row);
     });
 
     // baris kosong pemisah
     rows.push([]);
 
-    // baris TOTAL
-    const totalRow: (string | number)[] = ["TOTAL"];
+    const totalWeeklyRow: (string | number)[] = ["TOTAL"];
     sales.forEach((s) => {
-      totalRow.push(safeTotals[String(s.id)] ?? 0);
+      weeks.forEach((w) => {
+        totalWeeklyRow.push(totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0);
+      });
     });
-    rows.push(totalRow);
+    rows.push(totalWeeklyRow);
+
+    const totalPerSalesRow: (string | number)[] = ["TOTAL PER SALES"];
+    sales.forEach((s) => {
+      weeks.forEach((w, idx) => {
+        if (idx === weeks.length - 1) {
+          totalPerSalesRow.push(totalsPerSalesWeekly[String(s.id)] ?? 0);
+        } else {
+          totalPerSalesRow.push("");
+        }
+      });
+    });
+    rows.push(totalPerSalesRow);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
@@ -153,179 +219,218 @@ export default function StatusReportPage() {
   return (
     <DashboardLayout title="Laporan Status Lead">
       <div className="space-y-4">
+        {/* header */}
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Laporan Status Lead
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Laporan status lead per sales dan per minggu
+          </p>
+        </div>
+
         {/* FILTER */}
-        <Card className="border border-border bg-secondary">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-foreground">
-              Filter Laporan
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-3">
-            {/* Periode */}
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">
-                Periode Bulan
-              </div>
-              {loadingPeriod ? (
-                <Skeleton className="h-9 w-full" />
+        <div className="flex flex-wrap items-end gap-3 rounded-md py-3">
+          {/* Periode */}
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] md:text-xs font-medium text-muted-foreground">
+              Periode
+            </span>
+            {loadingPeriod ? (
+              <Skeleton className="h-8 w-40" />
+            ) : (
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger className="h-8 w-40 text-xs">
+                  <SelectValue placeholder="Pilih periode" />
+                </SelectTrigger>
+                <SelectContent>
+                  {periodRes?.periods.map((p) => (
+                    <SelectItem key={p} value={p} className="text-xs">
+                      {formatPeriodLabel(p)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+
+          {/* Team Leader (Manager only) */}
+          {isManager && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] md:text-xs font-medium text-muted-foreground">
+                Team Leader
+              </span>
+              {!tlRes ? (
+                <Skeleton className="h-8 w-40" />
               ) : (
-                <Select
-                  value={selectedPeriod}
-                  onValueChange={setSelectedPeriod}
-                >
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Pilih periode" />
+                <Select value={selectedTL} onValueChange={setSelectedTL}>
+                  <SelectTrigger className="h-8 w-40 text-xs">
+                    <SelectValue placeholder="Pilih Team Leader" />
                   </SelectTrigger>
                   <SelectContent>
-                    {periodRes?.periods.map((p) => (
-                      <SelectItem key={p} value={p} className="text-xs">
-                        {formatPeriodLabel(p)}
+                    {tlRes.data.map((tl) => (
+                      <SelectItem
+                        key={tl.id}
+                        value={String(tl.id)}
+                        className="text-xs"
+                      >
+                        {tl.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
             </div>
+          )}
 
-            {/* Pilih TL hanya utk manager */}
-            {isManager && (
-              <div className="space-y-1">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Team Leader
-                </div>
-                {!tlRes ? (
-                  <Skeleton className="h-9 w-full" />
-                ) : (
-                  <Select value={selectedTL} onValueChange={setSelectedTL}>
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Pilih team leader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tlRes.data.map((tl) => (
-                        <SelectItem
-                          key={tl.id}
-                          value={String(tl.id)}
-                          className="text-xs"
-                        >
-                          {tl.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Spacer */}
+          <div className="flex-1" />
+
+          {/* Export */}
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8 gap-1 text-xs"
+            disabled={
+              loadingUser || loadingReport || !reportRes?.ok || !sales.length
+            }
+            onClick={handleExportExcel}
+          >
+            <FileDown className="h-4 w-4" />
+            Export Excel
+          </Button>
+        </div>
 
         {/* TABLE + EXPORT */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-semibold">
-              Tabel Report Status Lead
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 text-xs"
-              disabled={
-                loadingUser || loadingReport || !reportRes?.ok || !sales.length
-              }
-              onClick={handleExportExcel}
-            >
-              <FileDown className="h-4 w-4" />
-              Export Excel
-            </Button>
-          </CardHeader>
-
-          <CardContent>
-            {loadingUser || loadingReport ? (
-              <div className="text-sm text-muted-foreground">
-                Memuat laporan...
-              </div>
-            ) : !reportRes?.ok ? (
-              <div className="text-sm text-primary">
-                {reportRes?.error ?? "Gagal memuat laporan"}
-              </div>
-            ) : sales.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                Belum ada data untuk periode & filter yang dipilih.
-              </div>
-            ) : (
-              <div className="w-full overflow-x-auto">
-                <table className="min-w-full border text-xs">
-                  <thead className="bg-primary">
-                    <tr>
-                      <th className="border px-3 py-2 text-left font-semibold text-foreground">
-                        Status
+        <CardContent className="px-0">
+          {loadingUser || loadingReport ? (
+            <div className="text-sm text-muted-foreground">
+              Memuat laporan...
+            </div>
+          ) : sales.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              Belum ada data untuk periode & filter yang dipilih.
+            </div>
+          ) : !reportRes?.ok ? (
+            <div className="text-sm text-primary">
+              {reportRes?.error ?? "Gagal memuat laporan"}
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-full border text-xs">
+                <thead className="bg-secondary">
+                  {/* BARIS 1: NAMA SALES */}
+                  <tr>
+                    <th
+                      rowSpan={2}
+                      className="border px-3 py-2 text-center font-semibold"
+                    >
+                      Status
+                    </th>
+                    {sales.map((s) => (
+                      <th
+                        key={s.id}
+                        colSpan={weeks.length}
+                        className="border px-3 py-2 text-center font-semibold"
+                      >
+                        {s.name}
                       </th>
-                      {sales.map((s) => (
+                    ))}
+                  </tr>
+
+                  {/* BARIS 2: WEEK */}
+                  <tr>
+                    {sales.flatMap((s) =>
+                      weeks.map((w) => (
                         <th
-                          key={s.id}
-                          className="border px-3 py-2 text-center font-semibold"
+                          key={`${s.id}-w${w}`}
+                          className="border px-2 py-1 text-center text-[11px]"
                         >
-                          {s.name}
+                          W{w}
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {statuses.map((st, idx) => {
-                      const rowKey = String(st.id);
-                      const rowData = matrix[rowKey] ?? {};
-                      return (
-                        <tr
-                          key={st.id}
-                          className={cn(
-                            "hover:bg-primary",
-                            idx % 2 === 1 && "bg-muted-foreground/30"
-                          )}
-                        >
-                          <td className="border px-3 py-2 font-medium">
-                            {st.name}{" "}
-                            <span className="text-[10px] text-muted-foreground">
-                              ({st.code})
-                            </span>
-                          </td>
-                          {sales.map((s) => {
-                            const colKey = String(s.id);
-                            const value = rowData[colKey] ?? 0;
+                      ))
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {statuses.map((st, idx) => {
+                    const rowKey = String(st.id);
+                    const rowData = matrix[rowKey] ?? {};
+
+                    return (
+                      <tr
+                        key={st.id}
+                        className={cn(
+                          "hover:bg-muted-foreground/10",
+                          idx % 2 === 1 && "bg-muted-foreground/5"
+                        )}
+                      >
+                        <td className="border px-3 py-2 font-medium">
+                          {st.name}
+                          <span className="ml-1 text-[10px] text-muted-foreground">
+                            ({st.code})
+                          </span>
+                        </td>
+
+                        {sales.flatMap((s) => {
+                          const weeksData = rowData[String(s.id)] ?? {};
+                          return weeks.map((w) => {
+                            const value = weeksData[w] ?? 0;
                             return (
                               <td
-                                key={s.id}
-                                className="border px-3 py-2 text-center tabular-nums"
+                                key={`${st.id}-${s.id}-w${w}`}
+                                className="border px-2 py-1 text-center tabular-nums"
                               >
                                 {value > 0 ? value : "-"}
                               </td>
                             );
-                          })}
-                        </tr>
-                      );
-                    })}
+                          });
+                        })}
+                      </tr>
+                    );
+                  })}
 
-                    {/* TOTAL per sales */}
-                    <tr className="bg-primary">
-                      <td className="border px-3 py-2 font-semibold">TOTAL</td>
-                      {sales.map((s) => (
+                  {/* TOTAL */}
+                  <tr className="bg-primary/70 font-semibold">
+                    <td className="border px-3 py-2">TOTAL</td>
+
+                    {sales.flatMap((s) =>
+                      weeks.map((w) => (
                         <td
-                          key={s.id}
-                          className="border px-3 py-2 text-center font-semibold tabular-nums"
+                          key={`total-${s.id}-w${w}`}
+                          className="border px-2 py-1 text-center tabular-nums"
                         >
-                          {safeTotals[String(s.id)] ?? 0}
+                          {totalsPerWeekPerSales[String(s.id)]?.[w] > 0
+                            ? totalsPerWeekPerSales[String(s.id)][w]
+                            : "-"}
                         </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  Angka menunjukkan berapa kali status lead berubah menjadi
-                  status tersebut dalam periode yang dipilih (berdasarkan
-                  riwayat perubahan status).
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                      ))
+                    )}
+                  </tr>
+
+                  <tr className="bg-primary/70 font-semibold">
+                    <td className="border px-3 py-2">TOTAL PER SALES</td>
+
+                    {sales.map((s, idx) => (
+                      <td
+                        key={`total-sales-${s.id}`}
+                        colSpan={weeks.length}
+                        className={cn(
+                          "px-2 py-2 text-center tabular-nums text-sm",
+                          "border-l border-r",
+                          idx === 0 && "border-l",
+                          idx === sales.length - 1 && "border-r"
+                        )}
+                      >
+                        {totalsPerSalesWeekly[String(s.id)] ?? 0}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
       </div>
     </DashboardLayout>
   );

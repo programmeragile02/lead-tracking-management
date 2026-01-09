@@ -95,7 +95,7 @@ type LeadCustomFieldDef = {
   helpText: string | null;
   isRequired: boolean;
   isActive: boolean;
-  sortOrder: int;
+  sortOrder: number;
   options: LeadCustomFieldOption[];
   createdAt: string;
   updatedAt: string;
@@ -176,13 +176,13 @@ function SortableFieldItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="border border-gray-200 rounded-xl bg-white px-4 py-3 flex items-start gap-3 shadow-sm"
+      className="border border-border rounded-xl bg-secondary px-4 py-3 flex items-start gap-3 shadow-sm"
     >
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="mt-1 p-1 rounded hover:bg-gray-100 cursor-grab active:cursor-grabbing text-gray-400"
+        className="mt-1 p-1 rounded hover:bg-card cursor-grab active:cursor-grabbing text-muted-foreground"
       >
         <GripVertical className="w-4 h-4" />
       </button>
@@ -190,10 +190,10 @@ function SortableFieldItem({
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 justify-between">
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">
+            <p className="font-semibold text-foreground truncate">
               {field.label}
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               Key: <span className="font-mono">{field.key}</span>
             </p>
           </div>
@@ -214,13 +214,13 @@ function SortableFieldItem({
           </div>
         </div>
         {field.helpText && (
-          <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
             {field.helpText}
           </p>
         )}
         {(field.type === "SINGLE_SELECT" || field.type === "MULTI_SELECT") &&
           field.options.length > 0 && (
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               Opsi: {field.options.map((o) => o.label).join(", ")}
             </p>
           )}
@@ -230,7 +230,7 @@ function SortableFieldItem({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-black hover:bg-black/10"
+          className="h-8 w-8 text-foreground hover:bg-black/10"
           onClick={() => onEdit(field)}
         >
           <Edit className="w-4 h-4" />
@@ -238,7 +238,7 @@ function SortableFieldItem({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-red-600 hover:bg-red-50"
+          className="h-8 w-8 text-primary hover:bg-primary/50"
           onClick={() => onDelete(field)}
         >
           <Trash2 className="w-4 h-4" />
@@ -253,12 +253,12 @@ function SortableFieldItem({
 function PreviewDynamicField({ field }: { field: LeadCustomFieldDef }) {
   const isRequired = field.isRequired;
   const requiredMark = isRequired ? (
-    <span className="text-red-500 ml-0.5">*</span>
+    <span className="text-primary ml-0.5">*</span>
   ) : null;
 
-  const labelCls = "text-sm font-medium text-gray-700 flex items-center gap-1";
+  const labelCls = "text-sm font-medium text-foreground flex items-center gap-1";
   const helpText = field.helpText ? (
-    <p className="text-xs text-gray-500 mt-1">{field.helpText}</p>
+    <p className="text-xs text-muted-foreground mt-1">{field.helpText}</p>
   ) : null;
 
   const placeholder =
@@ -375,7 +375,7 @@ function PreviewDynamicField({ field }: { field: LeadCustomFieldDef }) {
               field.options.map((o) => (
                 <label
                   key={o.id}
-                  className="flex items-center gap-2 text-xs text-gray-700"
+                  className="flex items-center gap-2 text-xs text-foreground"
                 >
                   <Checkbox disabled />
                   {o.label}
@@ -666,16 +666,16 @@ export default function LeadFieldSettingsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-2xl font-bold text-foreground">
               Konfigurasi Field Lead
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Atur field dinamis untuk form lead. Di sebelah kanan, kamu bisa
               melihat preview tampilan form yang akan dipakai sales.
             </p>
           </div>
           <Button
-            className="gradient-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
+            className="bg-primary text-white shadow-lg hover:shadow-xl w-full sm:w-auto"
             onClick={openCreate}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -685,10 +685,10 @@ export default function LeadFieldSettingsPage() {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Cari berdasarkan label atau key field..."
-            className="pl-10 h-12 border-gray-300 focus:border-primary"
+            className="pl-10 h-12 border-border focus:border-primary"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -697,7 +697,7 @@ export default function LeadFieldSettingsPage() {
         {/* 2 kolom: kiri konfigurasi, kanan preview */}
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-6 items-start">
           {/* Kiri: daftar field + drag drop */}
-          <Card className="border border-gray-200 shadow-sm">
+          <Card className="border border-border shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Daftar Field Dinamis</CardTitle>
               <CardDescription className="text-xs">
@@ -741,7 +741,7 @@ export default function LeadFieldSettingsPage() {
           </Card>
 
           {/* Kanan: Preview Form Lead */}
-          <Card className="border border-gray-200 shadow-sm">
+          <Card className="border border-border shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Preview Form Lead</CardTitle>
               <CardDescription className="text-xs">
@@ -754,7 +754,7 @@ export default function LeadFieldSettingsPage() {
               {/* Field Paten */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Informasi Utama (Field Paten)
                   </h3>
                   <Badge variant="outline" className="text-[10px]">
@@ -765,7 +765,7 @@ export default function LeadFieldSettingsPage() {
                 {/* Nama & No HP */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-700">
+                    <Label className="text-sm font-medium text-foreground">
                       Nama Lead<span className="text-red-500 ml-0.5">*</span>
                     </Label>
                     <Input
@@ -774,7 +774,7 @@ export default function LeadFieldSettingsPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-gray-700">
+                    <Label className="text-sm font-medium text-foreground">
                       No. HP
                     </Label>
                     <Input disabled placeholder="08xxxxxxxxxx (opsional)" />
@@ -783,7 +783,7 @@ export default function LeadFieldSettingsPage() {
 
                 {/* Alamat */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     Alamat
                   </Label>
                   <Textarea
@@ -795,18 +795,18 @@ export default function LeadFieldSettingsPage() {
 
                 {/* Foto */}
                 <div className="space-y-1">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     Foto Lead (opsional)
                   </Label>
-                  <div className="border border-dashed border-gray-300 rounded-xl p-3 flex items-center gap-3 bg-gray-50/60">
+                  <div className="border border-dashed border-border rounded-xl p-3 flex items-center gap-3 bg-muted-foreground/60">
                     <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100">
                       <ImageIcon className="w-5 h-5 text-gray-400" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs font-medium text-gray-700">
+                      <p className="text-xs font-medium text-foreground">
                         Upload foto lead
                       </p>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-foreground">
                         Preview saja. Upload asli dilakukan di halaman tambah
                         lead.
                       </p>
@@ -819,7 +819,7 @@ export default function LeadFieldSettingsPage() {
 
                 {/* Harga */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-gray-700">
+                  <Label className="text-sm font-medium text-foreground">
                     Harga Penawaran / Negosiasi / Closing
                   </Label>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
@@ -843,9 +843,9 @@ export default function LeadFieldSettingsPage() {
               </div>
 
               {/* Field Dinamis */}
-              <div className="pt-4 border-t border-gray-100 space-y-3">
+              <div className="pt-4 border-t border-border space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-800">
+                  <h3 className="text-sm font-semibold text-foreground">
                     Field Dinamis (Konfigurasi)
                   </h3>
                   <Badge variant="outline" className="text-[10px]">
@@ -979,7 +979,7 @@ export default function LeadFieldSettingsPage() {
                     checked={fieldForm.isActive}
                     onCheckedChange={(v) => handleFieldChange("isActive", v)}
                   />
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-foreground">
                     {fieldForm.isActive ? "Aktif" : "Nonaktif"}
                   </span>
                 </div>

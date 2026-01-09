@@ -15,6 +15,11 @@ function parsePeriod(period: string | null): { start: Date; end: Date } | null {
   return { start, end };
 }
 
+function getWeekOfMonth(date: Date) {
+  const day = date.getUTCDate();
+  return Math.ceil(day / 7); // 1 - 5
+}
+
 export async function GET(req: NextRequest) {
   try {
     const currentUser = await getCurrentUser(req);
@@ -39,7 +44,7 @@ export async function GET(req: NextRequest) {
 
     const { start, end } = dateRange;
 
-    const roleCode = (currentUser as any).roleCode ?? currentUser.role?.code;
+    const roleCode = (currentUser as any).roleCode ?? currentUser.roleCode;
     const isManager = roleCode === "MANAGER";
     const isTeamLeader = roleCode === "TEAM_LEADER";
 
@@ -125,29 +130,37 @@ export async function GET(req: NextRequest) {
       orderBy: { name: "asc" },
     });
 
-    // groupBy history per statusId x salesId
-    const rows = await prisma.leadStatusHistory.groupBy({
-      by: ["statusId", "salesId"],
-      _count: { _all: true },
+    // ambil history (raw) agar bisa hitung minggu
+    const histories = await prisma.leadStatusHistory.findMany({
       where: {
         salesId: { in: salesFilterIds },
         createdAt: { gte: start, lt: end },
       },
+      select: {
+        statusId: true,
+        salesId: true,
+        createdAt: true,
+      },
     });
 
-    // bentuk matrix: matrix[statusId][salesId] = count
-    const matrix: Record<string, Record<string, number>> = {};
+    // matrix[statusId][salesId][week] = count
+    const matrix: Record<string, Record<string, Record<number, number>>> = {};
+
     const totalsPerSales: Record<string, number> = {};
 
-    for (const r of rows) {
-      if (!r.salesId) continue;
-      const sId = String(r.salesId);
-      const stId = String(r.statusId);
+    for (const h of histories) {
+      if (!h.salesId) continue;
 
-      if (!matrix[stId]) matrix[stId] = {};
-      matrix[stId][sId] = r._count._all;
+      const statusId = String(h.statusId);
+      const salesId = String(h.salesId);
+      const week = getWeekOfMonth(h.createdAt); // 1-5
 
-      totalsPerSales[sId] = (totalsPerSales[sId] ?? 0) + r._count._all;
+      if (!matrix[statusId]) matrix[statusId] = {};
+      if (!matrix[statusId][salesId]) matrix[statusId][salesId] = {};
+      matrix[statusId][salesId][week] =
+        (matrix[statusId][salesId][week] ?? 0) + 1;
+
+      totalsPerSales[salesId] = (totalsPerSales[salesId] ?? 0) + 1;
     }
 
     return NextResponse.json({
@@ -155,6 +168,7 @@ export async function GET(req: NextRequest) {
       data: {
         statuses,
         sales: salesUsers,
+        weeks: [1, 2, 3, 4, 5],
         matrix,
         totalsPerSales,
       },

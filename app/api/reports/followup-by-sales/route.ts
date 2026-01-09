@@ -12,6 +12,11 @@ function parsePeriod(period: string | null) {
   return { start, end };
 }
 
+function getWeekOfMonth(date: Date) {
+  const day = date.getUTCDate();
+  return Math.ceil(day / 7); // 1–5
+}
+
 export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
@@ -103,28 +108,33 @@ export async function GET(req: NextRequest) {
     });
 
     // ================= aggregation =================
-    const rows = await prisma.leadFollowUp.groupBy({
-      by: ["typeId", "salesId"],
-      _count: { _all: true },
+    const rows = await prisma.leadFollowUp.findMany({
       where: {
         salesId: { in: salesIds },
         doneAt: { not: null, gte: start, lt: end },
       },
+      select: {
+        typeId: true,
+        salesId: true,
+        doneAt: true,
+      },
     });
 
-    const matrix: Record<string, Record<string, number>> = {};
+    const matrix: Record<string, Record<string, Record<number, number>>> = {};
     const totalsPerSales: Record<string, number> = {};
 
     for (const r of rows) {
-      if (!r.salesId || !r.typeId) continue;
+      if (!r.salesId || !r.typeId || !r.doneAt) continue;
 
-      const sid = String(r.salesId);
       const tid = String(r.typeId);
+      const sid = String(r.salesId);
+      const week = getWeekOfMonth(r.doneAt);
 
       if (!matrix[tid]) matrix[tid] = {};
-      matrix[tid][sid] = r._count._all;
+      if (!matrix[tid][sid]) matrix[tid][sid] = {};
+      matrix[tid][sid][week] = (matrix[tid][sid][week] ?? 0) + 1;
 
-      totalsPerSales[sid] = (totalsPerSales[sid] ?? 0) + r._count._all;
+      totalsPerSales[sid] = (totalsPerSales[sid] ?? 0) + 1;
     }
 
     return NextResponse.json({
@@ -132,6 +142,7 @@ export async function GET(req: NextRequest) {
       data: {
         followUpTypes,
         sales: salesUsers,
+        weeks: [1, 2, 3, 4, 5],
         matrix,
         totalsPerSales,
       },

@@ -25,43 +25,13 @@ import {
 import { EmployeeCard } from "./pegawai-card";
 import { EmployeeTable } from "./pegawai-table";
 import { useToast } from "@/hooks/use-toast";
-
-export type EmployeeRole = "MANAGER" | "TEAM_LEADER" | "SALES";
-
-export interface Employee {
-  id: number;
-  name: string;
-  email: string;
-  phone?: string | null;
-  photo?: string | null;
-  address?: string | null;
-  roleCode: EmployeeRole | null;
-  status: "AKTIF" | "NONAKTIF";
-  managerName?: string | null;
-  teamLeaderName?: string | null;
-  managerId?: number | null;
-  teamLeaderId?: number | null;
-}
-
-// untuk dropdown atasan
-interface SimpleUser {
-  id: number;
-  name: string;
-}
-
-// state form
-interface EmployeeFormState {
-  id?: number;
-  name: string;
-  email: string;
-  password: string;
-  phone: string;
-  address: string;
-  roleCode: EmployeeRole | "";
-  managerId: string;
-  teamLeaderId: string;
-  photoPath: string; // path di DB
-}
+import {
+  Employee,
+  EmployeeFormState,
+  EmployeeRole,
+  Role,
+  SimpleUser,
+} from "@/types/employee-types";
 
 export function EmployeeList() {
   const { toast } = useToast();
@@ -70,6 +40,7 @@ export function EmployeeList() {
     isMobile ? "card" : "table"
   );
 
+  const [roles, setRoles] = useState<Role[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +78,18 @@ export function EmployeeList() {
 
   const [managers, setManagers] = useState<SimpleUser[]>([]);
   const [teamLeaders, setTeamLeaders] = useState<SimpleUser[]>([]);
+
+  async function fetchRoles() {
+    try {
+      const res = await fetch("/api/roles?active=true");
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setRoles(json.data as Role[]);
+      }
+    } catch {
+      // tidak fatal
+    }
+  }
 
   async function fetchEmployees(pageParam = 1, q?: string) {
     try {
@@ -175,6 +158,7 @@ export function EmployeeList() {
   useEffect(() => {
     fetchEmployees(1);
     fetchSuperiors();
+    fetchRoles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -445,9 +429,7 @@ export function EmployeeList() {
               variant={viewMode === "card" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("card")}
-              className={
-                viewMode === "card" ? "bg-primary text-white" : ""
-              }
+              className={viewMode === "card" ? "bg-primary text-white" : ""}
             >
               <LayoutGrid className="h-4 w-4 mr-2" />
               Kartu
@@ -456,9 +438,7 @@ export function EmployeeList() {
               variant={viewMode === "table" ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode("table")}
-              className={
-                viewMode === "table" ? "bg-primary text-white" : ""
-              }
+              className={viewMode === "table" ? "bg-primary text-white" : ""}
             >
               <List className="h-4 w-4 mr-2" />
               Tabel
@@ -638,9 +618,11 @@ export function EmployeeList() {
                     <SelectValue placeholder="Pilih jabatan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="MANAGER">Manager</SelectItem>
-                    <SelectItem value="TEAM_LEADER">Team Leader</SelectItem>
-                    <SelectItem value="SALES">Sales</SelectItem>
+                    {roles.map((role) => (
+                      <SelectItem key={role.code} value={role.code}>
+                        {role.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

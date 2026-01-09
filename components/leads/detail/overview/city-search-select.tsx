@@ -64,7 +64,7 @@ export function CitySearchSelect(props: {
       <PopoverContent className="w-[320px] p-0">
         <Command>
           <CommandInput
-            placeholder="Cari kota / kabupaten..."
+            placeholder="Cari kota / kab / provinsi..."
             value={q}
             onValueChange={setQ}
           />

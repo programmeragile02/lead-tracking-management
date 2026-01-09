@@ -11,33 +11,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit, Trash2, Mail, Phone } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Employee } from "./pegawai-list";
-
-function getRoleLabel(role: Employee["roleCode"]) {
-  switch (role) {
-    case "MANAGER":
-      return "Manager";
-    case "TEAM_LEADER":
-      return "Team Leader";
-    case "SALES":
-      return "Sales";
-    default:
-      return "-";
-  }
-}
-
-function roleBadgeClass(role: Employee["roleCode"]) {
-  switch (role) {
-    case "MANAGER":
-      return "bg-primary/10 text-primary border-primary/30";
-    case "TEAM_LEADER":
-      return "bg-orange-50 text-orange-700 border-orange-200";
-    case "SALES":
-      return "bg-amber-50 text-amber-700 border-amber-200";
-    default:
-      return "bg-gray-100 text-gray-600 border-gray-200";
-  }
-}
+import { Employee } from "@/types/employee-types";
+import { formatRoleLabel, roleBadgeClass } from "./role-utils";
 
 function statusBadgeClass(status: Employee["status"]) {
   return status === "AKTIF"
@@ -87,8 +62,12 @@ export function EmployeeTable({
             >
               <TableCell>
                 <div>
-                  <p className="font-semibold text-foreground">{employee.name}</p>
-                  <p className="text-xs text-muted-foreground">{employee.email}</p>
+                  <p className="font-semibold text-foreground">
+                    {employee.name}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {employee.email}
+                  </p>
                 </div>
               </TableCell>
               <TableCell>
@@ -98,7 +77,7 @@ export function EmployeeTable({
                     employee.roleCode
                   )}`}
                 >
-                  {getRoleLabel(employee.roleCode)}
+                  {formatRoleLabel(employee.roleCode)}
                 </Badge>
               </TableCell>
               <TableCell>
@@ -111,7 +90,9 @@ export function EmployeeTable({
                   )}
                   {employee.teamLeaderName && (
                     <p>
-                      <span className="text-muted-foreground">Team Leader: </span>
+                      <span className="text-muted-foreground">
+                        Team Leader:{" "}
+                      </span>
                       {employee.teamLeaderName}
                     </p>
                   )}

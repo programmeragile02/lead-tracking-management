@@ -14,9 +14,20 @@ export async function GET(req: NextRequest) {
     ...(provinceId ? { provinceId: Number(provinceId) } : {}),
     ...(q
       ? {
-          name: {
-            contains: q,
-          },
+          OR: [
+            {
+              name: {
+                contains: q,
+              },
+            },
+            {
+              province: {
+                name: {
+                  contains: q,
+                },
+              },
+            },
+          ],
         }
       : {}),
   };

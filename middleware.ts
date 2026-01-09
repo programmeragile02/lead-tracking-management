@@ -4,11 +4,12 @@ import { jwtVerify } from "jose";
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-please-change";
 const secretKey = new TextEncoder().encode(JWT_SECRET);
 
-type RoleSlug = "manager" | "team-leader" | "sales";
+type RoleSlug = "manager" | "team-leader" | "sales" | "superadmin";
 
 function getDashboardByRole(role: RoleSlug): string {
   if (role === "manager") return "/dashboard/manager";
   if (role === "team-leader") return "/dashboard/team-leader";
+  if (role === "superadmin") return "/organisasi";
   return "/dashboard/sales";
 }
 
@@ -25,15 +26,20 @@ function isAllowed(pathname: string, role: RoleSlug): boolean {
     return role === "manager" || role === "team-leader" || role === "sales";
   }
 
-  // Manager area khusus
+  // admin area khusus
   if (
-    pathname.startsWith("/dashboard/manager") ||
+    pathname.startsWith("/organisasi") ||
     pathname.startsWith("/master") ||
     pathname.startsWith("/settings/general") ||
     pathname.startsWith("/settings/lead-fields") ||
     pathname.startsWith("/settings/target-lead") ||
     pathname.startsWith("/settings/template-quick-messages")
   ) {
+    return role === "superadmin";
+  }
+
+  // Manager area khusus
+  if (pathname.startsWith("/dashboard/manager")) {
     return role === "manager";
   }
 
@@ -55,10 +61,7 @@ function isAllowed(pathname: string, role: RoleSlug): boolean {
   }
 
   // Halaman bersama: leads, profile – semua role boleh
-  if (
-    pathname.startsWith("/leads") ||
-    pathname.startsWith("/profile")
-  ) {
+  if (pathname.startsWith("/leads") || pathname.startsWith("/profile")) {
     return true;
   }
 

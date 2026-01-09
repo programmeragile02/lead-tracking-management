@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 const JWT_SECRET = process.env.JWT_SECRET ?? "dev-secret-please-change";
 const secretKey = new TextEncoder().encode(JWT_SECRET);
 
-type RoleSlug = "manager" | "team-leader" | "sales";
+type RoleSlug = "manager" | "team-leader" | "sales" | "superadmin";
 
 function mapRoleCodeToSlug(code?: string | null): RoleSlug | null {
   const c = (code ?? "").toUpperCase();
@@ -17,6 +17,8 @@ function mapRoleCodeToSlug(code?: string | null): RoleSlug | null {
       return "team-leader";
     case "SALES":
       return "sales";
+    case "SUPERADMIN":
+      return "superadmin";
     default:
       return null;
   }
@@ -25,6 +27,7 @@ function mapRoleCodeToSlug(code?: string | null): RoleSlug | null {
 function getDashboardByRole(role: RoleSlug): string {
   if (role === "manager") return "/dashboard/manager";
   if (role === "team-leader") return "/dashboard/team-leader";
+  if (role === "superadmin") return "/organisasi";
   return "/dashboard/sales";
 }
 

@@ -10,7 +10,7 @@ type ImportSummary = {
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
-  if (!user || user.roleCode !== "MANAGER") {
+  if (!user || user.roleCode !== "SUPERADMIN") {
     return NextResponse.json(
       { ok: false, error: "Forbidden" },
       { status: 403 }

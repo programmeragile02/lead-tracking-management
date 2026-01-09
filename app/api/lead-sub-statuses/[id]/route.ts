@@ -46,16 +46,15 @@ export async function DELETE(_: Request, ctx: Params) {
     const { id } = await ctx.params;
     const subStatusId = Number(id);
 
-    const updated = await prisma.leadSubStatus.update({
+    await prisma.leadSubStatus.delete({
       where: { id: subStatusId },
-      data: { isActive: false },
     });
 
-    return NextResponse.json({ ok: true, data: updated });
+    return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("DELETE /lead-sub-statuses/[id] error:", err);
     return NextResponse.json(
-      { ok: false, message: "Gagal menonaktifkan sub status" },
+      { ok: false, message: "Gagal menghapus sub status" },
       { status: 500 }
     );
   }

@@ -33,8 +33,8 @@ type ReportResponse = {
   data: {
     stages: Stage[];
     sales: SalesUser[];
-    matrix: Record<string, Record<string, number>>;
-    totalsPerSales: Record<string, number>;
+    weeks: number[];
+    matrix: Record<string, Record<string, Record<number, number>>>;
   };
   error?: string;
 };
@@ -48,8 +48,10 @@ type TeamLeaderResponse = {
 export default function StageReportPage() {
   const { user, loading: loadingUser } = useCurrentUser();
 
-  const { data: periodRes, isLoading: loadingPeriod } =
-    useSWR<PeriodResponse>("/api/reports/stage-periods", fetcher);
+  const { data: periodRes, isLoading: loadingPeriod } = useSWR<PeriodResponse>(
+    "/api/reports/stage-periods",
+    fetcher
+  );
 
   const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
   const [selectedTL, setSelectedTL] = useState<string | undefined>();
@@ -81,253 +83,310 @@ export default function StageReportPage() {
     return null;
   }, [selectedPeriod, selectedTL, isManager, isTeamLeader]);
 
-  const { data: reportRes, isLoading: loadingReport } =
-    useSWR<ReportResponse>(reportUrl, fetcher);
+  const { data: reportRes, isLoading: loadingReport } = useSWR<ReportResponse>(
+    reportUrl,
+    fetcher
+  );
 
   const stages = reportRes?.data?.stages ?? [];
   const sales = reportRes?.data?.sales ?? [];
   const matrix = reportRes?.data?.matrix ?? {};
-  const totalsPerSales = reportRes?.data?.totalsPerSales ?? {};
+  const weeks = reportRes?.data?.weeks ?? [];
 
-  // kalau mau, kita bisa hitung ulang totals di client untuk jaga2
-  const safeTotals = useMemo(() => {
-    const totals: Record<string, number> = { ...totalsPerSales };
+  const totalsPerWeekPerSales = useMemo(() => {
+    const result: Record<string, Record<number, number>> = {};
+
+    sales.forEach((s) => {
+      result[String(s.id)] = {};
+      weeks.forEach((w) => (result[String(s.id)][w] = 0));
+    });
+
     stages.forEach((st) => {
       const row = matrix[String(st.id)] ?? {};
       sales.forEach((s) => {
-        const sid = String(s.id);
-        const val = row[sid] ?? 0;
-        totals[sid] = (totals[sid] ?? 0) || val ? (totals[sid] ?? 0) : 0;
+        const weeksData = row[String(s.id)] ?? {};
+        weeks.forEach((w) => {
+          result[String(s.id)][w] += weeksData[w] ?? 0;
+        });
       });
     });
-    return totals;
-  }, [stages, sales, matrix, totalsPerSales]);
+
+    return result;
+  }, [stages, sales, weeks, matrix]);
+
+  const totalsPerSalesWeekly = useMemo(() => {
+    const result: Record<string, number> = {};
+
+    sales.forEach((s) => (result[String(s.id)] = 0));
+
+    stages.forEach((st) => {
+      const row = matrix[String(st.id)] ?? {};
+      sales.forEach((s) => {
+        const weeksData = row[String(s.id)] ?? {};
+        weeks.forEach((w) => {
+          result[String(s.id)] += weeksData[w] ?? 0;
+        });
+      });
+    });
+
+    return result;
+  }, [stages, sales, weeks, matrix]);
 
   // ===== EXPORT EXCEL =====
   const handleExportExcel = async () => {
     if (!stages.length || !sales.length) return;
     const XLSX = await import("xlsx");
 
-    const headerRow = ["Tahapan", ...sales.map((s) => s.name)];
+    const headerRow = [
+      "Tahapan",
+      ...sales.flatMap((s) => weeks.map((w) => `${s.name} W${w}`)),
+    ];
+
     const rows: (string | number)[][] = [headerRow];
 
     stages.forEach((st) => {
-      const rowData: (string | number)[] = [st.name];
-      const row = matrix[String(st.id)] ?? {};
+      const row: (string | number)[] = [st.name];
+      const rowData = matrix[String(st.id)] ?? {};
+
       sales.forEach((s) => {
-        const val = row[String(s.id)] ?? 0;
-        rowData.push(val);
+        const weeksData = rowData[String(s.id)] ?? {};
+        weeks.forEach((w) => {
+          row.push(weeksData[w] ?? 0);
+        });
       });
-      rows.push(rowData);
+
+      rows.push(row);
     });
 
-    // baris kosong pemisah
-    rows.push([]);
-
-    // baris total
-    const totalRow: (string | number)[] = ["TOTAL"];
+    // TOTAL PER WEEK
+    const totalWeekRow: (string | number)[] = ["TOTAL"];
     sales.forEach((s) => {
-      totalRow.push(safeTotals[String(s.id)] ?? 0);
+      weeks.forEach((w) => {
+        totalWeekRow.push(totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0);
+      });
     });
-    rows.push(totalRow);
+    rows.push(totalWeekRow);
+
+    // TOTAL PER SALES
+    const totalSalesRow: (string | number)[] = ["TOTAL PER SALES"];
+    sales.forEach((s) => {
+      weeks.forEach((_, idx) => {
+        totalSalesRow.push(
+          idx === weeks.length - 1
+            ? totalsPerSalesWeekly[String(s.id)] ?? 0
+            : ""
+        );
+      });
+    });
+    rows.push(totalSalesRow);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Laporan Tahap");
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan Tahapan");
 
-    const label =
-      selectedPeriod?.replace("-", "_") ?? "PERIODE";
+    const label = selectedPeriod?.replace("-", "_") ?? "PERIODE";
     XLSX.writeFile(wb, `Laporan_Tahapan_${label}.xlsx`);
   };
 
   return (
-    <DashboardLayout
-      title="Laporan Tahapan Penjualan"
-    >
+    <DashboardLayout title="Laporan Tahapan Penjualan">
       <div className="space-y-4">
+        {/* header */}
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Laporan Tahapan Lead
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Laporan tahapan lead per sales dan per minggu
+          </p>
+        </div>
+
         {/* FILTER */}
-        <Card className="border border-border bg-secondary">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base font-semibold text-foreground">
-              Filter Laporan
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-3">
-            {/* Periode */}
-            <div className="space-y-1">
-              <div className="text-xs font-medium text-muted-foreground">
-                Periode Bulan
-              </div>
-              {loadingPeriod ? (
-                <Skeleton className="h-9 w-full" />
-              ) : (
-                <Select
-                  value={selectedPeriod}
-                  onValueChange={setSelectedPeriod}
-                >
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="Pilih periode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periodRes?.periods.map((p) => (
-                      <SelectItem
-                        key={p}
-                        value={p}
-                        className="text-xs"
-                      >
-                        {formatPeriodLabel(p)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+        <div className="flex flex-wrap items-end gap-3 rounded-md py-3">
+          {/* Periode */}
+          <div className="flex flex-col gap-1">
+            <span className="text-[11px] text-muted-foreground">Periode</span>
+            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <SelectTrigger className="h-8 w-40 text-xs">
+                <SelectValue placeholder="Pilih periode" />
+              </SelectTrigger>
+              <SelectContent>
+                {periodRes?.periods.map((p) => (
+                  <SelectItem key={p} value={p} className="text-xs">
+                    {formatPeriodLabel(p)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {isManager && (
+            <div className="flex flex-col gap-1">
+              <span className="text-[11px] text-muted-foreground">
+                Team Leader
+              </span>
+              <Select value={selectedTL} onValueChange={setSelectedTL}>
+                <SelectTrigger className="h-8 w-40 text-xs">
+                  <SelectValue placeholder="Pilih Team Leader" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tlRes?.data.map((tl) => (
+                    <SelectItem
+                      key={tl.id}
+                      value={String(tl.id)}
+                      className="text-xs"
+                    >
+                      {tl.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          )}
 
-            {/* Pilih TL untuk manager */}
-            {isManager && (
-              <div className="space-y-1">
-                <div className="text-xs font-medium text-muted-foreground">
-                  Team Leader
-                </div>
-                {!tlRes ? (
-                  <Skeleton className="h-9 w-full" />
-                ) : (
-                  <Select
-                    value={selectedTL}
-                    onValueChange={setSelectedTL}
-                  >
-                    <SelectTrigger className="h-9 text-xs">
-                      <SelectValue placeholder="Pilih team leader" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {tlRes.data.map((tl) => (
-                        <SelectItem
-                          key={tl.id}
-                          value={String(tl.id)}
-                          className="text-xs"
-                        >
-                          {tl.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          <div className="flex-1" />
 
-        {/* TABLE + EXPORT */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-3">
-            <CardTitle className="text-base font-semibold">
-              Tabel Report Tahap Penjualan
-            </CardTitle>
+          <Button
+            variant="default"
+            size="sm"
+            className="gap-1 text-xs"
+            disabled={
+              loadingUser || loadingReport || !reportRes?.ok || !sales.length
+            }
+            onClick={handleExportExcel}
+          >
+            <FileDown className="h-4 w-4" />
+            Export Excel
+          </Button>
+        </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1 text-xs"
-              disabled={
-                loadingUser ||
-                loadingReport ||
-                !reportRes?.ok ||
-                !sales.length
-              }
-              onClick={handleExportExcel}
-            >
-              <FileDown className="h-4 w-4" />
-              Export Excel
-            </Button>
-          </CardHeader>
-
-          <CardContent>
-            {loadingUser || loadingReport ? (
-              <div className="text-sm text-muted-foreground">
-                Memuat laporan...
-              </div>
-            ) : !reportRes?.ok ? (
-              <div className="text-sm text-primary">
-                {reportRes?.error ?? "Gagal memuat laporan"}
-              </div>
-            ) : sales.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                Belum ada data untuk periode & filter yang dipilih.
-              </div>
-            ) : (
-              <div className="w-full overflow-x-auto">
-                <table className="min-w-full border text-xs">
-                  <thead className="bg-primary">
-                    <tr>
-                      <th className="border px-3 py-2 text-left font-semibold">
-                        Tahapan
+        {/* TABLE */}
+        <CardContent className="px-0">
+          {loadingUser || loadingReport ? (
+            <div className="text-sm text-muted-foreground">
+              Memuat laporan...
+            </div>
+          ) : sales.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              Belum ada data untuk periode & filter yang dipilih.
+            </div>
+          ) : !reportRes?.ok ? (
+            <div className="text-sm text-primary">
+              {reportRes?.error ?? "Gagal memuat laporan"}
+            </div>
+          ) : (
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-full border text-xs">
+                <thead className="bg-secondary">
+                  {/* BARIS 1: NAMA SALES */}
+                  <tr>
+                    <th
+                      rowSpan={2}
+                      className="border px-3 py-2 text-center font-semibold"
+                    >
+                      Tahapan
+                    </th>
+                    {sales.map((s) => (
+                      <th
+                        key={s.id}
+                        colSpan={weeks.length}
+                        className="border px-3 py-2 text-center font-semibold"
+                      >
+                        {s.name}
                       </th>
-                      {sales.map((s) => (
+                    ))}
+                  </tr>
+
+                  {/* BARIS 2: WEEK */}
+                  <tr>
+                    {sales.flatMap((s) =>
+                      weeks.map((w) => (
                         <th
-                          key={s.id}
-                          className="border px-3 py-2 text-center font-semibold"
+                          key={`${s.id}-w${w}`}
+                          className="border px-2 py-1 text-center text-[11px]"
                         >
-                          {s.name}
+                          W{w}
                         </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {stages.map((st, idx) => {
-                      const rowKey = String(st.id);
-                      const rowData = matrix[rowKey] ?? {};
-                      return (
-                        <tr
-                          key={st.id}
-                          className={cn(
-                            "hover:bg-primary",
-                            idx % 2 === 1 && "bg-muted-foreground/30"
-                          )}
-                        >
-                          <td className="border px-3 py-2 font-medium">
-                            {st.name}
-                          </td>
-                          {sales.map((s) => {
-                            const colKey = String(s.id);
-                            const value = rowData[colKey] ?? 0;
+                      ))
+                    )}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {stages.map((st, idx) => {
+                    const row = matrix[String(st.id)] ?? {};
+
+                    return (
+                      <tr
+                        key={st.id}
+                        className={cn(
+                          "hover:bg-muted-foreground/10",
+                          idx % 2 === 1 && "bg-muted-foreground/5"
+                        )}
+                      >
+                        <td className="border px-3 py-2 font-medium">
+                          {st.name}
+                        </td>
+
+                        {sales.flatMap((s) => {
+                          const weeksData = row[String(s.id)] ?? {};
+
+                          return weeks.map((w) => {
+                            const value = weeksData[w] ?? 0;
+
                             return (
                               <td
-                                key={s.id}
-                                className="border px-3 py-2 text-center tabular-nums"
+                                key={`${st.id}-${s.id}-w${w}`}
+                                className="border px-2 py-1 text-center tabular-nums"
                               >
                                 {value > 0 ? value : "-"}
                               </td>
                             );
-                          })}
-                        </tr>
-                      );
-                    })}
+                          });
+                        })}
+                      </tr>
+                    );
+                  })}
 
-                    {/* BARIS TOTAL */}
-                    <tr className="bg-primary">
-                      <td className="border px-3 py-2 font-semibold">
-                        TOTAL
+                  {/* TOTAL PER WEEK */}
+                  <tr className="bg-primary/70 font-semibold">
+                    <td className="border px-3 py-2">TOTAL</td>
+
+                    {sales.flatMap((s) =>
+                      weeks.map((w) => {
+                        const value =
+                          totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0;
+                        return (
+                          <td
+                            key={`total-${s.id}-w${w}`}
+                            className="border px-2 py-1 text-center tabular-nums"
+                          >
+                            {value > 0 ? value : "-"}
+                          </td>
+                        );
+                      })
+                    )}
+                  </tr>
+
+                  {/* TOTAL PER SALES */}
+                  <tr className="bg-primary/70 font-semibold">
+                    <td className="border px-3 py-2">TOTAL PER SALES</td>
+
+                    {sales.map((s) => (
+                      <td
+                        key={s.id}
+                        colSpan={weeks.length}
+                        className="border-l border-r text-center tabular-nums"
+                      >
+                        {totalsPerSalesWeekly[String(s.id)] ?? 0}
                       </td>
-                      {sales.map((s) => (
-                        <td
-                          key={s.id}
-                          className="border px-3 py-2 text-center font-semibold tabular-nums"
-                        >
-                          {safeTotals[String(s.id)] ?? 0}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-                <p className="mt-2 text-[11px] text-muted-foreground">
-                  Angka menunjukkan berapa kali sales menyelesaikan tahapan
-                  tertentu dalam periode yang dipilih (berdasarkan riwayat
-                  perubahan tahap).
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
       </div>
     </DashboardLayout>
   );

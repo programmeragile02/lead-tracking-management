@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/auth-server";
 
 function canManageGlobal(roleCode?: string | null) {
-  return roleCode === "MANAGER";
+  return roleCode === "SUPERADMIN";
 }
 
 export async function PATCH(
@@ -140,7 +140,7 @@ export async function DELETE(
       );
     }
 
-    // Hapus GLOBAL hanya via global_admin + manager
+    // Hapus GLOBAL hanya via global_admin + SUPERADMIN
     if (mode === "global_admin") {
       if (!canManageGlobal(user.roleCode)) {
         return NextResponse.json(

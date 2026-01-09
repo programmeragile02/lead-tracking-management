@@ -45,6 +45,8 @@ export default function LeadSubStatusMasterPage() {
     statusId: "",
     isActive: true,
   });
+  const [deleteTarget, setDeleteTarget] = useState<LeadSubStatus | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const openCreate = () => {
     setEditing(null);
@@ -98,6 +100,35 @@ export default function LeadSubStatusMasterPage() {
     }
   };
 
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      const res = await fetch(`/api/lead-sub-statuses/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.message);
+
+      toast({
+        title: "Berhasil",
+        description: "Sub status berhasil dihapus permanen",
+      });
+
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+
+      await mutate(LEAD_SUB_STATUSES_KEY);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Gagal",
+        description: err?.message,
+      });
+    }
+  };
+
   return (
     <DashboardLayout title="Master Sub Status Lead">
       <div className="space-y-6">
@@ -114,7 +145,13 @@ export default function LeadSubStatusMasterPage() {
           </Button>
         </div>
 
-        <LeadSubStatusList onEdit={openEdit} onDelete={(s) => setEditing(s)} />
+        <LeadSubStatusList
+          onEdit={openEdit}
+          onDelete={(s) => {
+            setDeleteTarget(s);
+            setDeleteOpen(true);
+          }}
+        />
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
@@ -182,6 +219,33 @@ export default function LeadSubStatusMasterPage() {
                   {editing ? "Simpan" : "Tambah"}
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Hapus Sub Status</DialogTitle>
+            </DialogHeader>
+
+            <p className="text-sm text-muted-foreground">
+              Apakah kamu yakin ingin menghapus sub status{" "}
+              <b>{deleteTarget?.name}</b>?
+              <br />
+              <span className="text-red-500 font-semibold">
+                Tindakan ini tidak bisa dibatalkan.
+              </span>
+            </p>
+
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+                Batal
+              </Button>
+
+              <Button variant="destructive" onClick={confirmDelete}>
+                Hapus Permanen
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

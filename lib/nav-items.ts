@@ -20,9 +20,14 @@ import {
   UserRoundX,
   SquareArrowRight,
   Map,
+  GitBranch,
+  Activity,
+  Calendar,
+  Building,
+  ChartPie,
 } from "lucide-react";
 
-export type AppRole = "sales" | "team-leader" | "manager";
+export type AppRole = "sales" | "team-leader" | "manager" | "superadmin";
 
 export type NavItem = {
   id: string;
@@ -33,102 +38,13 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
-  sales: [
+  superadmin: [
     {
-      id: "dashboard",
-      label: "Dashboard",
-      href: "/dashboard/sales",
-      icon: Home,
+      id: "organisasi",
+      label: "Struktur Organisasi",
+      href: "/organisasi",
+      icon: Network,
     },
-    { id: "leads", label: "Lead", href: "/leads", icon: Users },
-    { id: "tasks", label: "Follow Up", href: "/tasks", icon: CheckSquare },
-    {
-      id: "laporan",
-      label: "Laporan",
-      icon: ChartColumnIncreasing,
-      children: [
-        {
-          id: "statistik-kota",
-          label: "Statistik Kota",
-          href: "/reports/leads-by-city",
-          icon: ChartBarIncreasing,
-        },
-      ],
-    },
-    {
-      id: "wa-me",
-      label: "WhatsApp Synchronise",
-      href: "/whatsapp/me",
-      icon: Phone,
-    },
-    {
-      id: "pengecualian-kontak",
-      label: "Pengecualian Kontak",
-      href: "/settings/excluded-contacts",
-      icon: UserRoundX,
-    },
-  ],
-
-  "team-leader": [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      href: "/dashboard/team-leader",
-      icon: Home,
-    },
-    { id: "leads", label: "Lead", href: "/leads", icon: Users },
-    { id: "team", label: "Tim", href: "/team", icon: BarChart3 },
-    {
-      id: "laporan",
-      label: "Laporan",
-      icon: ChartColumnIncreasing,
-      children: [
-        {
-          id: "laporan-assignmnet-lead",
-          label: "Assignment Lead",
-          href: "/reports/lead-assignments",
-          icon: SquareArrowRight,
-        },
-        {
-          id: "laporan-tahapan",
-          label: "Laporan Tahapan",
-          href: "/reports/stages",
-          icon: ChartBarIncreasing,
-        },
-        {
-          id: "laporan-status",
-          label: "Laporan Status Lead",
-          href: "/reports/statuses",
-          icon: ChartBarIncreasing,
-        },
-        {
-          id: "laporan-followup",
-          label: "Laporan Tindak Lanjut",
-          href: "/reports/followups",
-          icon: ChartBarIncreasing,
-        },
-        {
-          id: "statistik-kota",
-          label: "Statistik Kota",
-          href: "/reports/leads-by-city",
-          icon: ChartBarIncreasing,
-        },
-      ],
-    },
-    // { id: "leads", label: "Lead", href: "/leads", icon: Users },
-    // { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
-  ],
-
-  manager: [
-    {
-      id: "dashboard",
-      label: "Dashboard",
-      href: "/dashboard/manager",
-      icon: Home,
-    },
-
-    { id: "leads", label: "Lead", href: "/leads", icon: Users },
-
     // === Group MASTER ===
     {
       id: "master",
@@ -197,52 +113,6 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
         },
       ],
     },
-
-    {
-      id: "organisasi",
-      label: "Struktur Organisasi",
-      href: "/organisasi",
-      icon: Network,
-    },
-    {
-      id: "laporan",
-      label: "Laporan",
-      icon: ChartColumnIncreasing,
-      children: [
-        {
-          id: "laporan-assignmnet-lead",
-          label: "Assignment Lead",
-          href: "/reports/lead-assignments",
-          icon: SquareArrowRight,
-        },
-        {
-          id: "laporan-tahapan",
-          label: "Laporan Tahapan",
-          href: "/reports/stages",
-          icon: ChartBarIncreasing,
-        },
-        {
-          id: "laporan-status",
-          label: "Laporan Status Lead",
-          href: "/reports/statuses",
-          icon: ChartBarIncreasing,
-        },
-        {
-          id: "laporan-followup",
-          label: "Laporan Tindak Lanjut",
-          href: "/reports/followups",
-          icon: ChartBarIncreasing,
-        },
-        {
-          id: "statistik-kota",
-          label: "Statistik Kota",
-          href: "/reports/leads-by-city",
-          icon: ChartBarIncreasing,
-        },
-        { id: "reports", label: "Laporan", href: "/reports", icon: BarChart3 },
-      ],
-    },
-
     // === Group PENGATURAN ===
     {
       id: "settings-group",
@@ -273,6 +143,158 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           href: "/settings/template-quick-messages",
           icon: Settings,
         },
+      ],
+    },
+  ],
+  sales: [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      href: "/dashboard/sales",
+      icon: Home,
+    },
+    { id: "leads", label: "Lead", href: "/leads", icon: Users },
+    { id: "tasks", label: "Follow Up", href: "/tasks", icon: CheckSquare },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: ChartColumnIncreasing,
+      children: [
+        {
+          id: "statistik-kota",
+          label: "Statistik Kota",
+          href: "/reports/leads-by-city",
+          icon: ChartBarIncreasing,
+        },
+        {
+          id: "statistik-sumber-lead",
+          label: "Statistik Sumber Lead",
+          href: "/reports/leads-by-source",
+          icon: ChartBarIncreasing,
+        },
+      ],
+    },
+    {
+      id: "wa-me",
+      label: "WhatsApp Synchronise",
+      href: "/whatsapp/me",
+      icon: Phone,
+    },
+    {
+      id: "pengecualian-kontak",
+      label: "Pengecualian Kontak",
+      href: "/settings/excluded-contacts",
+      icon: UserRoundX,
+    },
+  ],
+
+  "team-leader": [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      href: "/dashboard/team-leader",
+      icon: Home,
+    },
+    { id: "leads", label: "Lead", href: "/leads", icon: Users },
+    { id: "team", label: "Tim", href: "/team", icon: BookUser },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: ChartColumnIncreasing,
+      children: [
+        {
+          id: "laporan-assignmnet-lead",
+          label: "Assignment Lead",
+          href: "/reports/lead-assignments",
+          icon: SquareArrowRight,
+        },
+        {
+          id: "laporan-tahapan",
+          label: "Laporan Tahapan",
+          href: "/reports/stages",
+          icon: GitBranch,
+        },
+        {
+          id: "laporan-status",
+          label: "Laporan Status Lead",
+          href: "/reports/statuses",
+          icon: Activity,
+        },
+        {
+          id: "laporan-followup",
+          label: "Laporan Tindak Lanjut",
+          href: "/reports/followups",
+          icon: Calendar,
+        },
+        {
+          id: "statistik-kota",
+          label: "Statistik Kota",
+          href: "/reports/leads-by-city",
+          icon: Building,
+        },
+        {
+          id: "statistik-sumber-lead",
+          label: "Statistik Sumber Lead",
+          href: "/reports/leads-by-source",
+          icon: ChartPie,
+        },
+      ],
+    },
+    // { id: "leads", label: "Lead", href: "/leads", icon: Users },
+    // { id: "tasks", label: "Tugas", href: "/tasks", icon: CheckSquare },
+  ],
+
+  manager: [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      href: "/dashboard/manager",
+      icon: Home,
+    },
+
+    { id: "leads", label: "Lead", href: "/leads", icon: Users },
+    {
+      id: "laporan",
+      label: "Laporan",
+      icon: ChartColumnIncreasing,
+      children: [
+        {
+          id: "laporan-assignmnet-lead",
+          label: "Assignment Lead",
+          href: "/reports/lead-assignments",
+          icon: SquareArrowRight,
+        },
+        {
+          id: "laporan-tahapan",
+          label: "Laporan Tahapan",
+          href: "/reports/stages",
+          icon: GitBranch,
+        },
+        {
+          id: "laporan-status",
+          label: "Laporan Status Lead",
+          href: "/reports/statuses",
+          icon: Activity,
+        },
+        {
+          id: "laporan-followup",
+          label: "Laporan Tindak Lanjut",
+          href: "/reports/followups",
+          icon: Calendar,
+        },
+        {
+          id: "statistik-kota",
+          label: "Statistik Kota",
+          href: "/reports/leads-by-city",
+          icon: Building,
+        },
+        {
+          id: "statistik-sumber-lead",
+          label: "Statistik Sumber Lead",
+          href: "/reports/leads-by-source",
+          icon: ChartPie,
+        },
+        // { id: "reports", label: "Laporan", href: "/reports", icon: BarChart3 },
       ],
     },
   ],

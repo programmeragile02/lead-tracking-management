@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       { status: 401 }
     );
   }
-  if (user.roleCode !== "MANAGER") {
+  if (user.roleCode !== "SUPERADMIN") {
     return NextResponse.json(
       { ok: false, error: "Forbidden" },
       { status: 403 }
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 // post
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser(req);
-  if (!user || user.roleCode !== "MANAGER") {
+  if (!user || user.roleCode !== "SUPERADMIN") {
     return NextResponse.json(
       { ok: false, error: "Forbidden" },
       { status: 403 }
