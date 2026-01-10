@@ -25,6 +25,7 @@ import {
   Calendar,
   Building,
   ChartPie,
+  Layers,
 } from "lucide-react";
 
 export type AppRole = "sales" | "team-leader" | "manager" | "superadmin";
@@ -221,6 +222,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           icon: Activity,
         },
         {
+          id: "laporan-sub-status",
+          label: "Laporan Sub Status Lead",
+          href: "/reports/sub-statuses",
+          icon: Layers,
+        },
+        {
           id: "laporan-followup",
           label: "Laporan Tindak Lanjut",
           href: "/reports/followups",
@@ -275,6 +282,12 @@ export const NAV_ITEMS: Record<AppRole, NavItem[]> = {
           label: "Laporan Status Lead",
           href: "/reports/statuses",
           icon: Activity,
+        },
+        {
+          id: "laporan-sub-status",
+          label: "Laporan Sub Status Lead",
+          href: "/reports/sub-statuses",
+          icon: Layers,
         },
         {
           id: "laporan-followup",

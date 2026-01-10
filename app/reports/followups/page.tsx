@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -16,6 +16,13 @@ import { FileDown } from "lucide-react";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ReportCharts } from "@/components/reports/report-charts";
+import { LeadListModal } from "@/components/reports/lead-list-modal";
+
+type WeekItem = {
+  week: number;
+  label: string;
+};
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -30,6 +37,9 @@ export default function FollowUpReportPage() {
   const [period, setPeriod] = useState<string>();
   const [teamLeaderId, setTeamLeaderId] = useState<string>();
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [filter, setFilter] = useState<any>(null);
+
   if (!period && periodRes?.defaultPeriod) {
     setPeriod(periodRes.defaultPeriod);
   }
@@ -39,12 +49,21 @@ export default function FollowUpReportPage() {
     fetcher
   );
 
+  useEffect(() => {
+    if (isManager && !teamLeaderId) {
+      setTeamLeaderId("ALL");
+    }
+  }, [isManager, teamLeaderId]);
+
   const reportUrl = useMemo(() => {
     if (!period) return null;
     if (isManager) {
-      if (!teamLeaderId) return null;
-      return `/api/reports/followup-by-sales?period=${period}&teamLeaderId=${teamLeaderId}`;
+      const qs =
+        teamLeaderId && teamLeaderId !== "ALL" ? `&teamLeaderId=${teamLeaderId}` : "";
+
+      return `/api/reports/followup-by-sales?period=${period}${qs}`;
     }
+
     if (isTeamLeader) {
       return `/api/reports/followup-by-sales?period=${period}`;
     }
@@ -57,22 +76,24 @@ export default function FollowUpReportPage() {
   const sales = data?.data?.sales ?? [];
   const matrix = data?.data?.matrix ?? {};
   const totals = data?.data?.totalsPerSales ?? {};
-  const weeks = data?.data?.weeks ?? [];
+  const weeks: WeekItem[] = data?.data?.weeks ?? [];
 
   const totalsPerWeekPerSales = useMemo(() => {
     const result: Record<string, Record<number, number>> = {};
 
     sales.forEach((s: any) => {
       result[String(s.id)] = {};
-      weeks.forEach((w: number) => (result[String(s.id)][w] = 0));
+      weeks.forEach(({ week }) => {
+        result[String(s.id)][week] = 0;
+      });
     });
 
     followUps.forEach((fu: any) => {
       const row = matrix[String(fu.id)] ?? {};
       sales.forEach((s: any) => {
         const weeksData = row[String(s.id)] ?? {};
-        weeks.forEach((w: number) => {
-          result[String(s.id)][w] += weeksData[w] ?? 0;
+        weeks.forEach(({ week }) => {
+          result[String(s.id)][week] += weeksData[week] ?? 0;
         });
       });
     });
@@ -83,14 +104,16 @@ export default function FollowUpReportPage() {
   const totalsPerSalesWeekly = useMemo(() => {
     const result: Record<string, number> = {};
 
-    sales.forEach((s: any) => (result[String(s.id)] = 0));
+    sales.forEach((s: any) => {
+      result[String(s.id)] = 0;
+    });
 
     followUps.forEach((fu: any) => {
       const row = matrix[String(fu.id)] ?? {};
       sales.forEach((s: any) => {
         const weeksData = row[String(s.id)] ?? {};
-        weeks.forEach((w: number) => {
-          result[String(s.id)] += weeksData[w] ?? 0;
+        weeks.forEach(({ week }) => {
+          result[String(s.id)] += weeksData[week] ?? 0;
         });
       });
     });
@@ -103,7 +126,9 @@ export default function FollowUpReportPage() {
 
     const headerRow = [
       "Jenis Tindak Lanjut",
-      ...sales.flatMap((s: any) => weeks.map((w: number) => `${s.name} W${w}`)),
+      ...sales.flatMap((s: any) =>
+        weeks.map((w) => `${s.name} W${w.week} (${w.label})`)
+      ),
     ];
 
     const rows: (string | number)[][] = [headerRow];
@@ -114,8 +139,8 @@ export default function FollowUpReportPage() {
 
       sales.forEach((s: any) => {
         const weeksData = rowData[String(s.id)] ?? {};
-        weeks.forEach((w: number) => {
-          row.push(weeksData[w] ?? 0);
+        weeks.forEach(({ week }) => {
+          row.push(weeksData[week] ?? 0);
         });
       });
 
@@ -125,8 +150,8 @@ export default function FollowUpReportPage() {
     // TOTAL PER WEEK
     const totalWeekRow: (string | number)[] = ["TOTAL"];
     sales.forEach((s: any) => {
-      weeks.forEach((w: number) => {
-        totalWeekRow.push(totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0);
+      weeks.forEach(({ week }) => {
+        totalWeekRow.push(totalsPerWeekPerSales[String(s.id)]?.[week] ?? 0);
       });
     });
     rows.push(totalWeekRow);
@@ -196,6 +221,10 @@ export default function FollowUpReportPage() {
                   <SelectValue placeholder="Pilih Team Leader" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ALL" className="text-xs font-medium">
+                    Semua Team Leader
+                  </SelectItem>
+
                   {tlRes?.data?.map((tl: any) => (
                     <SelectItem
                       key={tl.id}
@@ -229,80 +258,104 @@ export default function FollowUpReportPage() {
           {isLoading ? (
             <Skeleton className="h-32" />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full border text-xs">
-                <thead className="bg-secondary">
-                  <tr>
-                    <th rowSpan={2} className="border px-3 py-2 text-left">
-                      Jenis Follow Up
-                    </th>
-                    {sales.map((s: any) => (
-                      <th
-                        key={s.id}
-                        colSpan={weeks.length}
-                        className="border px-3 py-2 text-center"
-                      >
-                        {s.name}
+            <>
+              <div className="mb-4">
+                <ReportCharts
+                  title="Tindak Lanjut"
+                  itemType="follow_up"
+                  items={followUps}
+                  sales={sales}
+                  weeks={weeks}
+                  matrix={matrix}
+                  onSelect={(payload) => {
+                    setFilter({
+                      ...payload,
+                      period,
+                    });
+                    setModalOpen(true);
+                  }}
+                />
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border text-xs">
+                  <thead className="bg-secondary">
+                    <tr>
+                      <th rowSpan={2} className="border sticky left-0 z-20 px-3 py-2 text-left bg-secondary">
+                        Jenis Follow Up
                       </th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {sales.flatMap((s: any) =>
-                      weeks.map((w: number) => (
+                      {sales.map((s: any) => (
                         <th
-                          key={`${s.id}-w${w}`}
-                          className="border px-2 py-1 text-center text-[11px]"
+                          key={s.id}
+                          colSpan={weeks.length}
+                          className="border px-3 py-2 text-center"
                         >
-                          W{w}
+                          {s.name}
                         </th>
-                      ))
-                    )}
-                  </tr>
-                </thead>
+                      ))}
+                    </tr>
+                    <tr>
+                      {sales.flatMap((s: any) =>
+                        weeks.map((w) => (
+                          <th
+                            key={`${s.id}-w${w.week}`}
+                            className="border px-2 py-1 text-center text-[11px]"
+                          >
+                            W{w.week}
+                            <div className="text-[10px] text-muted-foreground">
+                              ({w.label})
+                            </div>
+                          </th>
+                        ))
+                      )}
+                    </tr>
+                  </thead>
 
-                <tbody>
-                  {followUps.map((fu: any, i: number) => {
-                    const row = matrix[String(fu.id)] ?? {};
+                  <tbody>
+                    {followUps.map((fu: any, i: number) => {
+                      const row = matrix[String(fu.id)] ?? {};
 
-                    return (
-                      <tr
-                        key={fu.id}
-                        className={cn(
-                          "hover:bg-muted-foreground/10",
-                          i % 2 === 1 && "bg-muted-foreground/5"
-                        )}
-                      >
-                        <td className="border px-3 py-2 font-medium">
-                          {fu.name}
-                        </td>
+                      return (
+                        <tr
+                          key={fu.id}
+                          className={cn(
+                            "hover:bg-muted-foreground/10",
+                            i % 2 === 1 && "bg-muted-foreground/5"
+                          )}
+                        >
+                          <td className="border sticky left-0 z-10 px-3 py-2 font-medium bg-background">
+                            {fu.name}
+                          </td>
 
-                        {sales.flatMap((s: any) => {
-                          const weeksData = row[String(s.id)] ?? {};
-                          return weeks.map((w: number) => {
-                            const value = weeksData[w] ?? 0;
-                            return (
-                              <td
-                                key={`${fu.id}-${s.id}-w${w}`}
-                                className="border px-2 py-1 text-center tabular-nums"
-                              >
-                                {value > 0 ? value : "-"}
-                              </td>
-                            );
-                          });
-                        })}
-                      </tr>
-                    );
-                  })}
+                          {sales.flatMap((s: any) => {
+                            const weeksData = row[String(s.id)] ?? {};
 
-                  {/* TOTAL PER WEEK */}
-                  <tr className="bg-primary/70 font-semibold">
-                    <td className="border px-3 py-2">TOTAL</td>
+                            return weeks.map(({ week }) => {
+                              const value = weeksData[week] ?? 0;
+
+                              return (
+                                <td
+                                  key={`${fu.id}-${s.id}-w${week}`}
+                                  className="border px-2 py-1 text-center tabular-nums"
+                                >
+                                  {value > 0 ? value : "-"}
+                                </td>
+                              );
+                            });
+                          })}
+                        </tr>
+                      );
+                    })}
+
+                    {/* TOTAL PER WEEK */}
+                    {/* <tr className="bg-primary/70 font-semibold">
+                    <td className="border px-3 py-2">TOTAL PER MINGGU</td>
                     {sales.flatMap((s: any) =>
-                      weeks.map((w: number) => {
-                        const v = totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0;
+                      weeks.map(({ week }) => {
+                        const v =
+                          totalsPerWeekPerSales[String(s.id)]?.[week] ?? 0;
                         return (
                           <td
-                            key={`total-${s.id}-w${w}`}
+                            key={`total-${s.id}-w${week}`}
                             className="border px-2 py-1 text-center"
                           >
                             {v > 0 ? v : "-"}
@@ -310,10 +363,10 @@ export default function FollowUpReportPage() {
                         );
                       })
                     )}
-                  </tr>
+                  </tr> */}
 
-                  {/* TOTAL PER SALES */}
-                  <tr className="bg-primary/70 font-semibold">
+                    {/* TOTAL PER SALES */}
+                    {/* <tr className="bg-primary/70 font-semibold">
                     <td className="border px-3 py-2">TOTAL PER SALES</td>
                     {sales.map((s: any) => (
                       <td
@@ -324,13 +377,19 @@ export default function FollowUpReportPage() {
                         {totalsPerSalesWeekly[String(s.id)] ?? 0}
                       </td>
                     ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                  </tr> */}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </div>
+      <LeadListModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        filter={filter}
+      />
     </DashboardLayout>
   );
 }

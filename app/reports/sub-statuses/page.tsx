@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,90 +22,98 @@ import { LeadListModal } from "@/components/reports/lead-list-modal";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+/* ================= TYPES ================= */
+
 type PeriodResponse = {
   ok: boolean;
   periods: string[];
   defaultPeriod: string;
 };
 
-type Status = { id: number; name: string; code: string };
+type SubStatus = { id: number; name: string; code: string };
 type SalesUser = { id: number; name: string };
+
+type WeekItem = {
+  week: number;
+  label: string;
+};
 
 type ReportResponse = {
   ok: boolean;
   data: {
-    statuses: Status[];
+    subStatuses: SubStatus[];
     sales: SalesUser[];
-    weeks: {
-      week: number;
-      label: string; // "1-3"
-    }[];
+    weeks: WeekItem[];
     matrix: Record<string, Record<string, Record<number, number>>>;
-    totalsPerSales: Record<string, number>;
   };
   error?: string;
 };
 
 type TeamLeader = { id: number; name: string };
-type TeamLeaderResponse = {
-  ok: boolean;
-  data: TeamLeader[];
-};
+type TeamLeaderResponse = { ok: boolean; data: TeamLeader[] };
 
-export default function StatusReportPage() {
+/* ================= PAGE ================= */
+
+export default function SubStatusReportPage() {
   const router = useRouter();
   const { user, loading: loadingUser } = useCurrentUser();
 
-  const roleCode = user?.roleCode; // "MANAGER" | "TEAM_LEADER" | "SALES"
+  const roleCode = user?.roleCode;
   const isManager = roleCode === "MANAGER";
   const isTeamLeader = roleCode === "TEAM_LEADER";
 
-  // kalau mau: blokir sales dari halaman ini
+  // blokir SALES
   if (!loadingUser && user && !isManager && !isTeamLeader) {
     router.replace("/dashboard");
   }
 
-  // periode: pakai endpoint yg sama dgn tahapan
+  /* ===== PERIOD ===== */
   const { data: periodRes, isLoading: loadingPeriod } = useSWR<PeriodResponse>(
     "/api/reports/stage-periods",
     fetcher
   );
 
-  const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
-  const [selectedTL, setSelectedTL] = useState<string | undefined>();
+  const [selectedPeriod, setSelectedPeriod] = useState<string>();
+  const [selectedTL, setSelectedTL] = useState<string>();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [filter, setFilter] = useState<any>(null);
 
-  // list TL hanya untuk manager
+  // default period
+  useEffect(() => {
+    if (!selectedPeriod && periodRes?.defaultPeriod) {
+      setSelectedPeriod(periodRes.defaultPeriod);
+    }
+  }, [selectedPeriod, periodRes]);
+
+  /* ===== TEAM LEADER ===== */
   const { data: tlRes } = useSWR<TeamLeaderResponse>(
     isManager ? "/api/reports/team-leaders" : null,
     fetcher
   );
 
+  // auto select all tl
   useEffect(() => {
     if (isManager && !selectedTL) {
       setSelectedTL("ALL");
     }
   }, [isManager, selectedTL]);
 
-  // set default periode sekali
-  if (!selectedPeriod && periodRes?.defaultPeriod) {
-    setSelectedPeriod(periodRes.defaultPeriod);
-  }
-
+  /* ===== REPORT URL ===== */
   const reportUrl = useMemo(() => {
     if (!selectedPeriod) return null;
+
     if (isManager) {
       const qs =
         selectedTL && selectedTL !== "ALL" ? `&teamLeaderId=${selectedTL}` : "";
 
-      return `/api/reports/status-by-sales?period=${selectedPeriod}${qs}`;
+      return `/api/reports/sub-status-by-sales?period=${selectedPeriod}${qs}`;
     }
 
     if (isTeamLeader) {
-      return `/api/reports/status-by-sales?period=${selectedPeriod}`;
+      return `/api/reports/sub-status-by-sales?period=${selectedPeriod}`;
     }
+
     return null;
   }, [selectedPeriod, selectedTL, isManager, isTeamLeader]);
 
@@ -114,75 +122,20 @@ export default function StatusReportPage() {
     fetcher
   );
 
-  const statuses = reportRes?.data?.statuses ?? [];
+  const subStatuses = reportRes?.data?.subStatuses ?? [];
   const sales = reportRes?.data?.sales ?? [];
-  const matrix = reportRes?.data?.matrix ?? {};
-  const totalsPerSales = reportRes?.data?.totalsPerSales ?? {};
   const weeks = reportRes?.data?.weeks ?? [];
+  const matrix = reportRes?.data?.matrix ?? {};
 
-  const totalsPerWeekPerSales = useMemo(() => {
-    const result: Record<string, Record<number, number>> = {};
+  /* ================= EXPORT EXCEL ================= */
 
-    sales.forEach((s) => {
-      result[String(s.id)] = {};
-      weeks.forEach(({ week }) => {
-        result[String(s.id)][week] = 0;
-      });
-    });
-
-    statuses.forEach((st) => {
-      const row = matrix[String(st.id)] ?? {};
-      sales.forEach((s) => {
-        const weeksData = row[String(s.id)] ?? {};
-        weeks.forEach(({ week }) => {
-          result[String(s.id)][week] += weeksData[week] ?? 0;
-        });
-      });
-    });
-
-    return result;
-  }, [statuses, sales, weeks, matrix]);
-
-  const totalsPerSalesWeekly = useMemo(() => {
-    const result: Record<string, number> = {};
-
-    sales.forEach((s) => {
-      result[String(s.id)] = 0;
-    });
-
-    statuses.forEach((st) => {
-      const row = matrix[String(st.id)] ?? {};
-      sales.forEach((s) => {
-        const weeksData = row[String(s.id)] ?? {};
-        weeks.forEach(({ week }) => {
-          result[String(s.id)] += weeksData[week] ?? 0;
-        });
-      });
-    });
-
-    return result;
-  }, [statuses, sales, weeks, matrix]);
-
-  const safeTotals = useMemo(() => {
-    const totals: Record<string, number> = { ...totalsPerSales };
-    statuses.forEach((st) => {
-      const row = matrix[String(st.id)] ?? {};
-      sales.forEach((s) => {
-        const sid = String(s.id);
-        if (totals[sid] === undefined) totals[sid] = totals[sid] ?? 0;
-        // server sudah hitung total, jadi di sini kita tidak tambah apa-apa lagi
-      });
-    });
-    return totals;
-  }, [statuses, sales, matrix, totalsPerSales]);
-
-  // ===== Export Excel =====
   const handleExportExcel = async () => {
-    if (!statuses.length || !sales.length) return;
+    if (!subStatuses.length || !sales.length) return;
+
     const XLSX = await import("xlsx");
 
     const headerRow = [
-      "Status",
+      "Sub Status",
       ...sales.flatMap((s) =>
         weeks.map((w) => `${s.name} W${w.week} (${w.label})`)
       ),
@@ -190,9 +143,9 @@ export default function StatusReportPage() {
 
     const rows: (string | number)[][] = [headerRow];
 
-    statuses.forEach((st) => {
-      const row: (string | number)[] = [`${st.name} (${st.code})`];
-      const rowData = matrix[String(st.id)] ?? {};
+    subStatuses.forEach((ss) => {
+      const row: (string | number)[] = [`${ss.name} (${ss.code})`];
+      const rowData = matrix[String(ss.id)] ?? {};
 
       sales.forEach((s) => {
         const weeksData = rowData[String(s.id)] ?? {};
@@ -204,55 +157,32 @@ export default function StatusReportPage() {
       rows.push(row);
     });
 
-    // baris kosong pemisah
-    rows.push([]);
-
-    const totalWeeklyRow: (string | number)[] = ["TOTAL"];
-    sales.forEach((s) => {
-      weeks.forEach(({ week }) => {
-        totalWeeklyRow.push(totalsPerWeekPerSales[String(s.id)]?.[week] ?? 0);
-      });
-    });
-    rows.push(totalWeeklyRow);
-
-    const totalPerSalesRow: (string | number)[] = ["TOTAL PER SALES"];
-    sales.forEach((s) => {
-      weeks.forEach((_, idx) => {
-        if (idx === weeks.length - 1) {
-          totalPerSalesRow.push(totalsPerSalesWeekly[String(s.id)] ?? 0);
-        } else {
-          totalPerSalesRow.push("");
-        }
-      });
-    });
-    rows.push(totalPerSalesRow);
-
     const ws = XLSX.utils.aoa_to_sheet(rows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Laporan Status");
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan Sub Status");
 
     const label = selectedPeriod?.replace("-", "_") ?? "PERIODE";
-    XLSX.writeFile(wb, `Laporan_Status_Lead_${label}.xlsx`);
+    XLSX.writeFile(wb, `Laporan_Sub_Status_${label}.xlsx`);
   };
 
+  /* ================= RENDER ================= */
+
   return (
-    <DashboardLayout title="Laporan Status Lead">
+    <DashboardLayout title="Laporan Sub Status Lead">
       <div className="space-y-4">
-        {/* header */}
+        {/* HEADER */}
         <div>
-          <h2 className="text-2xl font-bold text-foreground">
-            Laporan Status Lead
-          </h2>
+          <h2 className="text-2xl font-bold">Laporan Sub Status Lead</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Laporan status lead per sales dan per minggu
+            Rekap perubahan sub status lead per sales dan per minggu
           </p>
         </div>
 
         {/* FILTER */}
-        <div className="flex flex-wrap items-end gap-3 rounded-md py-3">
+        <div className="flex flex-wrap items-end gap-3 py-3">
           {/* Periode */}
           <div className="flex flex-col gap-1">
-            <span className="text-[11px] md:text-xs font-medium text-muted-foreground">
+            <span className="text-[11px] font-medium text-muted-foreground">
               Periode
             </span>
             {loadingPeriod ? (
@@ -273,10 +203,10 @@ export default function StatusReportPage() {
             )}
           </div>
 
-          {/* Team Leader (Manager only) */}
+          {/* Team Leader */}
           {isManager && (
             <div className="flex flex-col gap-1">
-              <span className="text-[11px] md:text-xs font-medium text-muted-foreground">
+              <span className="text-[11px] font-medium text-muted-foreground">
                 Team Leader
               </span>
               {!tlRes ? (
@@ -306,17 +236,13 @@ export default function StatusReportPage() {
             </div>
           )}
 
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Export */}
+          {/* EXPORT */}
           <Button
-            variant="default"
             size="sm"
             className="h-8 gap-1 text-xs"
-            disabled={
-              loadingUser || loadingReport || !reportRes?.ok || !sales.length
-            }
+            disabled={loadingReport || !subStatuses.length}
             onClick={handleExportExcel}
           >
             <FileDown className="h-4 w-4" />
@@ -324,27 +250,24 @@ export default function StatusReportPage() {
           </Button>
         </div>
 
-        {/* TABLE + EXPORT */}
+        {/* CONTENT */}
         <CardContent className="px-0">
           {loadingUser || loadingReport ? (
             <div className="text-sm text-muted-foreground">
               Memuat laporan...
             </div>
-          ) : sales.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
-              Belum ada data untuk periode & filter yang dipilih.
-            </div>
           ) : !reportRes?.ok ? (
-            <div className="text-sm text-primary">
+            <div className="text-sm text-destructive">
               {reportRes?.error ?? "Gagal memuat laporan"}
             </div>
           ) : (
             <>
+              {/* CHART */}
               <div className="mb-4">
                 <ReportCharts
-                  title="Status Lead"
-                  itemType="status"
-                  items={statuses}
+                  title="Sub Status Lead"
+                  itemType="sub_status"
+                  items={subStatuses}
                   sales={sales}
                   weeks={weeks}
                   matrix={matrix}
@@ -357,16 +280,17 @@ export default function StatusReportPage() {
                   }}
                 />
               </div>
-              <div className="w-full overflow-x-auto">
+
+              {/* TABLE */}
+              <div className="overflow-x-auto">
                 <table className="min-w-full border text-xs">
                   <thead className="bg-secondary">
-                    {/* BARIS 1: NAMA SALES */}
                     <tr>
                       <th
                         rowSpan={2}
                         className="border sticky left-0 z-20 px-3 py-2 text-center font-semibold bg-secondary"
                       >
-                        Status
+                        Sub Status
                       </th>
                       {sales.map((s) => (
                         <th
@@ -378,8 +302,6 @@ export default function StatusReportPage() {
                         </th>
                       ))}
                     </tr>
-
-                    {/* BARIS 2: WEEK */}
                     <tr>
                       {sales.flatMap((s) =>
                         weeks.map((w) => (
@@ -396,82 +318,40 @@ export default function StatusReportPage() {
                       )}
                     </tr>
                   </thead>
+
                   <tbody>
-                    {statuses.map((st, idx) => {
-                      const rowKey = String(st.id);
-                      const rowData = matrix[rowKey] ?? {};
+                    {subStatuses.map((ss, i) => {
+                      const row = matrix[String(ss.id)] ?? {};
 
                       return (
                         <tr
-                          key={st.id}
+                          key={ss.id}
                           className={cn(
                             "hover:bg-muted-foreground/10",
-                            idx % 2 === 1 && "bg-muted-foreground/5"
+                            i % 2 === 1 && "bg-muted-foreground/5"
                           )}
                         >
                           <td className="border sticky left-0 z-10 px-3 py-2 font-medium bg-background">
-                            {st.name}
+                            {ss.name}
                             <span className="ml-1 text-[10px] text-muted-foreground">
-                              ({st.code})
+                              ({ss.code})
                             </span>
                           </td>
 
                           {sales.flatMap((s) => {
-                            const weeksData = rowData[String(s.id)] ?? {};
-
-                            return weeks.map(({ week }) => {
-                              const value = weeksData[week] ?? 0;
-
-                              return (
-                                <td
-                                  key={`${st.id}-${s.id}-w${week}`}
-                                  className="border px-2 py-1 text-center tabular-nums"
-                                >
-                                  {value > 0 ? value : "-"}
-                                </td>
-                              );
-                            });
+                            const weeksData = row[String(s.id)] ?? {};
+                            return weeks.map(({ week }) => (
+                              <td
+                                key={`${ss.id}-${s.id}-w${week}`}
+                                className="border px-2 py-1 text-center tabular-nums"
+                              >
+                                {weeksData[week] > 0 ? weeksData[week] : "-"}
+                              </td>
+                            ));
                           })}
                         </tr>
                       );
                     })}
-
-                    {/* TOTAL */}
-                    {/* <tr className="bg-primary/70 font-semibold">
-                    <td className="border px-3 py-2">TOTAL PER MINGGU</td>
-
-                    {sales.flatMap((s) =>
-                      weeks.map(({ week }) => (
-                        <td
-                          key={`total-${s.id}-w${week}`}
-                          className="border px-2 py-1 text-center tabular-nums"
-                        >
-                          {totalsPerWeekPerSales[String(s.id)]?.[week] > 0
-                            ? totalsPerWeekPerSales[String(s.id)][week]
-                            : "-"}
-                        </td>
-                      ))
-                    )}
-                  </tr> */}
-
-                    {/* <tr className="bg-primary/70 font-semibold">
-                    <td className="border px-3 py-2">TOTAL PER SALES</td>
-
-                    {sales.map((s, idx) => (
-                      <td
-                        key={`total-sales-${s.id}`}
-                        colSpan={weeks.length}
-                        className={cn(
-                          "px-2 py-2 text-center tabular-nums text-sm",
-                          "border-l border-r",
-                          idx === 0 && "border-l",
-                          idx === sales.length - 1 && "border-r"
-                        )}
-                      >
-                        {totalsPerSalesWeekly[String(s.id)] ?? 0}
-                      </td>
-                    ))}
-                  </tr> */}
                   </tbody>
                 </table>
               </div>
@@ -487,6 +367,8 @@ export default function StatusReportPage() {
     </DashboardLayout>
   );
 }
+
+/* ================= UTIL ================= */
 
 function formatPeriodLabel(p: string) {
   const [y, m] = p.split("-");
@@ -504,6 +386,5 @@ function formatPeriodLabel(p: string) {
     "November",
     "Desember",
   ];
-  const idx = Number(m) - 1;
-  return `${bulan[idx] ?? m} ${y}`;
+  return `${bulan[Number(m) - 1] ?? m} ${y}`;
 }

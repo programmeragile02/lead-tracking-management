@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import {
@@ -16,6 +16,8 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { FileDown } from "lucide-react";
+import { ReportCharts } from "@/components/reports/report-charts";
+import { LeadListModal } from "@/components/reports/lead-list-modal";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -33,7 +35,10 @@ type ReportResponse = {
   data: {
     stages: Stage[];
     sales: SalesUser[];
-    weeks: number[];
+    weeks: {
+      week: number;
+      label: string;
+    }[];
     matrix: Record<string, Record<string, Record<number, number>>>;
   };
   error?: string;
@@ -56,6 +61,9 @@ export default function StageReportPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<string | undefined>();
   const [selectedTL, setSelectedTL] = useState<string | undefined>();
 
+  const [modalOpen, setModalOpen] = useState(false);
+  const [filter, setFilter] = useState<any>(null);
+
   const roleCode = user?.roleCode;
   const isManager = roleCode === "MANAGER";
   const isTeamLeader = roleCode === "TEAM_LEADER";
@@ -66,6 +74,12 @@ export default function StageReportPage() {
     fetcher
   );
 
+  useEffect(() => {
+    if (isManager && !selectedTL) {
+      setSelectedTL("ALL");
+    }
+  }, [isManager, selectedTL]);
+
   // set default periode sekali
   if (!selectedPeriod && periodRes?.defaultPeriod) {
     setSelectedPeriod(periodRes.defaultPeriod);
@@ -74,9 +88,12 @@ export default function StageReportPage() {
   const reportUrl = useMemo(() => {
     if (!selectedPeriod) return null;
     if (isManager) {
-      if (!selectedTL) return null;
-      return `/api/reports/stage-by-sales?period=${selectedPeriod}&teamLeaderId=${selectedTL}`;
+      const qs =
+        selectedTL && selectedTL !== "ALL" ? `&teamLeaderId=${selectedTL}` : "";
+
+      return `/api/reports/stage-by-sales?period=${selectedPeriod}${qs}`;
     }
+
     if (isTeamLeader) {
       return `/api/reports/stage-by-sales?period=${selectedPeriod}`;
     }
@@ -98,15 +115,17 @@ export default function StageReportPage() {
 
     sales.forEach((s) => {
       result[String(s.id)] = {};
-      weeks.forEach((w) => (result[String(s.id)][w] = 0));
+      weeks.forEach(({ week }) => {
+        result[String(s.id)][week] = 0;
+      });
     });
 
     stages.forEach((st) => {
       const row = matrix[String(st.id)] ?? {};
       sales.forEach((s) => {
         const weeksData = row[String(s.id)] ?? {};
-        weeks.forEach((w) => {
-          result[String(s.id)][w] += weeksData[w] ?? 0;
+        weeks.forEach(({ week }) => {
+          result[String(s.id)][week] += weeksData[week] ?? 0;
         });
       });
     });
@@ -117,14 +136,16 @@ export default function StageReportPage() {
   const totalsPerSalesWeekly = useMemo(() => {
     const result: Record<string, number> = {};
 
-    sales.forEach((s) => (result[String(s.id)] = 0));
+    sales.forEach((s) => {
+      result[String(s.id)] = 0;
+    });
 
     stages.forEach((st) => {
       const row = matrix[String(st.id)] ?? {};
       sales.forEach((s) => {
         const weeksData = row[String(s.id)] ?? {};
-        weeks.forEach((w) => {
-          result[String(s.id)] += weeksData[w] ?? 0;
+        weeks.forEach(({ week }) => {
+          result[String(s.id)] += weeksData[week] ?? 0;
         });
       });
     });
@@ -139,7 +160,9 @@ export default function StageReportPage() {
 
     const headerRow = [
       "Tahapan",
-      ...sales.flatMap((s) => weeks.map((w) => `${s.name} W${w}`)),
+      ...sales.flatMap((s) =>
+        weeks.map((w) => `${s.name} W${w.week} (${w.label})`)
+      ),
     ];
 
     const rows: (string | number)[][] = [headerRow];
@@ -150,8 +173,8 @@ export default function StageReportPage() {
 
       sales.forEach((s) => {
         const weeksData = rowData[String(s.id)] ?? {};
-        weeks.forEach((w) => {
-          row.push(weeksData[w] ?? 0);
+        weeks.forEach(({ week }) => {
+          row.push(weeksData[week] ?? 0);
         });
       });
 
@@ -161,8 +184,8 @@ export default function StageReportPage() {
     // TOTAL PER WEEK
     const totalWeekRow: (string | number)[] = ["TOTAL"];
     sales.forEach((s) => {
-      weeks.forEach((w) => {
-        totalWeekRow.push(totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0);
+      weeks.forEach(({ week }) => {
+        totalWeekRow.push(totalsPerWeekPerSales[String(s.id)]?.[week] ?? 0);
       });
     });
     rows.push(totalWeekRow);
@@ -230,6 +253,10 @@ export default function StageReportPage() {
                   <SelectValue placeholder="Pilih Team Leader" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="ALL" className="text-xs font-medium">
+                    Semua Team Leader
+                  </SelectItem>
+
                   {tlRes?.data.map((tl) => (
                     <SelectItem
                       key={tl.id}
@@ -275,90 +302,111 @@ export default function StageReportPage() {
               {reportRes?.error ?? "Gagal memuat laporan"}
             </div>
           ) : (
-            <div className="w-full overflow-x-auto">
-              <table className="min-w-full border text-xs">
-                <thead className="bg-secondary">
-                  {/* BARIS 1: NAMA SALES */}
-                  <tr>
-                    <th
-                      rowSpan={2}
-                      className="border px-3 py-2 text-center font-semibold"
-                    >
-                      Tahapan
-                    </th>
-                    {sales.map((s) => (
+            <>
+              <div className="mb-4">
+                <ReportCharts
+                  title="Tahapan Lead"
+                  itemType="stage"
+                  items={stages}
+                  sales={sales}
+                  weeks={weeks}
+                  matrix={matrix}
+                  onSelect={(payload) => {
+                    setFilter({
+                      ...payload,
+                      period: selectedPeriod,
+                    });
+                    setModalOpen(true);
+                  }}
+                />
+              </div>
+              <div className="w-full overflow-x-auto">
+                <table className="min-w-full border text-xs">
+                  <thead className="bg-secondary">
+                    {/* BARIS 1: NAMA SALES */}
+                    <tr>
                       <th
-                        key={s.id}
-                        colSpan={weeks.length}
-                        className="border px-3 py-2 text-center font-semibold"
+                        rowSpan={2}
+                        className="border sticky left-0 z-20 px-3 py-2 text-center font-semibold bg-secondary"
                       >
-                        {s.name}
+                        Tahapan
                       </th>
-                    ))}
-                  </tr>
-
-                  {/* BARIS 2: WEEK */}
-                  <tr>
-                    {sales.flatMap((s) =>
-                      weeks.map((w) => (
+                      {sales.map((s) => (
                         <th
-                          key={`${s.id}-w${w}`}
-                          className="border px-2 py-1 text-center text-[11px]"
+                          key={s.id}
+                          colSpan={weeks.length}
+                          className="border px-3 py-2 text-center font-semibold"
                         >
-                          W{w}
+                          {s.name}
                         </th>
-                      ))
-                    )}
-                  </tr>
-                </thead>
+                      ))}
+                    </tr>
 
-                <tbody>
-                  {stages.map((st, idx) => {
-                    const row = matrix[String(st.id)] ?? {};
+                    {/* BARIS 2: WEEK */}
+                    <tr>
+                      {sales.flatMap((s) =>
+                        weeks.map((w) => (
+                          <th
+                            key={`${s.id}-w${w.week}`}
+                            className="border px-2 py-1 text-center text-[11px]"
+                          >
+                            W{w.week}
+                            <div className="text-[10px] text-muted-foreground">
+                              ({w.label})
+                            </div>
+                          </th>
+                        ))
+                      )}
+                    </tr>
+                  </thead>
 
-                    return (
-                      <tr
-                        key={st.id}
-                        className={cn(
-                          "hover:bg-muted-foreground/10",
-                          idx % 2 === 1 && "bg-muted-foreground/5"
-                        )}
-                      >
-                        <td className="border px-3 py-2 font-medium">
-                          {st.name}
-                        </td>
+                  <tbody>
+                    {stages.map((st, idx) => {
+                      const row = matrix[String(st.id)] ?? {};
 
-                        {sales.flatMap((s) => {
-                          const weeksData = row[String(s.id)] ?? {};
+                      return (
+                        <tr
+                          key={st.id}
+                          className={cn(
+                            "hover:bg-muted-foreground/10",
+                            idx % 2 === 1 && "bg-muted-foreground/5"
+                          )}
+                        >
+                          <td className="border sticky left-0 z-20 px-3 py-2 font-medium bg-background">
+                            {st.name}
+                          </td>
 
-                          return weeks.map((w) => {
-                            const value = weeksData[w] ?? 0;
+                          {sales.flatMap((s) => {
+                            const weeksData = row[String(s.id)] ?? {};
 
-                            return (
-                              <td
-                                key={`${st.id}-${s.id}-w${w}`}
-                                className="border px-2 py-1 text-center tabular-nums"
-                              >
-                                {value > 0 ? value : "-"}
-                              </td>
-                            );
-                          });
-                        })}
-                      </tr>
-                    );
-                  })}
+                            return weeks.map(({ week }) => {
+                              const value = weeksData[week] ?? 0;
 
-                  {/* TOTAL PER WEEK */}
-                  <tr className="bg-primary/70 font-semibold">
-                    <td className="border px-3 py-2">TOTAL</td>
+                              return (
+                                <td
+                                  key={`${st.id}-${s.id}-w${week}`}
+                                  className="border px-2 py-1 text-center tabular-nums"
+                                >
+                                  {value > 0 ? value : "-"}
+                                </td>
+                              );
+                            });
+                          })}
+                        </tr>
+                      );
+                    })}
+
+                    {/* TOTAL PER WEEK */}
+                    {/* <tr className="bg-primary/70 font-semibold">
+                    <td className="border px-3 py-2">TOTAL PER MINGGU</td>
 
                     {sales.flatMap((s) =>
-                      weeks.map((w) => {
+                      weeks.map(({ week }) => {
                         const value =
-                          totalsPerWeekPerSales[String(s.id)]?.[w] ?? 0;
+                          totalsPerWeekPerSales[String(s.id)]?.[week] ?? 0;
                         return (
                           <td
-                            key={`total-${s.id}-w${w}`}
+                            key={`total-${s.id}-w${week}`}
                             className="border px-2 py-1 text-center tabular-nums"
                           >
                             {value > 0 ? value : "-"}
@@ -366,10 +414,10 @@ export default function StageReportPage() {
                         );
                       })
                     )}
-                  </tr>
+                  </tr> */}
 
-                  {/* TOTAL PER SALES */}
-                  <tr className="bg-primary/70 font-semibold">
+                    {/* TOTAL PER SALES */}
+                    {/* <tr className="bg-primary/70 font-semibold">
                     <td className="border px-3 py-2">TOTAL PER SALES</td>
 
                     {sales.map((s) => (
@@ -381,13 +429,19 @@ export default function StageReportPage() {
                         {totalsPerSalesWeekly[String(s.id)] ?? 0}
                       </td>
                     ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                  </tr> */}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </div>
+      <LeadListModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        filter={filter}
+      />
     </DashboardLayout>
   );
 }

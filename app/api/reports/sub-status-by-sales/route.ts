@@ -5,42 +5,33 @@ import { getCurrentUser } from "@/lib/auth-server";
 /* ================= UTIL ================= */
 function parsePeriod(period: string | null) {
   if (!period) return null;
-
   const [y, m] = period.split("-").map(Number);
   if (!y || !m) return null;
 
   const start = new Date(Date.UTC(y, m - 1, 1));
   const end = new Date(Date.UTC(y, m, 1));
-
   return { start, end, year: y, month: m };
 }
 
 function buildWeeks(year: number, month: number) {
-  const firstDay = new Date(Date.UTC(year, month - 1, 1));
-  const lastDay = new Date(Date.UTC(year, month, 0));
+  const first = new Date(Date.UTC(year, month - 1, 1));
+  const last = new Date(Date.UTC(year, month, 0));
 
-  const weeks: {
-    week: number;
-    start: Date;
-    end: Date;
-    label: string;
-  }[] = [];
+  const weeks: { week: number; start: Date; end: Date; label: string }[] = [];
+  let current = new Date(first);
+  let w = 1;
 
-  let current = new Date(firstDay);
-  let week = 1;
-
-  while (current <= lastDay) {
+  while (current <= last) {
     const start = new Date(current);
-
-    const dayOfWeek = current.getUTCDay();
-    const diffToSunday = (7 - dayOfWeek) % 7;
+    const dow = current.getUTCDay();
+    const diff = (7 - dow) % 7;
 
     let end = new Date(current);
-    end.setUTCDate(end.getUTCDate() + diffToSunday);
-    if (end > lastDay) end = new Date(lastDay);
+    end.setUTCDate(end.getUTCDate() + diff);
+    if (end > last) end = last;
 
     weeks.push({
-      week,
+      week: w,
       start,
       end,
       label: `${start.getUTCDate()}-${end.getUTCDate()}`,
@@ -48,7 +39,7 @@ function buildWeeks(year: number, month: number) {
 
     current = new Date(end);
     current.setUTCDate(current.getUTCDate() + 1);
-    week++;
+    w++;
   }
 
   return weeks;
@@ -63,10 +54,7 @@ export async function GET(req: NextRequest) {
   try {
     const user = await getCurrentUser(req);
     if (!user) {
-      return NextResponse.json(
-        { ok: false, error: "Belum login" },
-        { status: 401 }
-      );
+      return NextResponse.json({ ok: false }, { status: 401 });
     }
 
     const role = user.roleCode;
@@ -169,15 +157,15 @@ export async function GET(req: NextRequest) {
     if (salesIds.length === 0) {
       return NextResponse.json({
         ok: true,
-        data: { stages: [], sales: [], weeks: [], matrix: {} },
+        data: { subStatuses: [], sales: [], weeks: [], matrix: {} },
       });
     }
 
-    /* ===== MASTER STAGE ===== */
-    const stages = await prisma.leadStage.findMany({
+    /* ===== MASTER ===== */
+    const subStatuses = await prisma.leadSubStatus.findMany({
       where: { isActive: true },
       orderBy: [{ order: "asc" }, { id: "asc" }],
-      select: { id: true, name: true },
+      select: { id: true, name: true, code: true },
     });
 
     const salesUsers = await prisma.user.findMany({
@@ -187,14 +175,14 @@ export async function GET(req: NextRequest) {
     });
 
     /* ===== HISTORIES ===== */
-    const histories = await prisma.leadStageHistory.findMany({
+    const rows = await prisma.leadSubStatusHistory.findMany({
       where: {
         salesId: { in: salesIds },
         createdAt: { gte: start, lt: end },
         lead: { isExcluded: false },
       },
       select: {
-        stageId: true,
+        subStatusId: true,
         salesId: true,
         createdAt: true,
       },
@@ -202,36 +190,33 @@ export async function GET(req: NextRequest) {
 
     const matrix: Record<string, Record<string, Record<number, number>>> = {};
 
-    for (const h of histories) {
-      if (!h.salesId || !h.stageId) continue;
+    for (const r of rows) {
+      if (!r.salesId || !r.subStatusId) continue;
 
-      const week = getWeekIndex(h.createdAt, weeks);
+      const week = getWeekIndex(r.createdAt, weeks);
       if (!week) continue;
 
-      const sid = String(h.salesId);
-      const stageId = String(h.stageId);
+      const sid = String(r.salesId);
+      const ssid = String(r.subStatusId);
 
-      matrix[stageId] ??= {};
-      matrix[stageId][sid] ??= {};
-      matrix[stageId][sid][week] = (matrix[stageId][sid][week] ?? 0) + 1;
+      matrix[ssid] ??= {};
+      matrix[ssid][sid] ??= {};
+      matrix[ssid][sid][week] = (matrix[ssid][sid][week] ?? 0) + 1;
     }
 
     return NextResponse.json({
       ok: true,
       data: {
-        stages,
+        subStatuses,
         sales: salesUsers,
-        weeks: weeks.map((w) => ({
-          week: w.week,
-          label: w.label,
-        })),
+        weeks: weeks.map((w) => ({ week: w.week, label: w.label })),
         matrix,
       },
     });
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
+    console.error(e);
     return NextResponse.json(
-      { ok: false, error: "Gagal memuat laporan tahapan" },
+      { ok: false, error: "Gagal memuat laporan sub status" },
       { status: 500 }
     );
   }

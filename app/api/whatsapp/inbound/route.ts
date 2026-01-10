@@ -402,7 +402,7 @@ export async function POST(req: NextRequest) {
           leadId: lead.id,
           direction: "OUTBOUND",
           channel: "WHATSAPP",
-          isNurturingMessage: true, // 🔑 KUNCI UTAMA
+          isNurturingMessage: true, // KUNCI UTAMA
         },
         orderBy: { createdAt: "desc" },
       });

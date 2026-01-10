@@ -56,7 +56,7 @@ export async function POST(
   const statusChanged = lead.statusId !== subStatus.statusId;
 
   await prisma.$transaction(async (tx) => {
-    // 1️⃣ update lead
+    // 1️ update lead
     await tx.lead.update({
       where: { id: leadId },
       data: {
@@ -65,7 +65,7 @@ export async function POST(
       },
     });
 
-    // 2️⃣ history sub status
+    // 2️ history sub status
     await tx.leadSubStatusHistory.create({
       data: {
         leadId,
@@ -76,7 +76,7 @@ export async function POST(
       },
     });
 
-    // 3️⃣ history status utama (HANYA kalau berubah)
+    // 3️ history status utama (HANYA kalau berubah)
     if (statusChanged) {
       await tx.leadStatusHistory.create({
         data: {
@@ -89,7 +89,7 @@ export async function POST(
       });
     }
 
-    // 4️⃣ activity log
+    // 4️ activity log
     await tx.leadActivity.create({
       data: {
         leadId,

@@ -77,14 +77,14 @@ export async function POST(
   const ownerSalesId = lead.salesId ?? user.id;
 
   // Rule: HOT / CLOSE_WON / CLOSE_LOST → nurturing STOPPED
-  const shouldStopNurturing = ["HOT", "CLOSE_WON", "CLOSE_LOST"].includes(
+  const shouldStopNurturing = ["CLOSE_WON", "CLOSE_LOST"].includes(
     targetStatus.code.toUpperCase()
   );
 
   const now = new Date();
 
   const [updatedLead] = await prisma.$transaction([
-    // 1️⃣ Update status lead
+    // 1️ Update status lead
     prisma.lead.update({
       where: { id: leadId },
       data: {
@@ -92,7 +92,7 @@ export async function POST(
       },
     }),
 
-    // 2️⃣ History status
+    // 2️ History status
     prisma.leadStatusHistory.create({
       data: {
         leadId,
@@ -103,7 +103,7 @@ export async function POST(
       },
     }),
 
-    // 3️⃣ Stop nurturing (jika perlu)
+    // 3️ Stop nurturing (jika perlu)
     ...(shouldStopNurturing
       ? [
           prisma.leadNurturingState.upsert({
